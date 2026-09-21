@@ -28,6 +28,10 @@ jobs:
       - name: Setup Pages
         uses: actions/configure-pages@v5
 
+      - name: Bust browser cache
+        run: |
+          sed -i "s|styles.css|styles.css?v=${GITHUB_SHA}|g; s|app.js|app.js?v=${GITHUB_SHA}|g" index.html
+
       - name: Upload site
         uses: actions/upload-pages-artifact@v3
         with:
