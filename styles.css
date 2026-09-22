@@ -196,3 +196,60 @@ button,input{font:inherit}button{color:inherit}.topbar{height:72px;padding:0 32p
   .setting{padding:13px 14px;gap:14px}
   .setting span{max-width:38ch}
 }
+
+
+/* Quick interest controls in list and grid views */
+.quick-votes{
+  display:flex;
+  gap:5px;
+  flex-wrap:wrap;
+  margin-top:7px;
+}
+.quick-votes.compact{
+  gap:5px;
+  margin-top:8px;
+}
+.quick-vote{
+  appearance:none;
+  border:1px solid #30343a;
+  background:rgba(255,255,255,.025);
+  color:#777e87;
+  border-radius:6px;
+  padding:4px 7px;
+  font-size:9px;
+  line-height:1.1;
+  font-weight:650;
+  cursor:pointer;
+  transition:background .16s,border-color .16s,color .16s,transform .16s;
+}
+.quick-vote:hover{
+  background:var(--panel2);
+  border-color:#4a5058;
+  color:var(--text);
+  transform:translateY(-1px);
+}
+.quick-vote.selected{
+  background:var(--panel2);
+}
+.quick-must.selected{border-color:#8a6bb8;color:#c7a7ed;background:rgba(137,105,184,.13)}
+.quick-interested.selected{border-color:#476d51;color:#9fd3aa;background:rgba(121,197,139,.08)}
+.quick-watch.selected{border-color:#796d3f;color:#d9c878;background:rgba(226,197,108,.08)}
+.quick-no.selected{border-color:#704747;color:#cf8989;background:rgba(209,122,122,.08)}
+.grid .quick-votes{
+  min-height:23px;
+}
+@media(max-width:760px){
+  .quick-votes{
+    gap:4px;
+  }
+  .quick-vote{
+    padding:4px 6px;
+    font-size:8px;
+  }
+  .row .quick-votes{
+    flex-wrap:nowrap;
+    overflow-x:auto;
+    scrollbar-width:none;
+  }
+  .row .quick-votes::-webkit-scrollbar{display:none}
+}
