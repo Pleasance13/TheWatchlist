@@ -32,7 +32,7 @@ function responseButtons(m,compact=false){const mine=currentVote(m.id);return `<
 function listView(items){return `<div class="list">${items.map((m,i)=>{const mine=currentVote(m.id);return `<article class="row ${mine==="no"?"not-interested-row":""}" data-movie-id="${m.id}"><div class="rank">#${i+1}</div><div class="list-vhs" aria-hidden="true"><div class="vhs-stage">${caseFaces(m,"","list-vhs-inner")}</div></div><div onclick="openMovie('${m.id}')" style="cursor:pointer"><div class="title">${m.title}</div><div class="meta">${m.year} · ${m.genre} · ${m.director}</div>${responseButtons(m,true)}</div><div>${stack(voterEntries(m))}</div><div class="seen">${m.seen.includes("Josh")?"◉ Seen":"○ Not seen"}</div></article>`}).join("")}</div>`}
 function caseFaces(m, backHtml, extraClass=""){
   return `<div class="vhs-inner ${extraClass}">
-    <div class="vhs-front"><span class="rank-badge">#${rankOf(m)}</span><img src="${fallback(m.title,m.year)}" alt="${m.title}"></div>
+    <div class="vhs-front"><span class="rank-badge">#${rankOf(m)}</span><img src="${poster}" alt="${m.title}"></div>
     <div class="vhs-back"><div class="vhs-back-scroll">${backHtml}</div></div>
     <div class="vhs-side vhs-right"><div class="spine-label">${m.title} · ${m.year}</div></div>
     <div class="vhs-side vhs-left"><div class="spine-label">${m.title} · ${m.year}</div></div><div class="vhs-side vhs-top"></div><div class="vhs-side vhs-bottom"></div>
@@ -82,4 +82,23 @@ window.toggleCase=(e,el)=>{if(!el||e.target.closest("button,input"))return;el.cl
 window.setNav=x=>{state.nav=x;state.detail=null;render()};window.setView=x=>{state.view=x;render()};window.toggleFilters=()=>{state.showFilters=!state.showFilters;render()};window.setFilter=x=>{state.filter=x;render()};window.setPosterSize=x=>{state.posterSize=Number(x);document.querySelectorAll(".grid").forEach(e=>e.style.setProperty("--poster-size",state.posterSize+"px"));document.querySelectorAll(".range").forEach(e=>e.value=state.posterSize);requestAnimationFrame(()=>bindVhsTilt())};window.toggleSetting=k=>{state[k]=!state[k];render()};window.openMovie=id=>{state.detail=id;state.nav="detail";render()};window.togglePerson=p=>{const card=document.querySelector('[data-person="'+p+'"]');if(!card)return;const old=card.querySelector('.person-details');if(old){old.remove();return}const notSeen=movies.filter(m=>{if(m.seen.includes(p))return false;const v=personVote(m,p);return !v||v!=="red"});const interests=notSeen.filter(m=>personVote(m,p));const suggested=movies.filter(m=>p==="Josh"&&!m.seen.includes(p)&&m.note);const details=document.createElement("div");details.className="person-details";details.innerHTML='<div><div class="person-section-label">INTERESTED IN WATCHING</div><div class="person-movies">'+(interests.map(m=>{const v=personVote(m,p);const label=v==="green"?"Interested":v==="yellow"?"I’d Watch":"Not Interested";return '<div class="person-movie"><span>'+m.title+'</span><span class="person-interest '+v+'">'+label+'</span></div>'}).join("")||'<div class="person-empty">No interest responses yet.</div>')+'</div></div><div><div class="person-section-label">HASN\'T SEEN</div><div class="person-movies">'+(notSeen.map(m=>'<div class="person-movie"><span>'+m.title+'</span><span class="person-seen">Not seen</span></div>').join("")||'<div class="person-empty">No movies left unseen.</div>')+'</div></div>'+(suggested.length?'<div><div class="person-section-label">SUGGESTED</div><div class="person-movies">'+suggested.map(m=>'<div class="person-movie"><span>'+m.title+'</span><span class="person-seen">Suggestion</span></div>').join("")+'</div></div>':"");card.appendChild(details)};
 window.vote=(id,k)=>{const old=state.votes[id];if(old===k)return;const before=new Map([...document.querySelectorAll("[data-movie-id]")].map(el=>[el.dataset.movieId,el.getBoundingClientRect()]));const weights={must:5,interested:3,watch:1,no:0};const m=movies.find(x=>x.id===id);m.score=baseScores[id]+weights[k];state.votes[id]=k;render();requestAnimationFrame(()=>{document.querySelectorAll("[data-movie-id]").forEach(el=>{const first=before.get(el.dataset.movieId);if(!first)return;const last=el.getBoundingClientRect();const dx=first.left-last.left,dy=first.top-last.top;if(Math.abs(dx)+Math.abs(dy)>1){el.animate([{transform:`translate(${dx}px,${dy}px)`},{transform:"translate(0,0)"}],{duration:420,easing:"cubic-bezier(.2,.75,.2,1)"})}})})};
 window.toggleSeen=id=>{const m=movies.find(x=>x.id===id);if(!m)return;const i=m.seen.indexOf("Josh");if(i===-1)m.seen.push("Josh");else m.seen.splice(i,1);render()};
+let tmdbHydrated=false;
+async function hydrateTmdbArtwork(){
+  if(tmdbHydrated||!window.TMDB)return;
+  if(location.hostname.endsWith("github.io"))return;
+  tmdbHydrated=true;
+  for(const movie of movies){
+    try{
+      const search=await TMDB.search(movie.title);
+      const exact=(search.results||[]).find(r=>r.year===movie.year)||search.results?.[0];
+      if(!exact?.tmdbId)continue;
+      const details=await TMDB.details(exact.tmdbId);
+      TMDB.apply(movie,details);
+    }catch(error){
+      console.warn("TMDB hydration skipped for "+movie.title,error.message);
+    }
+  }
+  render();
+}
 render();
+hydrateTmdbArtwork();
