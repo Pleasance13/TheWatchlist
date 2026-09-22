@@ -62,13 +62,13 @@ function detail(){
  let m=movies.find(x=>x.id===state.detail), selected=currentVote(m.id);
  return `<div class="hero"><div><div class="eyebrow">MOVIE</div><h1>Details</h1></div><button class="ghost" onclick="setNav('watchlist')">← Back</button></div>
  <section class="detail">
-   <div class="detail-vhs" data-vhs="${m.id}" onclick="toggleCase(event,this)" title="Click the VHS case to flip it"><div class="vhs-stage">${caseFaces(m,backContent(m))}</div><div class="detail-flip-hint">CLICK TO FLIP</div></div>
+   <div class="detail-vhs" data-vhs="${m.id}" onclick="toggleCase(event,this)" title="Click the VHS case to flip it"><div class="vhs-stage">${caseFaces(m,backContent(m))}</div></div>
    <div>
     <div class="eyebrow">CURRENT RANK #${rankOf(m)}</div><h2>${m.title}</h2><div class="meta">${m.year} · ${m.genre} · ${m.director} · ${m.runtime}</div>
     <div class="people-strip"><div class="people-strip-label">RESPONSES</div>${stack(voterEntries(m))}</div>
     ${selected?`<div class="current-response">Your response: <strong>${responseLabel(selected)}</strong></div>`:""}
-    <div class="seen-control"><div><strong>Already seen</strong><span>Mark whether you have seen this movie before.</span></div><button class="toggle ${m.seen.includes("Josh")?"on":""}" onclick="toggleSeen('${m.id}')" aria-label="Toggle already seen"></button></div>
-    <div class="vote-box"><div class="vote-label">Your response</div><div class="votes">${[["must","🔥 Must Watch"],["interested","🟢 Interested"],["watch","🟡 I'd Watch"],["no","🔴 Not Interested"]].map(([k,l])=>`<button class="vote ${selected===k?"selected":""}" onclick="vote('${m.id}','${k}')">${l}</button>`).join("")}</div></div>
+    <div class="seen-control"><span class="seen-label">Already seen</span><button class="seen-button ${m.seen.includes("Josh")?"on":"off"}" onclick="toggleSeen('${m.id}')" aria-label="${m.seen.includes("Josh")?"Mark as not seen":"Mark as seen"}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.2 12s3.4-6 9.8-6 9.8 6 9.8 6-3.4 6-9.8 6-9.8-6-9.8-6Z"/><circle cx="12" cy="12" r="2.8"/></svg><span class="seen-slash"></span></button></div>
+    <div class="vote-box"><div class="vote-label">Your response</div><div class="votes">${[["must","Must Watch"],["interested","Interested"],["watch","I'd Watch"],["no","Not Interested"]].map(([k,l])=>`<button class="vote vote-${k} ${selected===k?"selected":""}" onclick="vote('${m.id}','${k}')">${l}</button>`).join("")}</div></div>
     ${state.showSynopsis?`<p class="detail-synopsis">${m.synopsis}</p>`:""}
     ${state.showNote&&m.note?`<div class="note">Suggested by Josh: “${m.note}”</div>`:""}
     <div class="warning-list">${m.warnings.map(w=>`<span class="pill">⚠ ${w}</span>`).join("")}</div>
