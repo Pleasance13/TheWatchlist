@@ -86,7 +86,6 @@ window.toggleSeen=id=>{const m=movies.find(x=>x.id===id);if(!m)return;const i=m.
 let tmdbHydrated=false;
 async function hydrateTmdbArtwork(){
   if(tmdbHydrated||!window.TMDB)return;
-  if(location.hostname.endsWith("github.io"))return;
   tmdbHydrated=true;
   for(const movie of movies){
     try{
