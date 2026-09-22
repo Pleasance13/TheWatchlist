@@ -1,0 +1,123 @@
+const TMDB_BASE = "https://api.themoviedb.org/3";
+
+function send(res, status, body) {
+  res.status(status).json(body);
+}
+
+function getToken() {
+  return process.env.TMDB_READ_ACCESS_TOKEN || process.env.TMDB_API_KEY || "";
+}
+
+function tmdbUrl(path, params = {}) {
+  const url = new URL(TMDB_BASE + path);
+  Object.entries(params).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && value !== "") url.searchParams.set(key, value);
+  });
+  return url;
+}
+
+async function tmdbFetch(path, params = {}) {
+  const token = getToken();
+  if (!token) throw new Error("TMDB credential is not configured on the server.");
+
+  const response = await fetch(tmdbUrl(path, params), {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      Accept: "application/json"
+    }
+  });
+
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    const message = data.status_message || `TMDB request failed (${response.status}).`;
+    const error = new Error(message);
+    error.status = response.status;
+    throw error;
+  }
+  return data;
+}
+
+export default async function handler(req, res) {
+  const action = req.query.action;
+
+  try {
+    if (req.method !== "GET") return send(res, 405, { error: "GET only." });
+
+    if (action === "search") {
+      const query = String(req.query.query || "").trim();
+      if (!query) return send(res, 400, { error: "A search query is required." });
+
+      const page = Math.max(1, Number(req.query.page) || 1);
+      const data = await tmdbFetch("/search/movie", {
+        query,
+        page,
+        include_adult: "false"
+      });
+
+      return send(res, 200, {
+        results: (data.results || []).map(movie => ({
+          tmdbId: movie.id,
+          title: movie.title,
+          originalTitle: movie.original_title,
+          year: movie.release_date ? Number(movie.release_date.slice(0, 4)) : null,
+          releaseDate: movie.release_date || null,
+          posterPath: movie.poster_path || null,
+          backdropPath: movie.backdrop_path || null,
+          synopsis: movie.overview || "",
+          popularity: movie.popularity || 0
+        })),
+        page: data.page || page,
+        totalPages: data.total_pages || 1,
+        totalResults: data.total_results || 0
+      });
+    }
+
+    if (action === "details") {
+      const id = Number(req.query.id);
+      if (!Number.isInteger(id)) return send(res, 400, { error: "A valid TMDB movie id is required." });
+
+      const [movie, images, credits] = await Promise.all([
+        tmdbFetch(`/movie/${id}`),
+        tmdbFetch(`/movie/${id}/images`, { include_image_language: "en,null" }),
+        tmdbFetch(`/movie/${id}/credits`)
+      ]);
+
+      const directors = (credits.crew || [])
+        .filter(person => person.job === "Director")
+        .map(person => person.name);
+
+      const logos = (images.logos || [])
+        .slice()
+        .sort((a, b) => (a.vote_average || 0) - (b.vote_average || 0))
+        .reverse();
+
+      const logo = logos.find(item => item.iso_639_1 === "en")
+        || logos.find(item => item.iso_639_1 === null)
+        || logos[0]
+        || null;
+
+      return send(res, 200, {
+        tmdbId: movie.id,
+        title: movie.title,
+        originalTitle: movie.original_title,
+        year: movie.release_date ? Number(movie.release_date.slice(0, 4)) : null,
+        releaseDate: movie.release_date || null,
+        genre: (movie.genres || []).map(g => g.name),
+        director: directors,
+        runtime: movie.runtime || null,
+        rating: movie.certification || null,
+        synopsis: movie.overview || "",
+        posterPath: movie.poster_path || null,
+        backdropPath: movie.backdrop_path || null,
+        logoPath: logo ? logo.file_path : null,
+        logoWidth: logo ? logo.width : null,
+        logoHeight: logo ? logo.height : null
+      });
+    }
+
+    return send(res, 400, { error: "Unknown TMDB action." });
+  } catch (error) {
+    const status = Number(error.status) || 500;
+    return send(res, status, { error: error.message || "TMDB request failed." });
+  }
+}
