@@ -254,12 +254,13 @@ button,input{font:inherit}button{color:inherit}.topbar{height:72px;padding:0 32p
   .row .quick-votes::-webkit-scrollbar{display:none}
 }
 
+/* Grid controls stay stacked, but each button keeps its natural width. */
 .grid .quick-votes{
   flex-direction:column;
-  align-items:stretch;
-  width:100%;
+  align-items:flex-start;
 }
 .grid .quick-vote{
-  width:100%;
+  width:max-content;
+  max-width:100%;
   text-align:left;
 }
