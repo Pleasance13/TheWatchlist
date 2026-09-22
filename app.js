@@ -34,7 +34,7 @@ function caseFaces(m, backHtml, extraClass=""){
     <div class="vhs-front"><span class="rank-badge">#${rankOf(m)}</span><img src="${fallback(m.title,m.year)}" alt="${m.title}"></div>
     <div class="vhs-back"><div class="vhs-back-scroll">${backHtml}</div></div>
     <div class="vhs-side vhs-right"><div class="spine-label">${m.title} · ${m.year}</div></div>
-    <div class="vhs-side vhs-left"></div><div class="vhs-side vhs-top"></div><div class="vhs-side vhs-bottom"></div>
+    <div class="vhs-side vhs-left"><div class="spine-label">${m.title} · ${m.year}</div></div><div class="vhs-side vhs-top"></div><div class="vhs-side vhs-bottom"></div>
   </div>`;
 }
 function backContent(m){
