@@ -10,7 +10,7 @@
  */
 
 const TMDB = {
-  endpoint: window.WATCHLIST_TMDB_ENDPOINT || "/api/tmdb",
+  endpoint: window.WATCHLIST_TMDB_ENDPOINT || (location.hostname.endsWith("github.io") ? "https://the-watchlist-two.vercel.app/api/tmdb" : "/api/tmdb"),
   imageBase: "https://image.tmdb.org/t/p/",
 
   image(path, size = "w500") {
