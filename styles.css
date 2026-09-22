@@ -72,7 +72,7 @@ button,input{font:inherit}button{color:inherit}.topbar{height:72px;padding:0 32p
 .detail{display:grid;grid-template-columns:275px minmax(0,1fr);align-items:start;gap:48px;padding:26px 0 0}
 .detail-vhs{grid-column:1;grid-row:1;width:275px;aspect-ratio:.565;padding:26px 72px 26px 22px;position:relative;cursor:default}
 .detail-vhs .vhs-stage{cursor:default}
-.detail-vhs .vhs-inner{transform:rotateY(0deg)!important}
+.detail-vhs .vhs-inner{transform:rotateY(0deg)}
 .detail-vhs .detail-flip-hint{display:none}
 .detail .detail-vhs + div{grid-column:2;grid-row:1}
 .seen-control{display:flex;align-items:center;justify-content:space-between;gap:14px;margin:18px 0;padding:11px 14px;border:1px solid var(--line);border-radius:9px;background:rgba(255,255,255,.025)}
