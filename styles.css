@@ -96,3 +96,19 @@ button,input{font:inherit}button{color:inherit}.topbar{height:72px;padding:0 32p
  .detail{grid-template-columns:170px minmax(0,1fr);gap:20px;padding:18px}
  .detail-vhs{width:170px;padding:16px 29px 16px 10px}
 }
+
+/* Refined detail response and seen controls */
+.seen-control{justify-content:flex-start}
+.seen-button{width:auto;min-width:32px;height:30px;display:inline-flex;align-items:center;gap:7px;padding:5px 9px;border:1px solid var(--line);border-radius:7px;background:var(--panel);font-size:11px;font-weight:650;color:#666b73}
+.seen-button:hover{border-color:var(--line2);color:#a2a7ae}
+.seen-button.on{color:var(--text);border-color:#555b64;background:var(--panel2)}
+.seen-button svg{flex:0 0 auto;width:17px;height:17px}
+.seen-button .seen-slash{left:6px;top:14px;width:21px}
+.seen-button.on .seen-slash{display:none}
+.vote{background:rgba(255,255,255,.025);border-color:#30343a;color:#888e97}
+.vote:hover{background:var(--panel2);color:var(--text);border-color:#4a5058}
+.vote.selected{background:var(--panel2);color:var(--text)}
+.vote-must.selected{border-color:#8a6bb8;color:#c7a7ed;background:rgba(137,105,184,.13)}
+.vote-interested.selected{border-color:#476d51;color:#9fd3aa;background:rgba(121,197,139,.08)}
+.vote-watch.selected{border-color:#796d3f;color:#d9c878;background:rgba(226,197,108,.08)}
+.vote-no.selected{border-color:#704747;color:#cf8989;background:rgba(209,122,122,.08)}
