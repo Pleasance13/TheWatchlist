@@ -67,3 +67,32 @@ button,input{font:inherit}button{color:inherit}.topbar{height:72px;padding:0 32p
 .list-vhs .vhs-stage{
   pointer-events:none;
 }
+
+/* Movie detail layout and controls */
+.detail{display:grid;grid-template-columns:275px minmax(0,1fr);align-items:start;gap:48px;padding:26px 0 0}
+.detail-vhs{grid-column:1;grid-row:1;width:275px;aspect-ratio:.565;padding:26px 72px 26px 22px;position:relative;cursor:default}
+.detail-vhs .vhs-stage{cursor:default}
+.detail-vhs .vhs-inner{transform:rotateY(0deg)!important}
+.detail-vhs .detail-flip-hint{display:none}
+.detail .detail-vhs + div{grid-column:2;grid-row:1}
+.seen-control{display:flex;align-items:center;justify-content:space-between;gap:14px;margin:18px 0;padding:11px 14px;border:1px solid var(--line);border-radius:9px;background:rgba(255,255,255,.025)}
+.seen-label{font-size:12px;color:var(--muted);font-weight:650}
+.seen-button{position:relative;width:32px;height:28px;padding:0;border:0;background:none;color:#666b73;cursor:pointer;display:grid;place-items:center}
+.seen-button svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.seen-button.on{color:#f1f0eb}
+.seen-slash{position:absolute;width:25px;height:1.5px;background:currentColor;transform:rotate(-45deg);opacity:.9}
+.seen-button.on .seen-slash{display:none}
+.vote-box{margin:18px 0}
+.vote-label{font-size:10px;text-transform:uppercase;letter-spacing:.14em;color:var(--muted);margin-bottom:8px}
+.votes{display:flex;gap:8px;flex-wrap:wrap}
+.vote{appearance:none;border:1px solid var(--line);background:var(--panel);color:var(--muted);border-radius:8px;padding:9px 12px;font-size:12px;font-weight:650;cursor:pointer;transition:background .18s,border-color .18s,color .18s,transform .18s}
+.vote:hover{transform:translateY(-1px);color:var(--text);border-color:var(--line2)}
+.vote.selected{color:var(--text);background:var(--panel2)}
+.vote-must.selected{border-color:#6b5a34;color:#e6ca79}
+.vote-interested.selected{border-color:#476d51;color:#9fd3aa}
+.vote-watch.selected{border-color:#6e653d;color:#d9c878}
+.vote-no.selected{border-color:#704747;color:#cf8989}
+@media(max-width:760px){
+ .detail{grid-template-columns:170px minmax(0,1fr);gap:20px;padding:18px}
+ .detail-vhs{width:170px;padding:16px 29px 16px 10px}
+}
