@@ -112,3 +112,21 @@ button,input{font:inherit}button{color:inherit}.topbar{height:72px;padding:0 32p
 .vote-interested.selected{border-color:#476d51;color:#9fd3aa;background:rgba(121,197,139,.08)}
 .vote-watch.selected{border-color:#796d3f;color:#d9c878;background:rgba(226,197,108,.08)}
 .vote-no.selected{border-color:#704747;color:#cf8989;background:rgba(209,122,122,.08)}
+
+
+/* Detail title + seen toggle */
+.detail-title-row{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  margin:0 0 8px;
+}
+.detail-title-row h2{margin:0}
+.detail-title-row .seen-button{
+  flex:0 0 auto;
+  margin:0;
+  height:27px;
+  padding:4px 8px;
+  border-radius:6px;
+}
+.seen-control{display:contents}
