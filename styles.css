@@ -38,7 +38,7 @@ button,input{font:inherit}button{color:inherit}.topbar{height:72px;padding:0 32p
   height:100%;
   aspect-ratio:auto;
   --tilt-x:0deg;
-  --tilt-y:-9deg;
+  --tilt-y:-20deg;
   transform:rotateX(var(--tilt-x)) rotateY(var(--tilt-y));
   transition:none;
   will-change:auto;
