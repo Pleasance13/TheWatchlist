@@ -253,3 +253,13 @@ button,input{font:inherit}button{color:inherit}.topbar{height:72px;padding:0 32p
   }
   .row .quick-votes::-webkit-scrollbar{display:none}
 }
+
+.grid .quick-votes{
+  flex-direction:column;
+  align-items:stretch;
+  width:100%;
+}
+.grid .quick-vote{
+  width:100%;
+  text-align:left;
+}
