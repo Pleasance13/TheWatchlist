@@ -295,3 +295,23 @@ button,input{font:inherit}button{color:inherit}.topbar{height:72px;padding:0 32p
   line-height:1.5;
   font-style:italic;
 }
+
+
+/* Expandable people cards */
+.people-list{display:grid;gap:10px;max-width:820px}
+.person-card{border:1px solid var(--line);border-radius:10px;background:linear-gradient(90deg,var(--panel),#111316);overflow:hidden}
+.person-summary{width:100%;min-height:68px;display:flex;align-items:center;justify-content:space-between;gap:20px;padding:15px 17px;border:0;background:none;color:inherit;text-align:left;cursor:pointer}
+.person-summary:hover{background:rgba(255,255,255,.018)}
+.person-main{display:flex;align-items:center;gap:13px;min-width:0}
+.person-main>div:last-child{min-width:0}
+.person-main strong{display:block;font-size:13px}
+.person-main span{display:block;color:var(--muted);font-size:11px;margin-top:3px}
+.person-chevron{color:#737981;font-size:16px;line-height:1;flex:0 0 auto}
+.person-details{border-top:1px solid var(--line);padding:15px 17px 17px;display:grid;gap:18px}
+.person-section-label{font-size:9px;letter-spacing:.14em;color:#737981;font-weight:700;margin-bottom:8px}
+.person-movies{display:grid;gap:5px}
+.person-movie{display:flex;align-items:center;justify-content:space-between;gap:15px;padding:8px 10px;border:1px solid #282c31;border-radius:6px;background:rgba(255,255,255,.018);font-size:11px}
+.person-interest,.person-seen{font-size:9px;font-weight:650;white-space:nowrap}
+.person-interest.green{color:#9fd3aa}.person-interest.yellow{color:#d9c878}.person-interest.red{color:#cf8989}.person-seen{color:#9298a1}
+.person-empty{font-size:11px;color:#626871;padding:2px 0}
+@media(max-width:760px){.person-summary{padding:13px 14px}.person-details{padding:13px 14px 15px}.person-movie{align-items:flex-start}}
