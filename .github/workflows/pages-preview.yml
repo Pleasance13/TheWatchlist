@@ -3,7 +3,7 @@ name: Deploy preview to GitHub Pages
 on:
   push:
     branches:
-      - fix/enclosed-vhs-case
+      - list-mode-improvement
   workflow_dispatch:
 
 permissions:
