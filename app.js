@@ -25,7 +25,7 @@ const state={nav:"watchlist",view:"list",search:"",filter:"all",posterSize:2,sho
 const app=document.querySelector("#app");
 let savedCaseAssets={};
 try{savedCaseAssets=JSON.parse(localStorage.getItem("watchlist-case-assets")||"{}");}catch(error){savedCaseAssets={}}
-function canEditCaseAssets(){return currentUser==="Josh"}
+// Temporary UI gate: once Discord auth exists, replace this with the authenticated Josh/Discord user ID check.\nfunction canEditCaseAssets(){return currentUser==="Josh"}
 function caseAssets(m){return savedCaseAssets[m.id]||{}}
 function saveCaseAssets(){try{localStorage.setItem("watchlist-case-assets",JSON.stringify(savedCaseAssets));}catch(error){}}
 function assetDraft(m){const a=caseAssets(m);return {frontLogoPath:a.frontLogoPath!==undefined?a.frontLogoPath:(m.logoPath||null),frontLogoSize:Number(a.frontLogoSize)||22,frontLogoBottom:Number(a.frontLogoBottom)||6,detailLogoPath:a.detailLogoPath!==undefined?a.detailLogoPath:(m.logoPath||null),frontImagePath:a.frontImagePath!==undefined?a.frontImagePath:(m.textlessPosterPath||m.posterPath||null),frontImageX:Number(a.frontImageX)||50,frontImageY:Number(a.frontImageY)||50,backStillPath:a.backStillPath!==undefined?a.backStillPath:(m.backdropPath||null)}}
