@@ -28,7 +28,20 @@ try{savedCaseAssets=JSON.parse(localStorage.getItem("watchlist-case-assets")||"{
 // Temporary UI gate: once Discord auth exists, replace this with the authenticated Josh/Discord user ID check.\nfunction canEditCaseAssets(){return currentUser==="Josh"}
 function caseAssets(m){return savedCaseAssets[m.id]||{}}
 function saveCaseAssets(){try{localStorage.setItem("watchlist-case-assets",JSON.stringify(savedCaseAssets));}catch(error){}}
-function assetDraft(m){const a=caseAssets(m);return {frontLogoPath:a.frontLogoPath!==undefined?a.frontLogoPath:(m.logoPath||null),frontLogoSize:Number(a.frontLogoSize)||22,frontLogoBottom:Number(a.frontLogoBottom)||6,detailLogoPath:a.detailLogoPath!==undefined?a.detailLogoPath:(m.logoPath||null),frontImagePath:a.frontImagePath!==undefined?a.frontImagePath:(m.textlessPosterPath||m.posterPath||null),frontImageX:Number(a.frontImageX)||50,frontImageY:Number(a.frontImageY)||50,backStillPath:a.backStillPath!==undefined?a.backStillPath:(m.backdropPath||null)}}
+function assetDraft(m){
+  const a=caseAssets(m);
+  const num=(value,fallback)=>Number.isFinite(Number(value))?Number(value):fallback;
+  return {
+    frontLogoPath:a.frontLogoPath!==undefined?a.frontLogoPath:(m.logoPath||null),
+    frontLogoSize:num(a.frontLogoSize,22),
+    frontLogoBottom:num(a.frontLogoBottom,6),
+    detailLogoPath:a.detailLogoPath!==undefined?a.detailLogoPath:(m.logoPath||null),
+    frontImagePath:a.frontImagePath!==undefined?a.frontImagePath:(m.textlessPosterPath||m.posterPath||null),
+    frontImageX:num(a.frontImageX,50),
+    frontImageY:num(a.frontImageY,50),
+    backStillPath:a.backStillPath!==undefined?a.backStillPath:(m.backdropPath||null)
+  }
+}
 
 function currentVote(id){return state.votes[id]||null}
 function voterEntries(m){
@@ -58,10 +71,10 @@ function caseFaces(m, backHtml, extraClass=""){
   const logoPath=assets.frontLogoPath!==undefined?assets.frontLogoPath:m.logoPath;
   const logo=logoPath&&window.TMDB?TMDB.image(logoPath,"w300"):"";
   const logoMarkup=logo?`<img class="vhs-logo" src="${logo}" alt="" aria-hidden="true">`:`<div class="vhs-logo-fallback">${m.title}</div>`;
-  const frontLogo=logo?`<div class="vhs-front-logo" style="--front-logo-size:${Number(assets.frontLogoSize)||22}%;--front-logo-bottom:${Number(assets.frontLogoBottom)||6}%">${logoMarkup}</div>`:"";
+  const frontLogo=logo?`<div class="vhs-front-logo" style="--front-logo-size:${Number.isFinite(Number(assets.frontLogoSize))?Number(assets.frontLogoSize):22}%;--front-logo-bottom:${Number.isFinite(Number(assets.frontLogoBottom))?Number(assets.frontLogoBottom):6}%>${logoMarkup}</div>`:"";
   const spineMarkup=logo?`<img class="vhs-spine-logo" src="${logo}" alt="" aria-hidden="true">`:`<span class="spine-label">${m.title}</span>`;
   const style=`--poster-art:url("${frontImage}");--backdrop-art:url("${backdrop}")`;
-  const objectPosition=`object-position:${Number(assets.frontImageX)||50}% ${Number(assets.frontImageY)||50}%`;
+  const objectPosition=`object-position:${Number.isFinite(Number(assets.frontImageX))?Number(assets.frontImageX):50}% ${Number.isFinite(Number(assets.frontImageY))?Number(assets.frontImageY):50}%`;
   return `<div class="vhs-inner ${extraClass}" style="${style}">
     <div class="vhs-front"><span class="rank-badge" style="${m.watched?"display:none":""}">#${rankOf(m)}</span><img src="${frontImage}" alt="${m.title}" style="${objectPosition}">${frontLogo}</div>
     <div class="vhs-back"><img class="vhs-back-art" src="${backdrop}" alt="" aria-hidden="true"><div class="vhs-back-scroll">${logo&&window.TMDB?`<div class="vhs-back-logo">${logoMarkup}</div>`:""}${backHtml}</div></div>
@@ -133,17 +146,69 @@ function assetCards(items,type,selected){
 }
 function assetEditor(){
   const m=movies.find(x=>x.id===state.assetMovieId);
-  if(!state.assetEditorOpen||!m||!canEditCaseAssets())return "";
+  if(!state.assetEditorOpen||state.nav!=="detail"||state.detail!==state.assetMovieId||!m||!canEditCaseAssets())return "";
   const d=assetDraft(m),tmdb=m.tmdbAssets||{};
-  return `<div class="modal-backdrop open" onclick="if(event.target===this)closeAssetEditor()"><section class="asset-modal" role="dialog" aria-modal="true" aria-labelledby="asset-title">
-    <div class="modal-head"><div><div class="eyebrow">TMDB ARTWORK</div><h2 id="asset-title">Customize case artwork</h2><p class="asset-sub">${m.title} · changes are saved in this browser</p></div><button class="modal-close" onclick="closeAssetEditor()" aria-label="Close">×</button></div>
-    ${state.assetLoading?'<div class="add-status">Loading TMDB artwork…</div>':state.assetError?'<div class="add-status error">'+state.assetError+'</div>':`
-      <div class="asset-section"><div class="asset-heading"><strong>Front logo</strong><span>Also used on the spine and back</span></div><div class="asset-grid logo-grid">${assetCards(tmdb.logos||[],"logo",d.frontLogoPath)}</div><div class="asset-controls"><label>Size <input type="range" min="10" max="40" value="${d.frontLogoSize}" oninput="setAssetDraft('frontLogoSize',this.value)"><b>${d.frontLogoSize}%</b></label><label>Vertical position <input type="range" min="0" max="30" value="${d.frontLogoBottom}" oninput="setAssetDraft('frontLogoBottom',this.value)"><b>${d.frontLogoBottom}% from bottom</b></label></div></div>
-      <div class="asset-section"><div class="asset-heading"><strong>Details-page logo</strong><span>Choose independently from the case logo</span></div><div class="asset-grid logo-grid">${assetCards(tmdb.logos||[],"detail-logo",d.detailLogoPath)}</div></div>
-      <div class="asset-section"><div class="asset-heading"><strong>Front image</strong><span>All TMDB poster assets, including language-specific versions</span></div><div class="asset-grid poster-grid">${assetCards(tmdb.posters||[],"poster",d.frontImagePath)}</div><div class="asset-crop-preview"><img src="${assetImage(d.frontImagePath,"w500")}" alt="" style="object-position:${d.frontImageX}% ${d.frontImageY}%"><span>Case crop preview</span></div><div class="asset-controls two"><label>Horizontal position <input type="range" min="0" max="100" value="${d.frontImageX}" oninput="setAssetDraft('frontImageX',this.value)"><b>${d.frontImageX}%</b></label><label>Vertical position <input type="range" min="0" max="100" value="${d.frontImageY}" oninput="setAssetDraft('frontImageY',this.value)"><b>${d.frontImageY}%</b></label></div></div>
-      <div class="asset-section"><div class="asset-heading"><strong>Back still</strong><span>Choose any TMDB backdrop/still</span></div><div class="asset-grid backdrop-grid">${assetCards(tmdb.backdrops||[],"backdrop",d.backStillPath)}</div></div>
-      <div class="asset-actions"><button class="ghost" onclick="closeAssetEditor()">Close</button></div>`}
-  </section></div>`;
+  return \`<div class="modal-backdrop open artwork-backdrop" onclick="if(event.target===this)closeAssetEditor()">
+    <section class="asset-modal artwork-picker" role="dialog" aria-modal="true" aria-labelledby="asset-title">
+      <div class="modal-head">
+        <div>
+          <div class="eyebrow">TMDB ARTWORK</div>
+          <h2 id="asset-title">Customize case artwork</h2>
+          <p class="asset-sub">Choose the artwork you want to use for this movie.</p>
+        </div>
+        <button class="modal-close" onclick="closeAssetEditor()" aria-label="Close">×</button>
+      </div>
+      \${state.assetLoading
+        ? '<div class="add-status">Loading artwork from TMDB…</div>'
+        : state.assetError
+          ? '<div class="add-status error">'+state.assetError+'</div>'
+          : \`
+            <div class="asset-section">
+              <div class="asset-heading">
+                <div><strong>1. Front logo</strong><span>Used on the front, spine, and back of the VHS case.</span></div>
+              </div>
+              <div class="asset-grid logo-grid">\${assetCards(tmdb.logos||[],"logo",d.frontLogoPath)}</div>
+              <div class="asset-controls">
+                <label>Logo size <input type="range" min="10" max="40" value="\${d.frontLogoSize}" oninput="setAssetDraft('frontLogoSize',this.value)"><b data-asset-value="frontLogoSize">\${d.frontLogoSize}%</b></label>
+                <label>Vertical position <input type="range" min="0" max="30" value="\${d.frontLogoBottom}" oninput="setAssetDraft('frontLogoBottom',this.value)"><b data-asset-value="frontLogoBottom">\${d.frontLogoBottom}% from bottom</b></label>
+              </div>
+            </div>
+
+            <div class="asset-section">
+              <div class="asset-heading">
+                <div><strong>2. Details-page logo</strong><span>Independent from the logo used on the physical case.</span></div>
+              </div>
+              <div class="asset-grid logo-grid">\${assetCards(tmdb.logos||[],"detail-logo",d.detailLogoPath)}</div>
+            </div>
+
+            <div class="asset-section">
+              <div class="asset-heading">
+                <div><strong>3. Front image</strong><span>Choose any TMDB poster asset, including language-specific versions.</span></div>
+              </div>
+              <div class="asset-grid poster-grid">\${assetCards(tmdb.posters||[],"poster",d.frontImagePath)}</div>
+              <div class="asset-crop-preview">
+                <img src="\${assetImage(d.frontImagePath,"w500")}" alt="" style="object-position:\${d.frontImageX}% \${d.frontImageY}%">
+                <div class="asset-crop-frame"></div>
+                <span>Case crop preview</span>
+              </div>
+              <div class="asset-controls">
+                <label>Horizontal crop <input type="range" min="0" max="100" value="\${d.frontImageX}" oninput="setAssetDraft('frontImageX',this.value)"><b data-asset-value="frontImageX">\${d.frontImageX}%</b></label>
+                <label>Vertical crop <input type="range" min="0" max="100" value="\${d.frontImageY}" oninput="setAssetDraft('frontImageY',this.value)"><b data-asset-value="frontImageY">\${d.frontImageY}%</b></label>
+              </div>
+            </div>
+
+            <div class="asset-section">
+              <div class="asset-heading">
+                <div><strong>4. Back still</strong><span>Choose the TMDB backdrop/still shown behind the back-of-case information.</span></div>
+              </div>
+              <div class="asset-grid backdrop-grid">\${assetCards(tmdb.backdrops||[],"backdrop",d.backStillPath)}</div>
+            </div>
+
+            <div class="asset-actions">
+              <button class="ghost" onclick="closeAssetEditor()">Done</button>
+            </div>\`}
+    </section>
+  </div>\`;
 }
 function render(){app.innerHTML=header()+`<main class="content">${state.nav==="watchlist"?watchlist():state.nav==="history"?history():state.nav==="people"?people():state.nav==="settings"?settings():detail()}</main>`+addMovieModal()+attendanceModal()+assetEditor();bindLiveInputs();bindVhsTilt()}
 let addMovieSearchTimer=null;let addMovieSearchRequest=0;
@@ -159,7 +224,7 @@ window.clearAddMovieSelection=()=>{state.addMovieSelection=null;state.addMovieEr
 window.confirmAddMovie=()=>{const d=state.addMovieSelection;if(!d?.tmdbId)return;const normalizeTitle=s=>String(s||"").trim().toLowerCase().replace(/[^a-z0-9]+/g," ");const duplicate=movies.some(m=>m.tmdbId===d.tmdbId||(normalizeTitle(m.title)===normalizeTitle(d.title)&&String(m.year)===String(d.year||"")));if(duplicate){state.addMovieError="Already in watchlist";return render()}const note=(document.querySelector("#addMovieNote")?.value||"").trim();const movie={id:"tmdb-"+d.tmdbId,title:d.title,year:d.year||"",genre:(d.genre||[]).join(" · "),director:(d.director||[]).join(", "),runtime:d.runtime?formatRuntime(d.runtime):"",rating:d.rating||"",score:0,seen:[],voters:[],synopsis:d.synopsis||"",note,warnings:[],watched:false,suggestedBy:"Josh",addedBy:currentUser,tmdbId:d.tmdbId,posterPath:d.posterPath||null,textlessPosterPath:d.textlessPosterPath||null,backdropPath:d.backdropPath||null,logoPath:d.logoPath||null};movies.push(movie);try{localStorage.setItem("watchlist-added-movies",JSON.stringify(movies.filter(m=>m.id.startsWith("tmdb-"))));}catch(error){}state.addMovieOpen=false;state.addMovieSelection=null;state.addMovieError="";render()};
 
 window.openAssetEditor=async id=>{
-  if(!canEditCaseAssets())return;
+  if(!canEditCaseAssets()||state.nav!=="detail"||state.detail!==id)return;
   state.assetMovieId=id;state.assetEditorOpen=true;state.assetLoading=true;state.assetError="";render();
   const m=movies.find(x=>x.id===id);
   try{
