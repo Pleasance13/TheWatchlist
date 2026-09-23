@@ -714,3 +714,10 @@ button,input{font:inherit}button{color:inherit}.topbar{height:72px;padding:0 32p
   object-position:center bottom!important;
 }
 .asset-section-toggle,.asset-language-heading{position:relative;z-index:2}
+
+/* Force artwork language groups to use the full picker width */
+.artwork-picker .asset-language-list{display:block!important;width:100%!important}
+.artwork-picker .asset-language-group{display:block!important;width:100%!important}
+.artwork-picker .asset-language-grid{display:grid!important;width:100%!important;grid-template-columns:repeat(auto-fill,minmax(88px,1fr))!important}
+.artwork-picker .asset-language-grid .asset-card{min-width:0;width:auto!important}
+.artwork-picker .asset-language-grid.logo-grid{grid-template-columns:repeat(auto-fill,minmax(88px,1fr))!important}
