@@ -32,9 +32,13 @@ function responseButtons(m,compact=false){const mine=currentVote(m.id);return `<
 function listView(items){return `<div class="list">${items.map((m,i)=>{const mine=currentVote(m.id);return `<article class="row ${mine==="no"?"not-interested-row":""}" data-movie-id="${m.id}"><div class="rank">#${i+1}</div><div class="list-vhs" aria-hidden="true"><div class="vhs-stage">${caseFaces(m,"","list-vhs-inner")}</div></div><div onclick="openMovie('${m.id}')" style="cursor:pointer"><div class="title">${m.title}</div><div class="meta">${m.year} · ${m.genre} · ${m.director}</div>${responseButtons(m,true)}</div><div>${stack(voterEntries(m))}</div><div class="seen">${m.seen.includes("Josh")?"◉ Seen":"○ Not seen"}</div></article>`}).join("")}</div>`}
 function caseFaces(m, backHtml, extraClass=""){
   const poster = m.posterPath && window.TMDB ? TMDB.image(m.posterPath,"w500") : fallback(m.title,m.year);
-  return `<div class="vhs-inner ${extraClass}">
+  const backdrop = m.backdropPath && window.TMDB ? TMDB.image(m.backdropPath,"w780") : poster;
+  const logo = m.logoPath && window.TMDB ? TMDB.image(m.logoPath,"w300") : "";
+  const logoMarkup = logo ? `<img class="vhs-logo" src="${logo}" alt="" aria-hidden="true">` : `<div class="vhs-logo-fallback">${m.title}</div>`;
+  const style = `--poster-art:url("${poster}");--backdrop-art:url("${backdrop}")`;
+  return `<div class="vhs-inner ${extraClass}" style="${style}">
     <div class="vhs-front"><span class="rank-badge">#${rankOf(m)}</span><img src="${poster}" alt="${m.title}"></div>
-    <div class="vhs-back"><div class="vhs-back-scroll">${backHtml}</div></div>
+    <div class="vhs-back"><div class="vhs-back-art" aria-hidden="true"></div><div class="vhs-back-logo">${logoMarkup}</div><div class="vhs-back-scroll">${backHtml}</div></div>
     <div class="vhs-side vhs-right"><div class="spine-label">${m.title} · ${m.year}</div></div>
     <div class="vhs-side vhs-left"><div class="spine-label">${m.title} · ${m.year}</div></div><div class="vhs-side vhs-top"></div><div class="vhs-side vhs-bottom"></div>
   </div>`;
@@ -67,7 +71,7 @@ function detail(){
  <section class="detail">
    <div class="detail-vhs" data-vhs="${m.id}" onclick="toggleCase(event,this)" title="Click the VHS case to flip it"><div class="vhs-stage">${caseFaces(m,backContent(m))}</div></div>
    <div>
-    <div class="eyebrow">CURRENT RANK #${rankOf(m)}</div><div class="detail-title-row"><h2>${m.title}</h2><button class="seen-button ${m.seen.includes("Josh")?"on":"off"}" data-movie-id="${m.id}" onclick="toggleSeen(this.dataset.movieId)" aria-label="${m.seen.includes("Josh")?"Mark as not seen":"Mark as seen"}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.2 12s3.4-6 9.8-6 9.8 6 9.8 6-3.4 6-9.8 6-9.8-6-9.8-6Z"/><circle cx="12" cy="12" r="2.8"/></svg><span class="seen-slash"></span><span>${m.seen.includes("Josh")?"I have seen this":"I have not seen this"}</span></button></div><div class="meta">${m.year} · ${m.genre} · ${m.director} · ${m.runtime}</div>
+    <div class="eyebrow">CURRENT RANK #${rankOf(m)}</div><div class="detail-title-row"><h2>${m.logoPath&&window.TMDB?'<img class="detail-logo" src="'+TMDB.image(m.logoPath,"w300")+'" alt="'+m.title+'">':'<span>'+m.title+'</span>'}</h2><button class="seen-button ${m.seen.includes("Josh")?"on":"off"}" data-movie-id="${m.id}" onclick="toggleSeen(this.dataset.movieId)" aria-label="${m.seen.includes("Josh")?"Mark as not seen":"Mark as seen"}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.2 12s3.4-6 9.8-6 9.8 6 9.8 6-3.4 6-9.8 6-9.8-6-9.8-6Z"/><circle cx="12" cy="12" r="2.8"/></svg><span class="seen-slash"></span><span>${m.seen.includes("Josh")?"I have seen this":"I have not seen this"}</span></button></div><div class="meta">${m.year} · ${m.genre} · ${m.director} · ${m.runtime}</div>
     <div class="people-strip"><div class="people-strip-label">RESPONSES</div>${stack(voterEntries(m))}</div>
     <div class="vote-box"><div class="vote-label">Your response</div><div class="votes">${[["must","Must Watch"],["interested","Interested"],["watch","I'd Watch"],["no","Not Interested"]].map(([k,l])=>`<button class="vote vote-${k} ${selected===k?"selected":""}" onclick="vote('${m.id}','${k}')">${l}</button>`).join("")}</div></div>
     ${state.showSynopsis?`<p class="detail-synopsis">${m.synopsis}</p>`:""}
