@@ -79,7 +79,7 @@ function caseFaces(m, backHtml, extraClass=""){
   const logoPath=movieLogoPath(m,assets.frontLogoPath);
   const logo=logoPath&&window.TMDB?TMDB.image(logoPath,"w300"):"";
   const logoMarkup=logo?`<img class="vhs-logo" src="${logo}" alt="" aria-hidden="true">`:`<div class="vhs-logo-fallback">${m.title}</div>`;
-  const frontLogo=logo&&assets.frontLogoVisible!==false?`<div class="vhs-front-logo" style="--front-logo-size:${Number.isFinite(Number(assets.frontLogoSize))?Number(assets.frontLogoSize):22}%;--front-logo-bottom:${Number.isFinite(Number(assets.frontLogoBottom))?Number(assets.frontLogoBottom):6}%;--front-logo-image:url("${logo}")" aria-hidden="true">${logoMarkup}</div>`:"";
+  const frontLogo=logo?`<div class="vhs-front-logo${assets.frontLogoVisible===false?" asset-logo-hidden":""}" style="--front-logo-size:${Number.isFinite(Number(assets.frontLogoSize))?Number(assets.frontLogoSize):22}%;--front-logo-bottom:${Number.isFinite(Number(assets.frontLogoBottom))?Number(assets.frontLogoBottom):6}%;--front-logo-image:url("${logo}")" aria-hidden="true">${logoMarkup}</div>`:"";
   const spineMarkup=logo?`<img class="vhs-spine-logo" src="${logo}" alt="" aria-hidden="true">`:`<span class="spine-label">${m.title}</span>`;
   const style=`--poster-art:url("${frontImage}");--backdrop-art:url("${backdrop}")`;
   const objectPosition=`object-position:${Number.isFinite(Number(assets.frontImageX))?100-Number(assets.frontImageX):50}% ${Number.isFinite(Number(assets.frontImageY))?Number(assets.frontImageY):50}%`;
@@ -336,7 +336,7 @@ window.setAssetDraft=(field,value)=>{
   }
   if(field==="frontLogoVisible"){
     const logo=live.querySelector(".vhs-front-logo");
-    if(logo)logo.style.display=Boolean(value)?"flex":"none";
+    if(logo)logo.classList.toggle("asset-logo-hidden",!Boolean(value));
     const toggle=document.querySelector(".asset-toggle .toggle");
     if(toggle)toggle.classList.toggle("on",Boolean(value));
   }
