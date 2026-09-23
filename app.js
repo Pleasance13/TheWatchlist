@@ -48,17 +48,23 @@ function stack(v){return `<div class="stack">${v.map(([n,c])=>`<div class="ring 
 function responseButtons(m,compact=false){const mine=currentVote(m.id);return `<div class="quick-votes ${compact?"compact":""}" onclick="event.stopPropagation()">${[["must","Must Watch"],["interested","Interested"],["watch","I'd Watch"],["no","Not Interested"]].map(([k,l])=>`<button class="quick-vote quick-${k} ${mine===k?"selected":""}" onclick="vote('${m.id}','${k}')" title="${l}" aria-label="${l}">${compact?({must:"Must Watch",interested:"Interested",watch:"I'd Watch",no:"Not Interested"}[k]):l}</button>`).join("")}</div>`}
 function listView(items,historyMode=false){return `<div class="list">${items.map((m,i)=>{const mine=currentVote(m.id);return `<article class="row ${mine==="no"?"not-interested-row":""} ${historyMode?"history-row":""}" data-movie-id="${m.id}">${historyMode?"":`<div class="rank">#${i+1}</div>`}<div class="list-vhs" aria-hidden="true"><div class="vhs-stage">${caseFaces(m,"","list-vhs-inner")}</div></div><div onclick="openMovie('${m.id}')" style="cursor:pointer"><div class="title">${m.title}</div><div class="meta">${m.year} · ${m.genre} · ${m.director}</div>${historyMode?"":responseButtons(m,true)}</div><div>${historyMode?stack((m.watchedBy||[]).map(n=>[n,"green"])):stack(voterEntries(m))}</div><div class="seen">${m.seen.includes("Josh")?"◉ Seen":"○ Not seen"}</div></article>`}).join("")}</div>`}
 function caseFaces(m, backHtml, extraClass=""){
-  const poster = m.posterPath && window.TMDB ? TMDB.image(m.posterPath,"w500") : fallback(m.title,m.year);
-  const textlessPoster = m.textlessPosterPath && window.TMDB ? TMDB.image(m.textlessPosterPath,"w500") : poster;
-  const backdrop = m.backdropPath && window.TMDB ? TMDB.image(m.backdropPath,"w780") : poster;
-  const logo = m.logoPath && window.TMDB ? TMDB.image(m.logoPath,"w300") : "";
-  const logoMarkup = logo ? `<img class="vhs-logo" src="${logo}" alt="" aria-hidden="true">` : `<div class="vhs-logo-fallback">${m.title}</div>`;
-  const frontLogo = logo ? `<div class="vhs-front-logo">${logoMarkup}</div>` : "";
-  const spineMarkup = logo ? `<img class="vhs-spine-logo" src="${logo}" alt="" aria-hidden="true">` : `<span class="spine-label">${m.title}</span>`;
-  const style = `--poster-art:url("${textlessPoster}");--backdrop-art:url("${backdrop}")`;
+  const assets=caseAssets(m);
+  const poster=m.posterPath&&window.TMDB?TMDB.image(m.posterPath,"w500"):fallback(m.title,m.year);
+  const defaultPoster=m.textlessPosterPath&&window.TMDB?TMDB.image(m.textlessPosterPath,"w500"):poster;
+  const frontPath=assets.frontImagePath||m.textlessPosterPath||m.posterPath||null;
+  const frontImage=frontPath&&window.TMDB?TMDB.image(frontPath,"w500"):defaultPoster;
+  const backPath=assets.backStillPath||m.backdropPath||m.posterPath||null;
+  const backdrop=backPath&&window.TMDB?TMDB.image(backPath,"w780"):poster;
+  const logoPath=assets.frontLogoPath!==undefined?assets.frontLogoPath:m.logoPath;
+  const logo=logoPath&&window.TMDB?TMDB.image(logoPath,"w300"):"";
+  const logoMarkup=logo?`<img class="vhs-logo" src="${logo}" alt="" aria-hidden="true">`:`<div class="vhs-logo-fallback">${m.title}</div>`;
+  const frontLogo=logo?`<div class="vhs-front-logo" style="--front-logo-size:${Number(assets.frontLogoSize)||22}%;--front-logo-bottom:${Number(assets.frontLogoBottom)||6}%">${logoMarkup}</div>`:"";
+  const spineMarkup=logo?`<img class="vhs-spine-logo" src="${logo}" alt="" aria-hidden="true">`:`<span class="spine-label">${m.title}</span>`;
+  const style=`--poster-art:url("${frontImage}");--backdrop-art:url("${backdrop}")`;
+  const objectPosition=`object-position:${Number(assets.frontImageX)||50}% ${Number(assets.frontImageY)||50}%`;
   return `<div class="vhs-inner ${extraClass}" style="${style}">
-    <div class="vhs-front"><span class="rank-badge" style="${m.watched?"display:none":""}">#${rankOf(m)}</span><img src="${textlessPoster}" alt="${m.title}">${frontLogo}</div>
-    <div class="vhs-back"><img class="vhs-back-art" src="${backdrop}" alt="" aria-hidden="true"><div class="vhs-back-scroll">${m.logoPath&&window.TMDB?`<div class="vhs-back-logo">${logoMarkup}</div>`:""}${backHtml}</div></div>
+    <div class="vhs-front"><span class="rank-badge" style="${m.watched?"display:none":""}">#${rankOf(m)}</span><img src="${frontImage}" alt="${m.title}" style="${objectPosition}">${frontLogo}</div>
+    <div class="vhs-back"><img class="vhs-back-art" src="${backdrop}" alt="" aria-hidden="true"><div class="vhs-back-scroll">${logo&&window.TMDB?`<div class="vhs-back-logo">${logoMarkup}</div>`:""}${backHtml}</div></div>
     <div class="vhs-side vhs-right">${spineMarkup}</div>
     <div class="vhs-side vhs-left">${spineMarkup}</div><div class="vhs-side vhs-top"></div><div class="vhs-side vhs-bottom"></div>
   </div>`;
