@@ -40,7 +40,7 @@ function caseFaces(m, backHtml, extraClass=""){
   const spineMarkup = logo ? `<img class="vhs-spine-logo" src="${logo}" alt="" aria-hidden="true">` : `<span class="spine-label">${m.title}</span>`;
   const style = `--poster-art:url("${textlessPoster}");--backdrop-art:url("${backdrop}")`;
   return `<div class="vhs-inner ${extraClass}" style="${style}">
-    <div class="vhs-front"><span class="rank-badge">#${rankOf(m)}</span><img src="${textlessPoster}" alt="${m.title}"><div class="vhs-front-logo">${frontLogo}</div></div>
+    <div class="vhs-front"><span class="rank-badge">#${rankOf(m)}</span><img src="${textlessPoster}" alt="${m.title}">${frontLogo}</div>
     <div class="vhs-back"><img class="vhs-back-art" src="${backdrop}" alt="" aria-hidden="true"><div class="vhs-back-scroll">${m.logoPath&&window.TMDB?`<div class="vhs-back-logo">${logoMarkup}</div>`:""}${backHtml}</div></div>
     <div class="vhs-side vhs-right">${spineMarkup}</div>
     <div class="vhs-side vhs-left">${spineMarkup}</div><div class="vhs-side vhs-top"></div><div class="vhs-side vhs-bottom"></div>
