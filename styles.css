@@ -349,13 +349,16 @@ button,input{font:inherit}button{color:inherit}.topbar{height:72px;padding:0 32p
 .vhs-logo-fallback{color:#f1eee5;font-size:calc(var(--box-height) * .045);line-height:1;font-weight:850;letter-spacing:.02em;text-align:center;text-shadow:0 2px 4px rgba(0,0,0,.9)}
 .vhs-back-scroll{padding-top:calc(var(--box-height) * .255)}
 .vhs-right,.vhs-left{
-  background-image:linear-gradient(90deg,rgba(8,10,12,.52),rgba(28,31,35,.82)),var(--poster-art);
-  background-size:cover;background-position:center;filter:saturate(.72) brightness(.72);
+  background-image:linear-gradient(90deg,rgba(8,10,12,.56),rgba(28,31,35,.82)),var(--poster-art);
+  background-size:cover;background-position:center;filter:saturate(.78) brightness(.72);
 }
 .vhs-top,.vhs-bottom{
-  background-image:linear-gradient(rgba(8,10,12,.56),rgba(24,27,30,.86)),var(--poster-art);
-  background-size:cover;background-position:center;filter:saturate(.68) brightness(.68);
+  background-image:linear-gradient(rgba(8,10,12,.58),rgba(24,27,30,.86)),var(--poster-art);
+  background-size:cover;background-position:center;filter:saturate(.74) brightness(.7);
 }
+.vhs-spine-logo,.spine-label{position:absolute;inset:5px 2px;display:flex;align-items:center;justify-content:center}
+.vhs-spine-logo{width:100%;height:100%;object-fit:contain;object-position:center;transform:rotate(180deg);filter:drop-shadow(0 1px 2px rgba(0,0,0,.85))}
+.spine-label{writing-mode:vertical-rl;transform:rotate(180deg);color:#dedbd2;font-size:calc(var(--box-height) * .0305);line-height:1.05;font-weight:800;letter-spacing:.045em;text-align:center;overflow:hidden;text-shadow:0 1px 1px #000}
 .detail-title-row h2{display:flex;align-items:center;min-height:42px}
 .detail-logo{display:block;max-width:230px;max-height:54px;object-fit:contain;object-position:left center;filter:drop-shadow(0 1px 2px rgba(0,0,0,.55))}
 @media(max-width:760px){.detail-logo{max-width:180px;max-height:46px}}
