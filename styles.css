@@ -671,3 +671,46 @@ button,input{font:inherit}button{color:inherit}.topbar{height:72px;padding:0 32p
   .artwork-picker.asset-modal{overflow:auto}
   .artwork-controls-column{max-height:none;overflow:visible;padding-right:0}
 }
+
+/* Artwork picker sizing, language groups, and front-logo layering fixes */
+.artwork-picker.asset-modal{
+  height:min(860px,calc(100vh - 40px));
+  box-sizing:border-box;
+}
+.asset-language-list{display:block}
+.asset-language-list .asset-language-group{width:100%}
+.vhs-front>img{
+  position:absolute!important;
+  inset:0!important;
+  z-index:1!important;
+  width:100%!important;
+  height:100%!important;
+  object-fit:cover!important;
+  display:block!important;
+}
+.vhs-front-logo{
+  position:absolute!important;
+  left:12%!important;
+  right:12%!important;
+  bottom:var(--front-logo-bottom,6%)!important;
+  height:var(--front-logo-size,22%)!important;
+  z-index:20!important;
+  display:flex!important;
+  align-items:flex-end!important;
+  justify-content:center!important;
+  pointer-events:none!important;
+  overflow:hidden!important;
+  box-sizing:border-box!important;
+}
+.vhs-front-logo .vhs-logo{
+  position:relative!important;
+  z-index:21!important;
+  display:block!important;
+  width:100%!important;
+  height:100%!important;
+  max-width:none!important;
+  max-height:none!important;
+  object-fit:contain!important;
+  object-position:center bottom!important;
+}
+.asset-section-toggle,.asset-language-heading{position:relative;z-index:2}
