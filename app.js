@@ -221,7 +221,7 @@ function assetEditor(){
       '<label>Logo size <input type="range" min="10" max="40" value="'+d.frontLogoSize+'" oninput="setAssetDraft(\'frontLogoSize\',this.value)"><b data-asset-value="frontLogoSize">'+d.frontLogoSize+'%</b></label>'+
       '<label>Vertical position <input type="range" min="0" max="100" value="'+d.frontLogoBottom+'" oninput="setAssetDraft(\'frontLogoBottom\',this.value)"><b data-asset-value="frontLogoBottom">'+d.frontLogoBottom+'% from bottom</b></label>'+
     '</div>'+
-    '<label class="asset-toggle"><span><strong>Show logo on front</strong><small>Keep the logo on the back and spines even when hidden here.</small></span><button type="button" class="toggle '+(d.frontLogoVisible?"on":"")+'" onclick="setAssetDraft(\'frontLogoVisible\',!this.classList.contains('on'))" aria-label="Toggle front logo"></button></label>';
+    '<label class="asset-toggle"><span><strong>Show logo on front</strong><small>Keep the logo on the back and spines even when hidden here.</small></span><button type="button" class="toggle '+(d.frontLogoVisible?"on":"")+'" onclick="toggleAssetLogo(this)" aria-label="Toggle front logo"></button></label>';
   const detailLogoBody='<div class="asset-grid-scroll"><div class="asset-grid asset-language-list logo-grid">'+assetCards(tmdb.logos||[],"detail-logo",d.detailLogoPath)+'</div></div>';
   const frontImageBody='<div class="asset-grid-scroll"><div class="asset-grid asset-language-list poster-grid">'+assetCards(tmdb.posters||[],"poster",d.frontImagePath)+'</div></div>'+
     '<div class="asset-controls">'+
@@ -301,6 +301,19 @@ window.chooseAsset=(type,encodedPath)=>{
       requestAnimationFrame(()=>preview.classList.toggle("flipped",targetFlipped));
     }
   });
+};
+window.toggleAssetLogo=(button)=>{
+  const m=movies.find(x=>x.id===state.assetMovieId);if(!m||!canEditCaseAssets())return;
+  const a=savedCaseAssets[m.id]||{};
+  const visible=a.frontLogoVisible!==false;
+  const next=!visible;
+  a.frontLogoVisible=next;
+  savedCaseAssets[m.id]=a;
+  saveCaseAssets();
+  const live=document.querySelector("[data-asset-preview] .vhs-inner");
+  const logo=live?.querySelector(".vhs-front-logo");
+  if(logo)logo.classList.toggle("asset-logo-hidden",!next);
+  if(button)button.classList.toggle("on",next);
 };
 window.setAssetDraft=(field,value)=>{
   const m=movies.find(x=>x.id===state.assetMovieId);if(!m||!canEditCaseAssets())return;
