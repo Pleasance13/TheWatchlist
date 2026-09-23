@@ -395,3 +395,6 @@ button,input{font:inherit}button{color:inherit}.topbar{height:72px;padding:0 32p
 
 /* Clip the star fill at the exact half of the star glyph box. */
 .rating-star .star-fill{clip-path:inset(0 50% 0 0)}
+
+.history-row{grid-template-columns:54px minmax(200px,1fr) auto auto}
+.history-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:18px}
