@@ -125,7 +125,7 @@ function assetLanguageLabel(a){return a.isoLanguage||"No language"}
 function assetCards(items,type,selected){
   if(!items?.length)return '<div class="asset-empty">No TMDB assets found.</div>';
   return items.map(a=>{
-    const safe=JSON.stringify(String(a.filePath));
+    const safe=encodeURIComponent(String(a.filePath));
     const sel=selected===a.filePath?" selected":"";
     const size=type==="logo"||type==="detail-logo"?"w300":type==="poster"?"w185":"w300";
     return `<button class="asset-card${sel}" onclick="chooseAsset('${type}','${safe}')" title="${assetLanguageLabel(a)}"><img src="${assetImage(a.filePath,size)}" alt=""><span>${assetLanguageLabel(a)}</span></button>`;
@@ -133,7 +133,7 @@ function assetCards(items,type,selected){
 }
 function assetEditor(){
   const m=movies.find(x=>x.id===state.assetMovieId);
-  if(!m||!canEditCaseAssets())return "";
+  if(!state.assetEditorOpen||!m||!canEditCaseAssets())return "";
   const d=assetDraft(m),tmdb=m.tmdbAssets||{};
   return `<div class="modal-backdrop open" onclick="if(event.target===this)closeAssetEditor()"><section class="asset-modal" role="dialog" aria-modal="true" aria-labelledby="asset-title">
     <div class="modal-head"><div><div class="eyebrow">TMDB ARTWORK</div><h2 id="asset-title">Customize case artwork</h2><p class="asset-sub">${m.title} · changes are saved in this browser</p></div><button class="modal-close" onclick="closeAssetEditor()" aria-label="Close">×</button></div>
@@ -170,8 +170,9 @@ window.openAssetEditor=async id=>{
   finally{state.assetLoading=false;render()}
 };
 window.closeAssetEditor=()=>{state.assetEditorOpen=false;state.assetMovieId=null;state.assetLoading=false;render()};
-window.chooseAsset=(type,path)=>{
+window.chooseAsset=(type,encodedPath)=>{
   const m=movies.find(x=>x.id===state.assetMovieId);if(!m||!canEditCaseAssets())return;
+  const path=decodeURIComponent(encodedPath);
   const a=savedCaseAssets[m.id]||{};
   if(type==="logo")a.frontLogoPath=path;
   else if(type==="detail-logo")a.detailLogoPath=path;
