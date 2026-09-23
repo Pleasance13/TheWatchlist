@@ -13,6 +13,11 @@ let savedMovies=[];
 try{savedMovies=JSON.parse(localStorage.getItem("watchlist-added-movies")||"[]");}catch(error){savedMovies=[];}
 const movies=[...seedMovies,...savedMovies];
 const baseScores=Object.fromEntries(movies.map(m=>[m.id,m.score||0]));
+let movieReviews={};let watchedMovies=[];
+try{movieReviews=JSON.parse(localStorage.getItem("watchlist-movie-reviews")||"{}");}catch(error){movieReviews={}}
+try{watchedMovies=JSON.parse(localStorage.getItem("watchlist-watched-movies")||"[]");}catch(error){watchedMovies=[]}
+watchedMovies.forEach(id=>{const m=movies.find(x=>x.id===id);if(m)m.watched=true});
+const currentUser="Josh";
 const state={nav:"watchlist",view:"list",search:"",filter:"all",posterSize:175,showSynopsis:true,showRatings:false,showNote:true,showTrailer:false,detail:null,showFilters:false,votes:{},addMovieOpen:false,addMovieQuery:"",addMovieResults:[],addMovieSelection:null,addMovieLoading:false,addMovieError:""};
 const app=document.querySelector("#app");
 
