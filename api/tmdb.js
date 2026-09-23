@@ -62,21 +62,63 @@ export default async function handler(req, res) {
       const data = await tmdbFetch("/search/movie", {
         query,
         page,
-        include_adult: "false"
+        include_adult: "false",
+        language: "en-US"
       });
 
-      return send(res, 200, {
-        results: (data.results || []).map(movie => ({
+      // Keep TMDB's relevance ordering within each language group, but put
+      // English-language movies first so mixed-language searches don't get
+      // dominated by unrelated non-English matches.
+      const ordered = (data.results || []).slice().sort((a, b) => {
+        const aEnglish = a.original_language === "en" ? 1 : 0;
+        const bEnglish = b.original_language === "en" ? 1 : 0;
+        if (aEnglish !== bEnglish) return bEnglish - aEnglish;
+        return (b.popularity || 0) - (a.popularity || 0);
+      }).slice(0, 8);
+
+      const results = await Promise.all(ordered.map(async movie => {
+        let images = {};
+        try {
+          images = await tmdbFetch(`/movie/${movie.id}/images`, {
+            include_image_language: "en,null"
+          });
+        } catch (error) {
+          // Artwork is optional; the search result still works with TMDB's
+          // standard poster if the image request fails.
+        }
+
+        const logos = (images.logos || [])
+          .slice()
+          .sort((a, b) => (b.vote_average || 0) - (a.vote_average || 0));
+        const logo = logos.find(item => item.iso_639_1 === "en")
+          || logos.find(item => item.iso_639_1 === null)
+          || logos[0]
+          || null;
+
+        const textlessPosters = (images.posters || [])
+          .filter(item => item.iso_639_1 === null)
+          .slice()
+          .sort((a, b) => (b.vote_average || 0) - (a.vote_average || 0));
+        const textlessPoster = textlessPosters[0] || null;
+
+        return {
           tmdbId: movie.id,
           title: movie.title,
           originalTitle: movie.original_title,
+          originalLanguage: movie.original_language || null,
           year: movie.release_date ? Number(movie.release_date.slice(0, 4)) : null,
           releaseDate: movie.release_date || null,
           posterPath: movie.poster_path || null,
+          textlessPosterPath: textlessPoster ? textlessPoster.file_path : null,
+          logoPath: logo ? logo.file_path : null,
           backdropPath: movie.backdrop_path || null,
           synopsis: movie.overview || "",
           popularity: movie.popularity || 0
-        })),
+        };
+      }));
+
+      return send(res, 200, {
+        results,
         page: data.page || page,
         totalPages: data.total_pages || 1,
         totalResults: data.total_results || 0
