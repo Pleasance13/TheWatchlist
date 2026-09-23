@@ -588,3 +588,20 @@ button,input{font:inherit}button{color:inherit}.topbar{height:72px;padding:0 32p
   .artwork-preview-case{width:230px}
   .artwork-preview-hint{margin-bottom:4px}
 }
+
+/* Artwork picker: keep the preview fixed while the controls scroll */
+.artwork-picker.asset-modal{overflow:hidden}
+.artwork-controls-column{max-height:calc(100vh - 150px);overflow-y:auto;padding-right:8px;scrollbar-width:thin;scrollbar-color:#3b4048 transparent}
+.artwork-controls-column::-webkit-scrollbar{width:6px}
+.artwork-controls-column::-webkit-scrollbar-track{background:transparent}
+.artwork-controls-column::-webkit-scrollbar-thumb{background:#3b4048;border-radius:999px}
+.artwork-live-preview .vhs-stage{cursor:pointer}
+.artwork-preview-case.flipped .vhs-inner{transform:rotateY(171deg)}
+.vhs-front>img{position:relative;z-index:1}
+.vhs-front-logo{z-index:10}
+.vhs-front-logo .vhs-logo{position:relative;z-index:11}
+.vhs-back-art{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:0}
+@media(max-width:900px){
+  .artwork-picker.asset-modal{overflow:auto}
+  .artwork-controls-column{max-height:none;overflow:visible;padding-right:0}
+}
