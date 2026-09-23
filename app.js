@@ -123,7 +123,7 @@ function assetLanguageLabel(a){return a.isoLanguage||"No language"}
 function assetCards(items,type,selected){
   if(!items?.length)return '<div class="asset-empty">No TMDB assets found.</div>';
   return items.map(a=>{
-    const safe=String(a.filePath).replace(/'/g,"\\\\'");
+    const safe=JSON.stringify(String(a.filePath));
     const sel=selected===a.filePath?" selected":"";
     const size=type==="logo"||type==="detail-logo"?"w300":type==="poster"?"w185":"w300";
     return \`<button class="asset-card\${sel}" onclick="chooseAsset('\${type}','\${safe}')" title="\${assetLanguageLabel(a)}"><img src="\${assetImage(a.filePath,size)}" alt=""><span>\${assetLanguageLabel(a)}</span></button>\`;
