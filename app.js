@@ -28,12 +28,16 @@ try{savedCaseAssets=JSON.parse(localStorage.getItem("watchlist-case-assets")||"{
 // Temporary UI gate: once Discord auth exists, replace this with the authenticated Josh/Discord user ID check.
 function canEditCaseAssets(){return currentUser==="Josh"}
 function caseAssets(m){return savedCaseAssets[m.id]||{}}
+function movieLogoPath(m,preferred){
+  const a=caseAssets(m);
+  return preferred||a.frontLogoPath||a.detailLogoPath||m.logoPath||m.tmdbAssets?.logos?.find(x=>x.isoLanguage==='en'||!x.isoLanguage)?.filePath||m.tmdbAssets?.logos?.[0]?.filePath||null;
+}
 function saveCaseAssets(){try{localStorage.setItem("watchlist-case-assets",JSON.stringify(savedCaseAssets));}catch(error){}}
 function assetDraft(m){
   const a=caseAssets(m);
   const num=(value,fallback)=>Number.isFinite(Number(value))?Number(value):fallback;
   return {
-    frontLogoPath:a.frontLogoPath||m.logoPath||null,
+    frontLogoPath:movieLogoPath(m)||null,
     frontLogoSize:num(a.frontLogoSize,22),
     frontLogoBottom:num(a.frontLogoBottom,6),
     frontLogoVisible:a.frontLogoVisible!==false,
@@ -72,7 +76,7 @@ function caseFaces(m, backHtml, extraClass=""){
   const frontImage=frontPath&&window.TMDB?TMDB.image(frontPath,"w500"):defaultPoster;
   const backPath=assets.backStillPath||m.backdropPath||m.posterPath||null;
   const backdrop=backPath&&window.TMDB?TMDB.image(backPath,"w780"):poster;
-  const logoPath=assets.frontLogoPath||m.logoPath||(m.tmdbAssets?.logos?.[0]?.filePath)||null;
+  const logoPath=movieLogoPath(m,assets.frontLogoPath);
   const logo=logoPath&&window.TMDB?TMDB.image(logoPath,"w300"):"";
   const logoMarkup=logo?`<img class="vhs-logo" src="${logo}" alt="" aria-hidden="true">`:`<div class="vhs-logo-fallback">${m.title}</div>`;
   const frontLogo=logo&&assets.frontLogoVisible!==false?`<div class="vhs-front-logo" style="--front-logo-size:${Number.isFinite(Number(assets.frontLogoSize))?Number(assets.frontLogoSize):22}%;--front-logo-bottom:${Number.isFinite(Number(assets.frontLogoBottom))?Number(assets.frontLogoBottom):6}%>${logoMarkup}</div>`:"";
@@ -155,7 +159,7 @@ function assetCards(items,type,selected){
       return `<button class="asset-card${sel}" onclick="chooseAsset('${type}','${safe}')" title="${assetLanguageName(key)}"><img src="${assetImage(a.filePath,size)}" alt=""><span>${assetLanguageName(key)}</span></button>`;
     }).join("");
     return `<div class="asset-language-group ${open?"open":""}">
-      <button type="button" class="asset-language-heading" onclick="toggleAssetLanguage('${id}')" aria-expanded="${open}">
+      <button type="button" class="asset-language-heading" onclick="toggleAssetLanguage('${id}',event)" aria-expanded="${open}">
         <strong>${assetLanguageName(key)}</strong><span>${group.length} asset${group.length===1?"":"s"} <b>${open?"−":"+"}</b></span>
       </button>
       ${open?`<div class="asset-language-grid">${cards}</div>`:""}
@@ -165,7 +169,7 @@ function assetCards(items,type,selected){
 function assetSection(id,number,title,description,body){
   const open=state.assetSections[id]!==false;
   return `<div class="asset-section ${open?"open":""}">
-    <button type="button" class="asset-heading asset-section-toggle" onclick="toggleAssetSection('${id}')" aria-expanded="${open}">
+    <button type="button" class="asset-heading asset-section-toggle" onclick="toggleAssetSection('${id}',event)" aria-expanded="${open}">
       <span><strong>${number}. ${title}</strong><small>${description}</small></span><b>${open?"−":"+"}</b>
     </button>
     ${open?body:""}
@@ -194,13 +198,15 @@ function restoreArtworkView(view){
     if(preview)preview.classList.toggle("flipped",view.flipped);
   }));
 }
-window.toggleAssetSection=id=>{
+window.toggleAssetSection=(id,event)=>{
+  event?.stopPropagation();
   const view=preserveArtworkView();
   state.assetSections[id]=state.assetSections[id]===false;
   render();
   restoreArtworkView(view);
 };
-window.toggleAssetLanguage=id=>{
+window.toggleAssetLanguage=(id,event)=>{
+  event?.stopPropagation();
   const view=preserveArtworkView();
   state.assetLanguageGroups[id]=state.assetLanguageGroups[id]===false;
   render();
@@ -210,19 +216,19 @@ function assetEditor(){
   const m=movies.find(x=>x.id===state.assetMovieId);
   if(!state.assetEditorOpen||state.nav!=="detail"||state.detail!==state.assetMovieId||!m||!canEditCaseAssets())return "";
   const d=assetDraft(m),tmdb=m.tmdbAssets||{};
-  const frontLogoBody='<div class="asset-grid-scroll"><div class="asset-grid logo-grid">'+assetCards(tmdb.logos||[],"logo",d.frontLogoPath)+'</div></div>'+
+  const frontLogoBody='<div class="asset-grid-scroll"><div class="asset-grid asset-language-list logo-grid">'+assetCards(tmdb.logos||[],"logo",d.frontLogoPath)+'</div></div>'+
     '<div class="asset-controls">'+
       '<label>Logo size <input type="range" min="10" max="40" value="'+d.frontLogoSize+'" oninput="setAssetDraft(\'frontLogoSize\',this.value)"><b data-asset-value="frontLogoSize">'+d.frontLogoSize+'%</b></label>'+
       '<label>Vertical position <input type="range" min="0" max="30" value="'+d.frontLogoBottom+'" oninput="setAssetDraft(\'frontLogoBottom\',this.value)"><b data-asset-value="frontLogoBottom">'+d.frontLogoBottom+'% from bottom</b></label>'+
     '</div>'+
     '<label class="asset-toggle"><span><strong>Show logo on front</strong><small>Keep the logo on the back and spines even when hidden here.</small></span><button type="button" class="toggle '+(d.frontLogoVisible?"on":"")+'" onclick="setAssetDraft(\'frontLogoVisible\','+(d.frontLogoVisible?"false":"true")+')" aria-label="Toggle front logo"></button></label>';
   const detailLogoBody='<div class="asset-grid-scroll"><div class="asset-grid logo-grid">'+assetCards(tmdb.logos||[],"detail-logo",d.detailLogoPath)+'</div></div>';
-  const frontImageBody='<div class="asset-grid-scroll"><div class="asset-grid poster-grid">'+assetCards(tmdb.posters||[],"poster",d.frontImagePath)+'</div></div>'+
+  const frontImageBody='<div class="asset-grid-scroll"><div class="asset-grid asset-language-list poster-grid">'+assetCards(tmdb.posters||[],"poster",d.frontImagePath)+'</div></div>'+
     '<div class="asset-controls">'+
       '<label>Horizontal crop <input type="range" min="0" max="100" value="'+d.frontImageX+'" oninput="setAssetDraft(\'frontImageX\',this.value)"><b data-asset-value="frontImageX">'+d.frontImageX+'%</b></label>'+
       '<label>Vertical crop <input type="range" min="0" max="100" value="'+d.frontImageY+'" oninput="setAssetDraft(\'frontImageY\',this.value)"><b data-asset-value="frontImageY">'+d.frontImageY+'%</b></label>'+
     '</div>';
-  const backStillBody='<div class="asset-grid-scroll"><div class="asset-grid backdrop-grid">'+assetCards(tmdb.backdrops||[],"backdrop",d.backStillPath)+'</div></div>'+
+  const backStillBody='<div class="asset-grid-scroll"><div class="asset-grid asset-language-list backdrop-grid">'+assetCards(tmdb.backdrops||[],"backdrop",d.backStillPath)+'</div></div>'+
     '<div class="asset-controls">'+
       '<label>Horizontal position <input type="range" min="0" max="100" value="'+d.backStillX+'" oninput="setAssetDraft(\'backStillX\',this.value)"><b data-asset-value="backStillX">'+d.backStillX+'%</b></label>'+
       '<label>Vertical position <input type="range" min="0" max="100" value="'+d.backStillY+'" oninput="setAssetDraft(\'backStillY\',this.value)"><b data-asset-value="backStillY">'+d.backStillY+'%</b></label>'+
@@ -273,7 +279,10 @@ window.chooseAsset=(type,encodedPath)=>{
   else if(type==="detail-logo")a.detailLogoPath=path;
   else if(type==="poster")a.frontImagePath=path;
   else if(type==="backdrop")a.backStillPath=path;
-  savedCaseAssets[m.id]=a;saveCaseAssets();render();restoreArtworkView(view);
+  savedCaseAssets[m.id]=a;saveCaseAssets();
+  if(type==="backdrop")view.flipped=true;
+  else if(type==="poster")view.flipped=false;
+  render();restoreArtworkView(view);
 };
 window.setAssetDraft=(field,value)=>{
   const m=movies.find(x=>x.id===state.assetMovieId);if(!m||!canEditCaseAssets())return;
