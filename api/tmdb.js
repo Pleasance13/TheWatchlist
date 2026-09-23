@@ -1,6 +1,9 @@
 const TMDB_BASE = "https://api.themoviedb.org/3";
 
 function send(res, status, body) {
+  res.setHeader("Access-Control-Allow-Origin", "https://pleasance13.github.io");
+  res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
   res.status(status).json(body);
 }
 
@@ -39,6 +42,14 @@ async function tmdbFetch(path, params = {}) {
 
 export default async function handler(req, res) {
   const action = req.query.action;
+
+  res.setHeader("Access-Control-Allow-Origin", "https://pleasance13.github.io");
+  res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+
+  if (req.method === "OPTIONS") {
+    return res.status(204).end();
+  }
 
   try {
     if (req.method !== "GET") return send(res, 405, { error: "GET only." });
