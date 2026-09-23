@@ -514,3 +514,77 @@ button,input{font:inherit}button{color:inherit}.topbar{height:72px;padding:0 32p
   .poster-grid .asset-card img{height:116px}
   .backdrop-grid{grid-template-columns:repeat(auto-fill,minmax(125px,1fr))}
 }
+/* Live artwork picker preview */
+.artwork-picker.asset-modal{
+  position:relative;
+  width:min(1180px,100%);
+  padding-left:350px;
+}
+.artwork-live-preview{
+  position:absolute;
+  left:20px;
+  top:82px;
+  width:300px;
+  text-align:center;
+}
+.artwork-preview-label{
+  margin-bottom:10px;
+  color:var(--muted);
+  font-size:9px;
+  font-weight:700;
+  letter-spacing:.15em;
+}
+.artwork-preview-case{
+  width:275px;
+  aspect-ratio:.565;
+  margin:0 auto;
+  perspective:1250px;
+}
+.artwork-preview-case .vhs-stage{
+  width:100%;
+  height:100%;
+}
+.artwork-preview-hint{
+  margin-top:10px;
+  color:var(--muted);
+  font-size:10px;
+  line-height:1.35;
+}
+.artwork-controls-column{min-width:0}
+.asset-grid-scroll{
+  max-height:210px;
+  overflow:auto;
+  padding:2px 5px 4px 1px;
+  scrollbar-width:thin;
+  scrollbar-color:#3b4048 transparent;
+}
+.asset-grid-scroll::-webkit-scrollbar{width:6px;height:6px}
+.asset-grid-scroll::-webkit-scrollbar-track{background:transparent}
+.asset-grid-scroll::-webkit-scrollbar-thumb{background:#3b4048;border-radius:999px}
+.asset-toggle{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:18px;
+  margin-top:14px;
+  padding-top:13px;
+  border-top:1px solid var(--line);
+  cursor:pointer;
+}
+.asset-toggle span{min-width:0}
+.asset-toggle strong{display:block;font-size:11px;color:var(--text);font-weight:650}
+.asset-toggle small{display:block;margin-top:3px;color:var(--muted);font-size:10px;line-height:1.35}
+.asset-toggle .toggle{margin-left:auto}
+.artwork-picker .asset-section{padding:16px 0}
+@media(max-width:900px){
+  .artwork-picker.asset-modal{padding-left:20px}
+  .artwork-live-preview{
+    position:relative;
+    left:auto;
+    top:auto;
+    width:100%;
+    margin:0 0 20px;
+  }
+  .artwork-preview-case{width:230px}
+  .artwork-preview-hint{margin-bottom:4px}
+}
