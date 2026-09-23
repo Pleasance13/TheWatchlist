@@ -39,6 +39,7 @@ const TMDB = {
 
     movie.tmdbId = data.tmdbId;
     movie.posterPath = data.posterPath || movie.posterPath || null;
+    movie.textlessPosterPath = data.textlessPosterPath || movie.textlessPosterPath || null;
     movie.backdropPath = data.backdropPath || movie.backdropPath || null;
     movie.logoPath = data.logoPath || movie.logoPath || null;
 
