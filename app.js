@@ -185,7 +185,7 @@ function preserveArtworkView(){
     flipped:preview?.classList.contains("flipped")||false
   };
 }
-function restoreArtworkView(view){
+function restoreArtworkView(view,restoreFlip=true){
   if(!view)return;
   requestAnimationFrame(()=>requestAnimationFrame(()=>{
     const controls=document.querySelector(".artwork-controls-column");
@@ -195,7 +195,7 @@ function restoreArtworkView(view){
       if(saved)el.scrollTop=saved[1];
     });
     const preview=document.querySelector("[data-asset-preview]");
-    if(preview)preview.classList.toggle("flipped",view.flipped);
+    if(preview&&restoreFlip)preview.classList.toggle("flipped",view.flipped);
   }));
 }
 window.toggleAssetSection=(id,event)=>{
@@ -283,6 +283,7 @@ window.chooseAsset=(type,encodedPath)=>{
   savedCaseAssets[m.id]=a;saveCaseAssets();
   const targetFlipped=type==="backdrop"?true:type==="poster"?false:wasFlipped;
   render();
+  restoreArtworkView(view,false);
   requestAnimationFrame(()=>{
     const preview=document.querySelector("[data-asset-preview]");
     if(!preview)return;
