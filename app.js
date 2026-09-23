@@ -118,6 +118,31 @@ function attendanceModal(){
   if(!m)return "";
   return `<div class="modal-backdrop open" onclick="if(event.target===this)closeAttendance()"><section class="attendance-modal" role="dialog" aria-modal="true" aria-labelledby="attendance-title"><div class="modal-head"><div><div class="eyebrow">GROUP WATCH</div><h2 id="attendance-title">Who watched?</h2><p class="attendance-sub">Select everyone who watched <strong>${m.title}</strong>.</p></div><button class="modal-close" onclick="closeAttendance()" aria-label="Close">×</button></div><div class="attendance-list">${serverUsers.map(name=>`<button class="attendance-user ${state.attendanceSelected.includes(name)?"selected":""}" onclick="toggleAttendanceUser(event,&quot;${name}&quot;)"><span class="avatar">${name.slice(0,2)}</span><span class="attendance-user-name">${name}</span><span class="attendance-check">${state.attendanceSelected.includes(name)?"✓":""}</span></button>`).join("")}</div><div class="attendance-actions"><button class="ghost" onclick="closeAttendance()">Cancel</button><button class="primary" onclick="confirmAttendance()">Confirm watched</button></div></section></div>`;
 }
+function assetImage(path,size="w185"){return path&&window.TMDB?TMDB.image(path,size):""}
+function assetLanguageLabel(a){return a.isoLanguage||"No language"}
+function assetCards(items,type,selected){
+  if(!items?.length)return '<div class="asset-empty">No TMDB assets found.</div>';
+  return items.map(a=>{
+    const safe=String(a.filePath).replace(/'/g,"\\\\'");
+    const sel=selected===a.filePath?" selected":"";
+    const size=type==="logo"||type==="detail-logo"?"w300":type==="poster"?"w185":"w300";
+    return \`<button class="asset-card\${sel}" onclick="chooseAsset('\${type}','\${safe}')" title="\${assetLanguageLabel(a)}"><img src="\${assetImage(a.filePath,size)}" alt=""><span>\${assetLanguageLabel(a)}</span></button>\`;
+  }).join("")
+}
+function assetEditor(){
+  const m=movies.find(x=>x.id===state.assetMovieId);
+  if(!m||!canEditCaseAssets())return "";
+  const d=assetDraft(m),tmdb=m.tmdbAssets||{};
+  return \`<div class="modal-backdrop open" onclick="if(event.target===this)closeAssetEditor()"><section class="asset-modal" role="dialog" aria-modal="true" aria-labelledby="asset-title">
+    <div class="modal-head"><div><div class="eyebrow">TMDB ARTWORK</div><h2 id="asset-title">Customize case artwork</h2><p class="asset-sub">\${m.title} · changes are saved in this browser</p></div><button class="modal-close" onclick="closeAssetEditor()" aria-label="Close">×</button></div>
+    \${state.assetLoading?'<div class="add-status">Loading TMDB artwork…</div>':state.assetError?'<div class="add-status error">'+state.assetError+'</div>':\`
+      <div class="asset-section"><div class="asset-heading"><strong>Front logo</strong><span>Also used on the spine and back</span></div><div class="asset-grid logo-grid">\${assetCards(tmdb.logos||[],"logo",d.frontLogoPath)}</div><div class="asset-controls"><label>Size <input type="range" min="10" max="40" value="\${d.frontLogoSize}" oninput="setAssetDraft('frontLogoSize',this.value)"><b>\${d.frontLogoSize}%</b></label><label>Vertical position <input type="range" min="0" max="30" value="\${d.frontLogoBottom}" oninput="setAssetDraft('frontLogoBottom',this.value)"><b>\${d.frontLogoBottom}% from bottom</b></label></div></div>
+      <div class="asset-section"><div class="asset-heading"><strong>Details-page logo</strong><span>Choose independently from the case logo</span></div><div class="asset-grid logo-grid">\${assetCards(tmdb.logos||[],"detail-logo",d.detailLogoPath)}</div></div>
+      <div class="asset-section"><div class="asset-heading"><strong>Front image</strong><span>All TMDB poster assets, including language-specific versions</span></div><div class="asset-grid poster-grid">\${assetCards(tmdb.posters||[],"poster",d.frontImagePath)}</div><div class="asset-crop-preview"><img src="\${assetImage(d.frontImagePath,"w500")}" alt="" style="object-position:\${d.frontImageX}% \${d.frontImageY}%"><span>Case crop preview</span></div><div class="asset-controls two"><label>Horizontal position <input type="range" min="0" max="100" value="\${d.frontImageX}" oninput="setAssetDraft('frontImageX',this.value)"><b>\${d.frontImageX}%</b></label><label>Vertical position <input type="range" min="0" max="100" value="\${d.frontImageY}" oninput="setAssetDraft('frontImageY',this.value)"><b>\${d.frontImageY}%</b></label></div></div>
+      <div class="asset-section"><div class="asset-heading"><strong>Back still</strong><span>Choose any TMDB backdrop/still</span></div><div class="asset-grid backdrop-grid">\${assetCards(tmdb.backdrops||[],"backdrop",d.backStillPath)}</div></div>
+      <div class="asset-actions"><button class="ghost" onclick="closeAssetEditor()">Close</button></div>\`}
+  </section></div>\`;
+}
 function render(){app.innerHTML=header()+`<main class="content">${state.nav==="watchlist"?watchlist():state.nav==="history"?history():state.nav==="people"?people():state.nav==="settings"?settings():detail()}</main>`+addMovieModal()+attendanceModal();bindLiveInputs();bindVhsTilt()}
 let addMovieSearchTimer=null;let addMovieSearchRequest=0;
 function bindLiveInputs(){let s=document.querySelector("#search");if(s)s.addEventListener("input",e=>{state.search=e.target.value;updateListOnly()});let r=document.querySelector("#sizeRange");if(r)r.addEventListener("input",e=>setPosterSize(e.target.value));let a=document.querySelector("#addMovieSearch");if(a)a.addEventListener("input",e=>{state.addMovieQuery=e.target.value;clearTimeout(addMovieSearchTimer);const query=e.target.value.trim();if(!query){state.addMovieResults=[];state.addMovieError="";document.querySelector("#addMovieResults").innerHTML=addMovieResults();return}addMovieSearchTimer=setTimeout(()=>searchAddMovies(query),300)})}
