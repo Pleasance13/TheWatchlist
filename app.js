@@ -25,7 +25,8 @@ const state={nav:"watchlist",view:"list",search:"",filter:"all",posterSize:2,sho
 const app=document.querySelector("#app");
 let savedCaseAssets={};
 try{savedCaseAssets=JSON.parse(localStorage.getItem("watchlist-case-assets")||"{}");}catch(error){savedCaseAssets={}}
-// Temporary UI gate: once Discord auth exists, replace this with the authenticated Josh/Discord user ID check.\nfunction canEditCaseAssets(){return currentUser==="Josh"}
+// Temporary UI gate: once Discord auth exists, replace this with the authenticated Josh/Discord user ID check.
+function canEditCaseAssets(){return currentUser==="Josh"}
 function caseAssets(m){return savedCaseAssets[m.id]||{}}
 function saveCaseAssets(){try{localStorage.setItem("watchlist-case-assets",JSON.stringify(savedCaseAssets));}catch(error){}}
 function assetDraft(m){
