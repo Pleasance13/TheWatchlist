@@ -387,3 +387,11 @@ button,input{font:inherit}button{color:inherit}.topbar{height:72px;padding:0 32p
 /* Precise half-star rendering */
 .rating-star .star-base,.rating-star .star-fill{position:absolute;left:0;top:0;right:auto;bottom:auto;width:23px;height:23px;display:block;text-align:left;line-height:23px;white-space:nowrap}
 .rating-star .star-fill{overflow:hidden}
+
+
+/* History is no longer part of the ranked watchlist. */
+.history-movie .quick-votes{display:none}
+.history-detail .vote-box{display:none}
+
+/* Clip the star fill at the exact half of the star glyph box. */
+.rating-star .star-fill{clip-path:inset(0 50% 0 0)}
