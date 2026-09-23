@@ -736,3 +736,5 @@ button,input{font:inherit}button{color:inherit}.topbar{height:72px;padding:0 32p
 
 /* Slightly lighter scrollable artwork subsections */
 .artwork-picker .asset-grid-scroll{background:#202328;border:1px solid rgba(255,255,255,.045);border-radius:7px}
+
+.vhs-front-logo.asset-logo-hidden{display:none!important}
