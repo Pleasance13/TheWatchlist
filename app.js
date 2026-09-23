@@ -82,10 +82,10 @@ function caseFaces(m, backHtml, extraClass=""){
   const frontLogo=logo&&assets.frontLogoVisible!==false?`<div class="vhs-front-logo" style="--front-logo-size:${Number.isFinite(Number(assets.frontLogoSize))?Number(assets.frontLogoSize):22}%;--front-logo-bottom:${Number.isFinite(Number(assets.frontLogoBottom))?Number(assets.frontLogoBottom):6}%;--front-logo-image:url("${logo}")" aria-hidden="true">${logoMarkup}</div>`:"";
   const spineMarkup=logo?`<img class="vhs-spine-logo" src="${logo}" alt="" aria-hidden="true">`:`<span class="spine-label">${m.title}</span>`;
   const style=`--poster-art:url("${frontImage}");--backdrop-art:url("${backdrop}")`;
-  const objectPosition=`object-position:${Number.isFinite(Number(assets.frontImageX))?Number(assets.frontImageX):50}% ${Number.isFinite(Number(assets.frontImageY))?Number(assets.frontImageY):50}%`;
+  const objectPosition=`object-position:${Number.isFinite(Number(assets.frontImageX))?100-Number(assets.frontImageX):50}% ${Number.isFinite(Number(assets.frontImageY))?Number(assets.frontImageY):50}%`;
   return `<div class="vhs-inner ${extraClass}" style="${style}">
     <div class="vhs-front"><span class="rank-badge" style="${m.watched?"display:none":""}">#${rankOf(m)}</span><img src="${frontImage}" alt="${m.title}" style="${objectPosition}">${frontLogo}</div>
-    <div class="vhs-back"><img class="vhs-back-art" src="${backdrop}" alt="" aria-hidden="true" style="object-position:${Number.isFinite(Number(assets.backStillX))?Number(assets.backStillX):50}% ${Number.isFinite(Number(assets.backStillY))?Number(assets.backStillY):50}%"><div class="vhs-back-scroll">${logo&&window.TMDB?`<div class="vhs-back-logo">${logoMarkup}</div>`:""}${backHtml}</div></div>
+    <div class="vhs-back"><img class="vhs-back-art" src="${backdrop}" alt="" aria-hidden="true" style="object-position:${Number.isFinite(Number(assets.backStillX))?100-Number(assets.backStillX):50}% ${Number.isFinite(Number(assets.backStillY))?Number(assets.backStillY):50}%"><div class="vhs-back-scroll">${logo&&window.TMDB?`<div class="vhs-back-logo">${logoMarkup}</div>`:""}${backHtml}</div></div>
     <div class="vhs-side vhs-right">${spineMarkup}</div>
     <div class="vhs-side vhs-left">${spineMarkup}</div><div class="vhs-side vhs-top"></div><div class="vhs-side vhs-bottom"></div>
   </div>`;
@@ -219,10 +219,10 @@ function assetEditor(){
   const frontLogoBody='<div class="asset-grid-scroll"><div class="asset-grid asset-language-list logo-grid">'+assetCards(tmdb.logos||[],"logo",d.frontLogoPath)+'</div></div>'+
     '<div class="asset-controls">'+
       '<label>Logo size <input type="range" min="10" max="40" value="'+d.frontLogoSize+'" oninput="setAssetDraft(\'frontLogoSize\',this.value)"><b data-asset-value="frontLogoSize">'+d.frontLogoSize+'%</b></label>'+
-      '<label>Vertical position <input type="range" min="0" max="30" value="'+d.frontLogoBottom+'" oninput="setAssetDraft(\'frontLogoBottom\',this.value)"><b data-asset-value="frontLogoBottom">'+d.frontLogoBottom+'% from bottom</b></label>'+
+      '<label>Vertical position <input type="range" min="0" max="100" value="'+d.frontLogoBottom+'" oninput="setAssetDraft(\'frontLogoBottom\',this.value)"><b data-asset-value="frontLogoBottom">'+d.frontLogoBottom+'% from bottom</b></label>'+
     '</div>'+
     '<label class="asset-toggle"><span><strong>Show logo on front</strong><small>Keep the logo on the back and spines even when hidden here.</small></span><button type="button" class="toggle '+(d.frontLogoVisible?"on":"")+'" onclick="setAssetDraft(\'frontLogoVisible\','+(d.frontLogoVisible?"false":"true")+')" aria-label="Toggle front logo"></button></label>';
-  const detailLogoBody='<div class="asset-grid-scroll"><div class="asset-grid logo-grid">'+assetCards(tmdb.logos||[],"detail-logo",d.detailLogoPath)+'</div></div>';
+  const detailLogoBody='<div class="asset-grid-scroll"><div class="asset-grid asset-language-list logo-grid">'+assetCards(tmdb.logos||[],"detail-logo",d.detailLogoPath)+'</div></div>';
   const frontImageBody='<div class="asset-grid-scroll"><div class="asset-grid asset-language-list poster-grid">'+assetCards(tmdb.posters||[],"poster",d.frontImagePath)+'</div></div>'+
     '<div class="asset-controls">'+
       '<label>Horizontal crop <input type="range" min="0" max="100" value="'+d.frontImageX+'" oninput="setAssetDraft(\'frontImageX\',this.value)"><b data-asset-value="frontImageX">'+d.frontImageX+'%</b></label>'+
@@ -273,7 +273,7 @@ window.closeAssetEditor=()=>{state.assetEditorOpen=false;state.assetMovieId=null
 window.chooseAsset=(type,encodedPath)=>{
   const m=movies.find(x=>x.id===state.assetMovieId);if(!m||!canEditCaseAssets())return;
   const view=preserveArtworkView();
-  const wasFlipped=view.flipped;
+  const wasFlipped=Boolean(view.flipped);
   const path=decodeURIComponent(encodedPath);
   const a=savedCaseAssets[m.id]||{};
   if(type==="logo")a.frontLogoPath=path;
@@ -281,40 +281,65 @@ window.chooseAsset=(type,encodedPath)=>{
   else if(type==="poster")a.frontImagePath=path;
   else if(type==="backdrop")a.backStillPath=path;
   savedCaseAssets[m.id]=a;saveCaseAssets();
-  const targetFlipped=type==="backdrop"?true:type==="poster"?false:wasFlipped;
+
+  const shouldFlip=type==="poster"?!wasFlipped:type==="backdrop"?wasFlipped:false;
+  const targetFlipped=(type==="poster"||type==="backdrop")?shouldFlip:wasFlipped;
+
   render();
   restoreArtworkView(view,false);
+
   requestAnimationFrame(()=>{
     const preview=document.querySelector("[data-asset-preview]");
-    if(!preview)return;
-    const inner=preview.querySelector(".vhs-inner");
-    if(!inner)return;
-    if(type==="backdrop"||type==="poster"){
-      if(wasFlipped!==targetFlipped){
-        preview.classList.toggle("flipped",wasFlipped);
-        void inner.offsetWidth;
-        requestAnimationFrame(()=>preview.classList.toggle("flipped",targetFlipped));
-      }else{
-        preview.classList.toggle("flipped",targetFlipped);
-      }
-    }else{
-      preview.classList.toggle("flipped",wasFlipped);
+    const inner=preview?.querySelector(".vhs-inner");
+    if(!preview||!inner)return;
+
+    // Restore the side the user was already viewing. Nothing except a front/back
+    // asset selection is allowed to change the preview side.
+    preview.classList.toggle("flipped",wasFlipped);
+
+    if((type==="poster"||type==="backdrop")&&wasFlipped!==targetFlipped){
+      void inner.offsetWidth;
+      requestAnimationFrame(()=>preview.classList.toggle("flipped",targetFlipped));
     }
   });
 };
 window.setAssetDraft=(field,value)=>{
   const m=movies.find(x=>x.id===state.assetMovieId);if(!m||!canEditCaseAssets())return;
   const a=savedCaseAssets[m.id]||{};
-  a[field]=field==="frontLogoVisible"?Boolean(value):Number(value);savedCaseAssets[m.id]=a;saveCaseAssets();
+  a[field]=field==="frontLogoVisible"?Boolean(value):Number(value);
+  savedCaseAssets[m.id]=a;saveCaseAssets();
+
   const label=document.querySelector('[data-asset-value="'+field+'"]');
   if(label)label.textContent=field==="frontLogoBottom"?value+"% from bottom":value+"%";
+
   const live=document.querySelector("[data-asset-preview] .vhs-inner");
-  if(live){
-    if(field==="frontLogoSize")live.style.setProperty("--front-logo-size",Number(value)+"%");
-    if(field==="frontLogoBottom")live.style.setProperty("--front-logo-bottom",Number(value)+"%");
-    if(field==="frontImageX"||field==="frontImageY"){const img=live.querySelector(".vhs-front>img");if(img)img.style.objectPosition=(field==="frontImageX"?value:(a.frontImageX??50))+"% "+(field==="frontImageY"?value:(a.frontImageY??50))+"%";}
-    if(field==="backStillX"||field==="backStillY"){const img=live.querySelector(".vhs-back-art");if(img)img.style.objectPosition=(field==="backStillX"?value:(a.backStillX??50))+"% "+(field==="backStillY"?value:(a.backStillY??50))+"%";}
-    if(field==="frontLogoVisible"){const logo=live.querySelector(".vhs-front-logo");if(logo)logo.style.display=Boolean(value)?"flex":"none";const toggle=document.querySelector(".asset-toggle .toggle");if(toggle)toggle.classList.toggle("on",Boolean(value));}
+  if(!live)return;
+
+  if(field==="frontLogoSize"||field==="frontLogoBottom"){
+    const logo=live.querySelector(".vhs-front-logo");
+    if(logo)logo.style.setProperty(field==="frontLogoSize"?"--front-logo-size":"--front-logo-bottom",Number(value)+"%");
+  }
+  if(field==="frontImageX"||field==="frontImageY"){
+    const img=live.querySelector(".vhs-front>img");
+    if(img){
+      const x=field==="frontImageX"?100-Number(value):100-Number(a.frontImageX??50);
+      const y=field==="frontImageY"?Number(value):Number(a.frontImageY??50);
+      img.style.objectPosition=x+"% "+y+"%";
+    }
+  }
+  if(field==="backStillX"||field==="backStillY"){
+    const img=live.querySelector(".vhs-back-art");
+    if(img){
+      const x=field==="backStillX"?100-Number(value):100-Number(a.backStillX??50);
+      const y=field==="backStillY"?Number(value):Number(a.backStillY??50);
+      img.style.objectPosition=x+"% "+y+"%";
+    }
+  }
+  if(field==="frontLogoVisible"){
+    const logo=live.querySelector(".vhs-front-logo");
+    if(logo)logo.style.display=Boolean(value)?"flex":"none";
+    const toggle=document.querySelector(".asset-toggle .toggle");
+    if(toggle)toggle.classList.toggle("on",Boolean(value));
   }
 };
 window.setNav=x=>{state.nav=x;state.detail=null;render()};window.setView=x=>{state.view=x;render()};window.toggleFilters=()=>{state.showFilters=!state.showFilters;render()};window.setFilter=x=>{state.filter=x;render()};window.setPosterSize=x=>{state.posterSize=Math.max(1,Math.min(4,Math.round(Number(x)||1)));const cols=[12,8,6,5][state.posterSize-1];document.querySelectorAll(".grid").forEach(e=>e.style.setProperty("--grid-cols",cols));document.querySelectorAll(".range").forEach(e=>e.value=state.posterSize);requestAnimationFrame(()=>bindVhsTilt())};window.toggleSetting=k=>{state[k]=!state[k];render()};window.openMovie=id=>{const movie=movies.find(x=>x.id===id);if(!movie)return;state.detail=movie.id;state.nav="detail";render();window.scrollTo({top:0,behavior:"smooth"})};window.togglePerson=p=>{const card=document.querySelector('[data-person="'+p+'"]');if(!card)return;const old=card.querySelector('.person-details');if(old){old.remove();return}const notSeen=movies.filter(m=>{if(m.seen.includes(p))return false;const v=personVote(m,p);return !v||v!=="red"});const interests=notSeen.filter(m=>personVote(m,p));const suggested=movies.filter(m=>p==="Josh"&&!m.seen.includes(p)&&m.note);const details=document.createElement("div");details.className="person-details";details.innerHTML='<div><div class="person-section-label">INTERESTED IN WATCHING</div><div class="person-movies">'+(interests.map(m=>{const v=personVote(m,p);const label=v==="green"?"Interested":v==="yellow"?"I’d Watch":"Not Interested";return '<div class="person-movie"><span>'+m.title+'</span><span class="person-interest '+v+'">'+label+'</span></div>'}).join("")||'<div class="person-empty">No interest responses yet.</div>')+'</div></div><div><div class="person-section-label">HASN\'T SEEN</div><div class="person-movies">'+(notSeen.map(m=>'<div class="person-movie"><span>'+m.title+'</span><span class="person-seen">Not seen</span></div>').join("")||'<div class="person-empty">No movies left unseen.</div>')+'</div></div>'+(suggested.length?'<div><div class="person-section-label">SUGGESTED</div><div class="person-movies">'+suggested.map(m=>'<div class="person-movie"><span>'+m.title+'</span><span class="person-seen">Suggestion</span></div>').join("")+'</div></div>':"");card.appendChild(details)};
