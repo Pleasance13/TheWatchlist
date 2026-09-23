@@ -38,13 +38,16 @@ function caseFaces(m, backHtml, extraClass=""){
   const style = `--poster-art:url("${poster}");--backdrop-art:url("${backdrop}")`;
   return `<div class="vhs-inner ${extraClass}" style="${style}">
     <div class="vhs-front"><span class="rank-badge">#${rankOf(m)}</span><img src="${poster}" alt="${m.title}"></div>
-    <div class="vhs-back"><div class="vhs-back-art" aria-hidden="true"></div><div class="vhs-back-logo">${logoMarkup}</div><div class="vhs-back-scroll">${backHtml}</div></div>
+    <div class="vhs-back"><img class="vhs-back-art" src="${backdrop}" alt="" aria-hidden="true"><div class="vhs-back-logo">${logoMarkup}</div><div class="vhs-back-scroll">${backHtml}</div></div>
     <div class="vhs-side vhs-right"><div class="spine-label">${m.title} · ${m.year}</div></div>
     <div class="vhs-side vhs-left"><div class="spine-label">${m.title} · ${m.year}</div></div><div class="vhs-side vhs-top"></div><div class="vhs-side vhs-bottom"></div>
   </div>`;
 }
 function backContent(m){
- return `<div class="eyebrow">VHS BACK</div><h3>${m.title}</h3>
+ const heading=m.logoPath&&window.TMDB
+   ? `<div class="back-logo-spacer" aria-hidden="true"></div>`
+   : `<h3>${m.title}</h3>`;
+ return `${heading}
  <div class="meta">${m.year} · ${m.genre}</div><div class="meta">${m.director} · ${m.runtime}</div>
  ${state.showSynopsis?`<p>${m.synopsis}</p>`:""}
  ${state.showRatings?`<span class="pill">Rating ${m.rating}</span>`:""}
