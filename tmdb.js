@@ -42,6 +42,11 @@ const TMDB = {
     movie.textlessPosterPath = data.textlessPosterPath || movie.textlessPosterPath || null;
     movie.backdropPath = data.backdropPath || movie.backdropPath || null;
     movie.logoPath = data.logoPath || movie.logoPath || null;
+    movie.tmdbAssets = {
+      logos: data.logos || movie.tmdbAssets?.logos || [],
+      posters: data.posters || movie.tmdbAssets?.posters || [],
+      backdrops: data.backdrops || movie.tmdbAssets?.backdrops || []
+    };
 
     if (data.title) movie.title = data.title;
     if (data.year) movie.year = data.year;
