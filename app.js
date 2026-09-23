@@ -41,7 +41,9 @@ function assetDraft(m){
     frontImagePath:a.frontImagePath!==undefined?a.frontImagePath:(m.textlessPosterPath||m.posterPath||null),
     frontImageX:num(a.frontImageX,50),
     frontImageY:num(a.frontImageY,50),
-    backStillPath:a.backStillPath!==undefined?a.backStillPath:(m.backdropPath||null)
+    backStillPath:a.backStillPath!==undefined?a.backStillPath:(m.backdropPath||null),
+    backStillX:num(a.backStillX,50),
+    backStillY:num(a.backStillY,50)
   }
 }
 
@@ -79,7 +81,7 @@ function caseFaces(m, backHtml, extraClass=""){
   const objectPosition=`object-position:${Number.isFinite(Number(assets.frontImageX))?Number(assets.frontImageX):50}% ${Number.isFinite(Number(assets.frontImageY))?Number(assets.frontImageY):50}%`;
   return `<div class="vhs-inner ${extraClass}" style="${style}">
     <div class="vhs-front"><span class="rank-badge" style="${m.watched?"display:none":""}">#${rankOf(m)}</span><img src="${frontImage}" alt="${m.title}" style="${objectPosition}">${frontLogo}</div>
-    <div class="vhs-back"><img class="vhs-back-art" src="${backdrop}" alt="" aria-hidden="true"><div class="vhs-back-scroll">${logo&&window.TMDB?`<div class="vhs-back-logo">${logoMarkup}</div>`:""}${backHtml}</div></div>
+    <div class="vhs-back"><img class="vhs-back-art" src="${backdrop}" alt="" aria-hidden="true" style="object-position:${Number.isFinite(Number(assets.backStillX))?Number(assets.backStillX):50}% ${Number.isFinite(Number(assets.backStillY))?Number(assets.backStillY):50}%"><div class="vhs-back-scroll">${logo&&window.TMDB?`<div class="vhs-back-logo">${logoMarkup}</div>`:""}${backHtml}</div></div>
     <div class="vhs-side vhs-right">${spineMarkup}</div>
     <div class="vhs-side vhs-left">${spineMarkup}</div><div class="vhs-side vhs-top"></div><div class="vhs-side vhs-bottom"></div>
   </div>`;
@@ -190,11 +192,7 @@ function assetEditor(){
                 <div><strong>3. Front image</strong><span>Choose any TMDB poster asset, including language-specific versions.</span></div>
               </div>
               <div class="asset-grid-scroll"><div class="asset-grid poster-grid">${assetCards(tmdb.posters||[],"poster",d.frontImagePath)}</div>
-              </div><div class="asset-crop-preview">
-                <img src="${assetImage(d.frontImagePath,"w500")}" alt="" style="object-position:${d.frontImageX}% ${d.frontImageY}%">
-                <div class="asset-crop-frame"></div>
-                <span>Case crop preview</span>
-              </div>
+</div>
               <div class="asset-controls">
                 <label>Horizontal crop <input type="range" min="0" max="100" value="${d.frontImageX}" oninput="setAssetDraft('frontImageX',this.value)"><b data-asset-value="frontImageX">${d.frontImageX}%</b></label>
                 <label>Vertical crop <input type="range" min="0" max="100" value="${d.frontImageY}" oninput="setAssetDraft('frontImageY',this.value)"><b data-asset-value="frontImageY">${d.frontImageY}%</b></label>
@@ -207,6 +205,10 @@ function assetEditor(){
               </div>
               <div class="asset-grid-scroll"><div class="asset-grid backdrop-grid">${assetCards(tmdb.backdrops||[],"backdrop",d.backStillPath)}</div>
             </div>
+<div class="asset-controls">
+                <label>Horizontal position <input type="range" min="0" max="100" value="${d.backStillX}" oninput="setAssetDraft(&quot;backStillX&quot;,this.value)"><b data-asset-value="backStillX">${d.backStillX}%</b></label>
+                <label>Vertical position <input type="range" min="0" max="100" value="${d.backStillY}" oninput="setAssetDraft(&quot;backStillY&quot;,this.value)"><b data-asset-value="backStillY">${d.backStillY}%</b></label>
+              </div>
 
             </div><div class="asset-actions">
               <button class="ghost" onclick="closeAssetEditor()">Done</button>
@@ -264,6 +266,7 @@ window.setAssetDraft=(field,value)=>{
     if(field==="frontLogoSize")live.style.setProperty("--front-logo-size",Number(value)+"%");
     if(field==="frontLogoBottom")live.style.setProperty("--front-logo-bottom",Number(value)+"%");
     if(field==="frontImageX"||field==="frontImageY"){const img=live.querySelector(".vhs-front>img");if(img)img.style.objectPosition=(field==="frontImageX"?value:(a.frontImageX??50))+"% "+(field==="frontImageY"?value:(a.frontImageY??50))+"%";}
+    if(field==="backStillX"||field==="backStillY"){const img=live.querySelector(".vhs-back-art");if(img)img.style.objectPosition=(field==="backStillX"?value:(a.backStillX??50))+"% "+(field==="backStillY"?value:(a.backStillY??50))+"%";}
     if(field==="frontLogoVisible"){const logo=live.querySelector(".vhs-front-logo");if(logo)logo.style.display=Boolean(value)?"flex":"none";const toggle=document.querySelector(".asset-toggle .toggle");if(toggle)toggle.classList.toggle("on",Boolean(value));}
   }
 };
