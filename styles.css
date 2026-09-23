@@ -398,3 +398,17 @@ button,input{font:inherit}button{color:inherit}.topbar{height:72px;padding:0 32p
 
 .history-row{grid-template-columns:54px minmax(200px,1fr) auto auto}
 .history-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:18px}
+
+/* Group-watch user picker */
+.attendance-modal{width:min(520px,100%);max-height:min(700px,calc(100vh - 48px));overflow:auto;background:var(--panel);border:1px solid var(--line2);border-radius:12px;box-shadow:var(--shadow);padding:20px}
+.attendance-sub{margin:5px 0 0;color:var(--muted);font-size:12px}
+.attendance-list{display:grid;gap:7px;margin-top:16px}
+.attendance-user{width:100%;display:flex;align-items:center;gap:10px;padding:10px 11px;border:1px solid var(--line);border-radius:8px;background:var(--panel2);color:inherit;text-align:left;cursor:pointer}
+.attendance-user:hover{border-color:var(--line2);background:#1d2024}
+.attendance-user.selected{border-color:#65706a;background:rgba(121,197,139,.07)}
+.attendance-user .avatar{flex:0 0 auto;width:31px;height:31px}
+.attendance-user-name{font-size:12px;font-weight:650}
+.attendance-check{margin-left:auto;width:20px;height:20px;display:grid;place-items:center;border:1px solid var(--line2);border-radius:5px;color:var(--green);font-size:12px}
+.attendance-user.selected .attendance-check{border-color:#5a7a63;background:rgba(121,197,139,.1)}
+.attendance-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:17px;padding-top:14px;border-top:1px solid var(--line)}
+@media(max-width:560px){.attendance-modal{padding:16px;max-height:calc(100vh - 24px)}}
