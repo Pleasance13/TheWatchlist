@@ -37,7 +37,7 @@ function assetDraft(m){
     frontLogoSize:num(a.frontLogoSize,22),
     frontLogoBottom:num(a.frontLogoBottom,6),
     frontLogoVisible:a.frontLogoVisible!==false,
-    detailLogoPath:a.detailLogoPath||m.logoPath||null,
+    detailLogoPath:a.detailLogoPath||m.logoPath||(m.tmdbAssets?.logos?.[0]?.filePath)||null,
     frontImagePath:a.frontImagePath!==undefined?a.frontImagePath:(m.textlessPosterPath||m.posterPath||null),
     frontImageX:num(a.frontImageX,50),
     frontImageY:num(a.frontImageY,50),
@@ -72,7 +72,7 @@ function caseFaces(m, backHtml, extraClass=""){
   const frontImage=frontPath&&window.TMDB?TMDB.image(frontPath,"w500"):defaultPoster;
   const backPath=assets.backStillPath||m.backdropPath||m.posterPath||null;
   const backdrop=backPath&&window.TMDB?TMDB.image(backPath,"w780"):poster;
-  const logoPath=assets.frontLogoPath||m.logoPath||null;
+  const logoPath=assets.frontLogoPath||m.logoPath||(m.tmdbAssets?.logos?.[0]?.filePath)||null;
   const logo=logoPath&&window.TMDB?TMDB.image(logoPath,"w300"):"";
   const logoMarkup=logo?`<img class="vhs-logo" src="${logo}" alt="" aria-hidden="true">`:`<div class="vhs-logo-fallback">${m.title}</div>`;
   const frontLogo=logo&&assets.frontLogoVisible!==false?`<div class="vhs-front-logo" style="--front-logo-size:${Number.isFinite(Number(assets.frontLogoSize))?Number(assets.frontLogoSize):22}%;--front-logo-bottom:${Number.isFinite(Number(assets.frontLogoBottom))?Number(assets.frontLogoBottom):6}%>${logoMarkup}</div>`:"";
@@ -118,7 +118,7 @@ function detail(){
  <section class="detail ${m.watched?"history-detail":""}">
    <div class="detail-cover-column"><div class="detail-vhs" data-vhs="${m.id}" onclick="toggleCase(event,this)" title="Click the VHS case to flip it"><div class="vhs-stage">${caseFaces(m,backContent(m))}</div></div>${canEditCaseAssets()&&m.tmdbId?`<button class="watched-together-button artwork-button" onclick="openAssetEditor('${m.id}')">✎ Customize case artwork</button>`:""}</div>
    <div>
-    <div class="eyebrow" style="${m.watched?"display:none":""}">CURRENT RANK #${rankOf(m)}</div><div class="detail-title-row"><h2>${(caseAssets(m).detailLogoPath||m.logoPath)&&window.TMDB?'<img class="detail-logo" src="'+TMDB.image(caseAssets(m).detailLogoPath||m.logoPath,"w300")+'" alt="'+m.title+'">':'<span>'+m.title+'</span>'}</h2><button class="seen-button ${m.seen.includes("Josh")?"on":"off"}" data-movie-id="${m.id}" onclick="toggleSeen(this.dataset.movieId)" aria-label="${m.seen.includes("Josh")?"Mark as not seen":"Mark as seen"}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.2 12s3.4-6 9.8-6 9.8 6 9.8 6-3.4 6-9.8 6-9.8-6-9.8-6Z"/><circle cx="12" cy="12" r="2.8"/></svg><span class="seen-slash"></span><span>${m.seen.includes("Josh")?"I have seen this":"I have not seen this"}</span></button></div><div class="meta">${m.year} · ${m.genre} · ${m.director} · ${m.runtime}</div>
+    <div class="eyebrow" style="${m.watched?"display:none":""}">CURRENT RANK #${rankOf(m)}</div><div class="detail-title-row"><h2>${(caseAssets(m).detailLogoPath||m.logoPath||m.tmdbAssets?.logos?.[0]?.filePath)&&window.TMDB?'<img class="detail-logo" src="'+TMDB.image(caseAssets(m).detailLogoPath||m.logoPath||m.tmdbAssets?.logos?.[0]?.filePath,"w300")+'" alt="'+m.title+'">':'<span>'+m.title+'</span>'}</h2><button class="seen-button ${m.seen.includes("Josh")?"on":"off"}" data-movie-id="${m.id}" onclick="toggleSeen(this.dataset.movieId)" aria-label="${m.seen.includes("Josh")?"Mark as not seen":"Mark as seen"}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.2 12s3.4-6 9.8-6 9.8 6 9.8 6-3.4 6-9.8 6-9.8-6-9.8-6Z"/><circle cx="12" cy="12" r="2.8"/></svg><span class="seen-slash"></span><span>${m.seen.includes("Josh")?"I have seen this":"I have not seen this"}</span></button></div><div class="meta">${m.year} · ${m.genre} · ${m.director} · ${m.runtime}</div>
     <div class="people-strip"><div class="people-strip-label">${m.watched?"WHO WATCHED":"RESPONSES"}</div>${m.watched?stack((m.watchedBy||[]).map(n=>[n,"green"])):stack(voterEntries(m))}</div>
     <div class="vote-box"><div class="vote-label">Your response</div><div class="votes">${[["must","Must Watch"],["interested","Interested"],["watch","I'd Watch"],["no","Not Interested"]].map(([k,l])=>`<button class="vote vote-${k} ${selected===k?"selected":""}" onclick="vote('${m.id}','${k}')">${l}</button>`).join("")}</div></div>
     ${state.showSynopsis?`<p class="detail-synopsis">${m.synopsis}</p>`:""}
