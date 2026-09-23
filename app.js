@@ -182,7 +182,7 @@ function assetEditor(){
               <div class="asset-heading">
                 <div><strong>2. Details-page logo</strong><span>Independent from the logo used on the physical case.</span></div>
               </div>
-              <div class="asset-grid logo-grid">${assetCards(tmdb.logos||[],"detail-logo",d.detailLogoPath)}</div>
+              <div class="asset-grid-scroll"><div class="asset-grid logo-grid">${assetCards(tmdb.logos||[],"detail-logo",d.detailLogoPath)}</div></div>
             </div>
 
             <div class="asset-section">
@@ -252,12 +252,19 @@ window.chooseAsset=(type,encodedPath)=>{
 window.setAssetDraft=(field,value)=>{
   const m=movies.find(x=>x.id===state.assetMovieId);if(!m||!canEditCaseAssets())return;
   const a=savedCaseAssets[m.id]||{};
-  a[field]=Number(value);savedCaseAssets[m.id]=a;saveCaseAssets();
+  a[field]=field==="frontLogoVisible"?Boolean(value):Number(value);savedCaseAssets[m.id]=a;saveCaseAssets();
   const label=document.querySelector('[data-asset-value="'+field+'"]');
   if(label)label.textContent=field==="frontLogoBottom"?value+"% from bottom":value+"%";
   if(field==="frontImageX"||field==="frontImageY"){
     const preview=document.querySelector(".asset-crop-preview img");
     if(preview)preview.style.objectPosition=(field==="frontImageX"?value:(a.frontImageX??50))+"% "+(field==="frontImageY"?value:(a.frontImageY??50))+"%";
+  }
+  const live=document.querySelector("[data-asset-preview] .vhs-inner");
+  if(live){
+    if(field==="frontLogoSize")live.style.setProperty("--front-logo-size",Number(value)+"%");
+    if(field==="frontLogoBottom")live.style.setProperty("--front-logo-bottom",Number(value)+"%");
+    if(field==="frontImageX"||field==="frontImageY"){const img=live.querySelector(".vhs-front>img");if(img)img.style.objectPosition=(field==="frontImageX"?value:(a.frontImageX??50))+"% "+(field==="frontImageY"?value:(a.frontImageY??50))+"%";}
+    if(field==="frontLogoVisible"){const logo=live.querySelector(".vhs-front-logo");if(logo)logo.style.display=Boolean(value)?"flex":"none";}
   }
 };
 window.setNav=x=>{state.nav=x;state.detail=null;render()};window.setView=x=>{state.view=x;render()};window.toggleFilters=()=>{state.showFilters=!state.showFilters;render()};window.setFilter=x=>{state.filter=x;render()};window.setPosterSize=x=>{state.posterSize=Math.max(1,Math.min(4,Math.round(Number(x)||1)));const cols=[12,8,6,5][state.posterSize-1];document.querySelectorAll(".grid").forEach(e=>e.style.setProperty("--grid-cols",cols));document.querySelectorAll(".range").forEach(e=>e.value=state.posterSize);requestAnimationFrame(()=>bindVhsTilt())};window.toggleSetting=k=>{state[k]=!state[k];render()};window.openMovie=id=>{const movie=movies.find(x=>x.id===id);if(!movie)return;state.detail=movie.id;state.nav="detail";render();window.scrollTo({top:0,behavior:"smooth"})};window.togglePerson=p=>{const card=document.querySelector('[data-person="'+p+'"]');if(!card)return;const old=card.querySelector('.person-details');if(old){old.remove();return}const notSeen=movies.filter(m=>{if(m.seen.includes(p))return false;const v=personVote(m,p);return !v||v!=="red"});const interests=notSeen.filter(m=>personVote(m,p));const suggested=movies.filter(m=>p==="Josh"&&!m.seen.includes(p)&&m.note);const details=document.createElement("div");details.className="person-details";details.innerHTML='<div><div class="person-section-label">INTERESTED IN WATCHING</div><div class="person-movies">'+(interests.map(m=>{const v=personVote(m,p);const label=v==="green"?"Interested":v==="yellow"?"I’d Watch":"Not Interested";return '<div class="person-movie"><span>'+m.title+'</span><span class="person-interest '+v+'">'+label+'</span></div>'}).join("")||'<div class="person-empty">No interest responses yet.</div>')+'</div></div><div><div class="person-section-label">HASN\'T SEEN</div><div class="person-movies">'+(notSeen.map(m=>'<div class="person-movie"><span>'+m.title+'</span><span class="person-seen">Not seen</span></div>').join("")||'<div class="person-empty">No movies left unseen.</div>')+'</div></div>'+(suggested.length?'<div><div class="person-section-label">SUGGESTED</div><div class="person-movies">'+suggested.map(m=>'<div class="person-movie"><span>'+m.title+'</span><span class="person-seen">Suggestion</span></div>').join("")+'</div></div>':"");card.appendChild(details)};
