@@ -127,6 +127,7 @@ export default async function handler(req, res) {
         rating: movie.certification || null,
         synopsis: movie.overview || "",
         posterPath: movie.poster_path || null,
+        textlessPosterPath: textlessPoster ? textlessPoster.file_path : null,
         backdropPath: movie.backdrop_path || null,
         logoPath: logo ? logo.file_path : null,
         logoWidth: logo ? logo.width : null,
