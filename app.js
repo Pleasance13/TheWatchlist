@@ -21,8 +21,14 @@ let watchedAttendance={};try{watchedAttendance=JSON.parse(localStorage.getItem("
 watchedMovies.forEach(id=>{const m=movies.find(x=>x.id===id);if(m){m.watched=true;m.watchedBy=watchedAttendance[id]||m.watchedBy||[]}});
 const currentUser="Josh";
 const serverUsers=["Josh","Sarah","Mike","Alex"];
-const state={nav:"watchlist",view:"list",search:"",filter:"all",posterSize:2,showSynopsis:true,showRatings:false,showNote:true,showTrailer:false,detail:null,showFilters:false,votes:{},addMovieOpen:false,addMovieQuery:"",addMovieResults:[],addMovieSelection:null,addMovieLoading:false,addMovieError:"",attendanceOpen:false,attendanceMovieId:null,attendanceSelected:[]};
+const state={nav:"watchlist",view:"list",search:"",filter:"all",posterSize:2,showSynopsis:true,showRatings:false,showNote:true,showTrailer:false,detail:null,showFilters:false,votes:{},addMovieOpen:false,addMovieQuery:"",addMovieResults:[],addMovieSelection:null,addMovieLoading:false,addMovieError:"",attendanceOpen:false,attendanceMovieId:null,attendanceSelected:[],assetEditorOpen:false,assetMovieId:null,assetLoading:false,assetError:""};
 const app=document.querySelector("#app");
+let savedCaseAssets={};
+try{savedCaseAssets=JSON.parse(localStorage.getItem("watchlist-case-assets")||"{}");}catch(error){savedCaseAssets={}}
+function canEditCaseAssets(){return currentUser==="Josh"}
+function caseAssets(m){return savedCaseAssets[m.id]||{}}
+function saveCaseAssets(){try{localStorage.setItem("watchlist-case-assets",JSON.stringify(savedCaseAssets));}catch(error){}}
+function assetDraft(m){const a=caseAssets(m);return {frontLogoPath:a.frontLogoPath!==undefined?a.frontLogoPath:(m.logoPath||null),frontLogoSize:Number(a.frontLogoSize)||22,frontLogoBottom:Number(a.frontLogoBottom)||6,detailLogoPath:a.detailLogoPath!==undefined?a.detailLogoPath:(m.logoPath||null),frontImagePath:a.frontImagePath!==undefined?a.frontImagePath:(m.textlessPosterPath||m.posterPath||null),frontImageX:Number(a.frontImageX)||50,frontImageY:Number(a.frontImageY)||50,backStillPath:a.backStillPath!==undefined?a.backStillPath:(m.backdropPath||null)}}
 
 function currentVote(id){return state.votes[id]||null}
 function voterEntries(m){
