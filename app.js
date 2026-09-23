@@ -82,7 +82,8 @@ function caseFaces(m, backHtml, extraClass=""){
   const frontLogo=logo&&assets.frontLogoVisible!==false?`<div class="vhs-front-logo" style="--front-logo-size:${Number.isFinite(Number(assets.frontLogoSize))?Number(assets.frontLogoSize):22}%;--front-logo-bottom:${Number.isFinite(Number(assets.frontLogoBottom))?Number(assets.frontLogoBottom):6}%;--front-logo-image:url("${logo}")" aria-hidden="true">${logoMarkup}</div>`:"";
   const spineMarkup=logo?`<img class="vhs-spine-logo" src="${logo}" alt="" aria-hidden="true">`:`<span class="spine-label">${m.title}</span>`;
   const style=`--poster-art:url("${frontImage}");--backdrop-art:url("${backdrop}")`;
-  const frontX=Number.isFinite(Number(assets.frontImageX))?100-Number(assets.frontImageX):50;\n  const objectPosition=`object-position:${frontX}% ${Number.isFinite(Number(assets.frontImageY))?Number(assets.frontImageY):50}%`;
+  const frontX=Number.isFinite(Number(assets.frontImageX))?100-Number(assets.frontImageX):50;
+  const objectPosition=`object-position:${frontX}% ${Number.isFinite(Number(assets.frontImageY))?Number(assets.frontImageY):50}%`;
   return `<div class="vhs-inner ${extraClass}" style="${style}">
     <div class="vhs-front"><span class="rank-badge" style="${m.watched?"display:none":""}">#${rankOf(m)}</span><img src="${frontImage}" alt="${m.title}" style="${objectPosition}">${frontLogo}</div>
     <div class="vhs-back"><img class="vhs-back-art" src="${backdrop}" alt="" aria-hidden="true" style="object-position:${Number.isFinite(Number(assets.backStillX))?100-Number(assets.backStillX):50}% ${Number.isFinite(Number(assets.backStillY))?Number(assets.backStillY):50}%"><div class="vhs-back-scroll">${logo&&window.TMDB?`<div class="vhs-back-logo">${logoMarkup}</div>`:""}${backHtml}</div></div>
