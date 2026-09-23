@@ -282,8 +282,7 @@ window.chooseAsset=(type,encodedPath)=>{
   else if(type==="backdrop")a.backStillPath=path;
   savedCaseAssets[m.id]=a;saveCaseAssets();
 
-  const shouldFlip=type==="poster"?!wasFlipped:type==="backdrop"?wasFlipped:false;
-  const targetFlipped=(type==="poster"||type==="backdrop")?shouldFlip:wasFlipped;
+  const targetFlipped=type==="backdrop"?true:type==="poster"?false:wasFlipped;
 
   render();
   restoreArtworkView(view,false);
