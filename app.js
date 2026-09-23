@@ -65,7 +65,7 @@ function backContent(m){
  ${state.showNote&&m.note?`<div class="note">“${m.note}”</div>`:""}
  <div class="back-warnings">${m.warnings.map(w=>`<span class="pill">⚠ ${w}</span>`).join("")}</div>`;
 }
-function caseArticle(m,extra=""){return `<article class="vhs ${extra}" data-vhs="${m.id}" data-movie-id="${m.id}" onclick="toggleCase(event,this)"><div class="vhs-stage">${caseFaces(m,backContent(m))}</div><div class="grid-title" onclick="event.stopPropagation();openMovie('${m.id}')">${m.title}</div><div class="grid-meta" onclick="event.stopPropagation();openMovie('${m.id}')">${m.year} · ${m.genre}</div>${responseButtons(m,true)}</article>`}
+function caseArticle(m,extra=""){return `<article class="vhs ${extra}" data-vhs="${m.id}" data-movie-id="${m.id}"><div class="vhs-stage" onclick="toggleCase(event,this.parentElement)">${caseFaces(m,backContent(m))}</div><div class="grid-title" onclick="event.stopPropagation();openMovie('${m.id}')">${m.title}</div><div class="grid-meta" onclick="event.stopPropagation();openMovie('${m.id}')">${m.year} · ${m.genre}</div>${responseButtons(m,true)}</article>`}
 function gridView(items,historyMode=false){return `<div class="grid" style="--grid-cols:${[12,8,6,5][state.posterSize-1]||8}">${items.map(m=>caseArticle(m,historyMode?"history-movie":"")).join("")}</div>`}
 function watchlist(){
  let a=movies.filter(m=>!m.watched&&((m.title+" "+m.genre).toLowerCase().includes(state.search.toLowerCase())));
