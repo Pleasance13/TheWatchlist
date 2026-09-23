@@ -73,7 +73,7 @@ function watchlist(){
  if(state.filter==="I haven't seen")a=a.filter(m=>!m.seen.includes("Josh"));
  if(state.filter==="not interested")a=a.filter(m=>currentVote(m.id)==="no");
  a.sort((x,y)=>y.score-x.score);
- return `<div class="hero"><div><div class="eyebrow">YOUR SERVER'S MOVIE LIBRARY</div><h1>Watchlist</h1><p class="sub">${a.length} movies waiting for a movie night.</p></div><button class="primary" onclick="openAddMovie()">＋ Add movie</button></div>${toolbar()}${a.length?(state.view==="list"?listView(a,true):gridView(a,true)):`<div class="empty">Nothing matches those filters.</div>`}`;
+ return `<div class="hero"><div><div class="eyebrow">YOUR SERVER'S MOVIE LIBRARY</div><h1>Watchlist</h1><p class="sub">${a.length} movies waiting for a movie night.</p></div><button class="primary" onclick="openAddMovie()">＋ Add movie</button></div>${toolbar()}${a.length?(state.view==="list"?listView(a,false):gridView(a,false)):`<div class="empty">Nothing matches those filters.</div>`}`;
 }
 function history(){const a=movies.filter(m=>m.watched&&((m.title+" "+m.genre).toLowerCase().includes(state.search.toLowerCase())));return `<div class="hero"><div><div class="eyebrow">THE GROUP ARCHIVE</div><h1>History</h1><p class="sub">Movies you've watched together, kept around so nobody has to remember.</p></div></div>${toolbar()}${a.length?(state.view==="list"?listView(a,true):gridView(a,true)):`<div class="empty">Nothing matches your search.</div>`}` }
 function personVote(m,p){if(p==="Josh"){const mine=currentVote(m.id);if(mine)return {must:"green",interested:"green",watch:"yellow",no:"red"}[mine]||null}const v=m.voters.find(([n])=>n===p);return v?v[1]:null}
