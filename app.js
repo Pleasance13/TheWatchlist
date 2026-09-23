@@ -1,6 +1,6 @@
 const fallback=(t,y)=>`data:image/svg+xml;charset=UTF-8,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="500" height="750"><rect width="100%" height="100%" fill="#25282d"/><rect x="30" y="30" width="440" height="690" rx="12" fill="#17191c" stroke="#4a4f57"/><text x="250" y="350" fill="#e8e4da" font-family="Arial" font-size="38" font-weight="bold" text-anchor="middle">${t}</text><text x="250" y="400" fill="#9298a1" font-family="Arial" font-size="24" text-anchor="middle">${y}</text></svg>`)}`;
 
-const movies=[
+const seedMovies=[
 {id:"alien",title:"Alien",year:1979,genre:"Horror · Sci-Fi",director:"Ridley Scott",runtime:"1h 57m",rating:"R",score:10,seen:["Josh"],voters:[["Josh","green"],["Sarah","green"],["Mike","yellow"]],synopsis:"The crew of a commercial spacecraft encounter a deadly lifeform after answering a mysterious distress signal.",note:"I don't think we've actually watched this together. Fix that.",warnings:["Gore","Body horror"],watched:false},
 {id:"thing",title:"The Thing",year:1982,genre:"Horror · Sci-Fi",director:"John Carpenter",runtime:"1h 49m",rating:"R",score:8,seen:["Sarah"],voters:[["Josh","green"],["Sarah","yellow"],["Alex","red"]],synopsis:"A research team in Antarctica faces a lifeform capable of perfectly imitating other organisms.",note:"Been meaning to show you guys this for ages.",warnings:["Gore","Animal death"],watched:false},
 {id:"scream",title:"Scream",year:1996,genre:"Horror · Mystery",director:"Wes Craven",runtime:"1h 51m",rating:"R",score:7,seen:["Josh","Alex"],voters:[["Josh","yellow"],["Mike","yellow"],["Alex","red"]],synopsis:"A masked killer turns a small town's horror-movie knowledge into a deadly game.",note:"A classic group-watch candidate.",warnings:["Violence","Sexual content"],watched:false},
@@ -9,7 +9,6 @@ const movies=[
 {id:"event",title:"Event Horizon",year:1997,genre:"Horror · Sci-Fi",director:"Paul W. S. Anderson",runtime:"1h 36m",rating:"R",score:3,seen:["Sarah","Mike"],voters:[["Sarah","green"],["Alex","yellow"]],synopsis:"A rescue crew investigates a vanished spaceship and discovers something deeply wrong with its return.",note:"Maybe this one is a terrible idea. Which is exactly why I'm suggesting it.",warnings:["Gore","Disturbing imagery"],watched:true}
 ];
 
-const seedMovies=movies;
 let savedMovies=[];
 try{savedMovies=JSON.parse(localStorage.getItem("watchlist-added-movies")||"[]");}catch(error){savedMovies=[];}
 const movies=[...seedMovies,...savedMovies];
