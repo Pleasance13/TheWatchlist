@@ -210,52 +210,34 @@ function assetEditor(){
   const m=movies.find(x=>x.id===state.assetMovieId);
   if(!state.assetEditorOpen||state.nav!=="detail"||state.detail!==state.assetMovieId||!m||!canEditCaseAssets())return "";
   const d=assetDraft(m),tmdb=m.tmdbAssets||{};
-  return `<div class="modal-backdrop open artwork-backdrop" onclick="if(event.target===this)closeAssetEditor()">
-    <section class="asset-modal artwork-picker" role="dialog" aria-modal="true" aria-labelledby="asset-title">
-      <div class="artwork-live-preview"><div class="artwork-preview-label">LIVE PREVIEW</div><div class="artwork-preview-case" data-asset-preview data-vhs="${m.id}" title="Move the mouse over the case to tilt · click to flip"><div class="vhs-stage" onclick="toggleCase(event,this.parentElement)">${caseFaces(m,backContent(m))}</div></div><div class="artwork-preview-hint">Move over the case to tilt · click to flip</div></div>
-      <div class="artwork-controls-column"><div class="modal-head">
-        <div>
-          <div class="eyebrow">TMDB ARTWORK</div>
-          <h2 id="asset-title">Customize case artwork</h2>
-          <p class="asset-sub">Choose the artwork you want to use for this movie.</p>
-        </div>
-        <button class="modal-close" onclick="closeAssetEditor()" aria-label="Close">×</button>
-      </div>
-      ${state.assetLoading
-        ? '<div class="add-status">Loading artwork from TMDB…</div>'
-        : state.assetError
-          ? '<div class="add-status error">'+state.assetError+'</div>'
-          : `
-            ${assetSection("frontLogo",1,"Front logo","Used on the front, spine, and back of the VHS case.",`
-              <div class="asset-grid-scroll"><div class="asset-grid logo-grid">${assetCards(tmdb.logos||[],"logo",d.frontLogoPath)}</div></div>
-              <div class="asset-controls">
-                <label>Logo size <input type="range" min="10" max="40" value="${d.frontLogoSize}" oninput="setAssetDraft('frontLogoSize',this.value)"><b data-asset-value="frontLogoSize">${d.frontLogoSize}%</b></label>
-                <label>Vertical position <input type="range" min="0" max="30" value="${d.frontLogoBottom}" oninput="setAssetDraft('frontLogoBottom',this.value)"><b data-asset-value="frontLogoBottom">${d.frontLogoBottom}% from bottom</b></label>
-              </div>
-              <label class="asset-toggle"><span><strong>Show logo on front</strong><small>Keep the logo on the back and spines even when hidden here.</small></span><button type="button" class="toggle ${d.frontLogoVisible?"on":""}" onclick="setAssetDraft('frontLogoVisible',${d.frontLogoVisible?"false":"true"})" aria-label="Toggle front logo"></button></label>`)
-
-            ${assetSection("detailLogo",2,"Details-page logo","Independent from the logo used on the physical case.",`
-              <div class="asset-grid-scroll"><div class="asset-grid logo-grid">${assetCards(tmdb.logos||[],"detail-logo",d.detailLogoPath)}</div></div>`)}
-
-            ${assetSection("frontImage",3,"Front image","Choose any TMDB poster asset, including language-specific versions.",`
-              <div class="asset-grid-scroll"><div class="asset-grid poster-grid">${assetCards(tmdb.posters||[],"poster",d.frontImagePath)}</div></div>
-              <div class="asset-controls">
-                <label>Horizontal crop <input type="range" min="0" max="100" value="${d.frontImageX}" oninput="setAssetDraft('frontImageX',this.value)"><b data-asset-value="frontImageX">${d.frontImageX}%</b></label>
-                <label>Vertical crop <input type="range" min="0" max="100" value="${d.frontImageY}" oninput="setAssetDraft('frontImageY',this.value)"><b data-asset-value="frontImageY">${d.frontImageY}%</b></label>
-              </div>`)}
-
-            ${assetSection("backStill",4,"Back still","Choose the TMDB backdrop/still shown behind the back-of-case information.",`
-              <div class="asset-grid-scroll"><div class="asset-grid backdrop-grid">${assetCards(tmdb.backdrops||[],"backdrop",d.backStillPath)}</div></div>
-              <div class="asset-controls">
-                <label>Horizontal position <input type="range" min="0" max="100" value="${d.backStillX}" oninput="setAssetDraft(&quot;backStillX&quot;,this.value)"><b data-asset-value="backStillX">${d.backStillX}%</b></label>
-                <label>Vertical position <input type="range" min="0" max="100" value="${d.backStillY}" oninput="setAssetDraft(&quot;backStillY&quot;,this.value)"><b data-asset-value="backStillY">${d.backStillY}%</b></label>
-              </div>`)}
-
-            </div><div class="asset-actions">
-              <button class="ghost" onclick="closeAssetEditor()">Done</button>
-            </div></div>`}
-    </section>
-  </div>`;
+  const frontLogoBody='<div class="asset-grid-scroll"><div class="asset-grid logo-grid">'+assetCards(tmdb.logos||[],"logo",d.frontLogoPath)+'</div></div>'+
+    '<div class="asset-controls">'+
+      '<label>Logo size <input type="range" min="10" max="40" value="'+d.frontLogoSize+'" oninput="setAssetDraft(\'frontLogoSize\',this.value)"><b data-asset-value="frontLogoSize">'+d.frontLogoSize+'%</b></label>'+
+      '<label>Vertical position <input type="range" min="0" max="30" value="'+d.frontLogoBottom+'" oninput="setAssetDraft(\'frontLogoBottom\',this.value)"><b data-asset-value="frontLogoBottom">'+d.frontLogoBottom+'% from bottom</b></label>'+
+    '</div>'+
+    '<label class="asset-toggle"><span><strong>Show logo on front</strong><small>Keep the logo on the back and spines even when hidden here.</small></span><button type="button" class="toggle '+(d.frontLogoVisible?"on":"")+'" onclick="setAssetDraft(\'frontLogoVisible\','+(d.frontLogoVisible?"false":"true")+')" aria-label="Toggle front logo"></button></label>';
+  const detailLogoBody='<div class="asset-grid-scroll"><div class="asset-grid logo-grid">'+assetCards(tmdb.logos||[],"detail-logo",d.detailLogoPath)+'</div></div>';
+  const frontImageBody='<div class="asset-grid-scroll"><div class="asset-grid poster-grid">'+assetCards(tmdb.posters||[],"poster",d.frontImagePath)+'</div></div>'+
+    '<div class="asset-controls">'+
+      '<label>Horizontal crop <input type="range" min="0" max="100" value="'+d.frontImageX+'" oninput="setAssetDraft(\'frontImageX\',this.value)"><b data-asset-value="frontImageX">'+d.frontImageX+'%</b></label>'+
+      '<label>Vertical crop <input type="range" min="0" max="100" value="'+d.frontImageY+'" oninput="setAssetDraft(\'frontImageY\',this.value)"><b data-asset-value="frontImageY">'+d.frontImageY+'%</b></label>'+
+    '</div>';
+  const backStillBody='<div class="asset-grid-scroll"><div class="asset-grid backdrop-grid">'+assetCards(tmdb.backdrops||[],"backdrop",d.backStillPath)+'</div></div>'+
+    '<div class="asset-controls">'+
+      '<label>Horizontal position <input type="range" min="0" max="100" value="'+d.backStillX+'" oninput="setAssetDraft(\'backStillX\',this.value)"><b data-asset-value="backStillX">'+d.backStillX+'%</b></label>'+
+      '<label>Vertical position <input type="range" min="0" max="100" value="'+d.backStillY+'" oninput="setAssetDraft(\'backStillY\',this.value)"><b data-asset-value="backStillY">'+d.backStillY+'%</b></label>'+
+    '</div>';
+  return '<div class="modal-backdrop open artwork-backdrop" onclick="if(event.target===this)closeAssetEditor()">'+
+    '<section class="asset-modal artwork-picker" role="dialog" aria-modal="true" aria-labelledby="asset-title">'+
+      '<div class="artwork-live-preview"><div class="artwork-preview-label">LIVE PREVIEW</div><div class="artwork-preview-case" data-asset-preview data-vhs="'+m.id+'" title="Move the mouse over the case to tilt · click to flip"><div class="vhs-stage" onclick="toggleCase(event,this.parentElement)">'+caseFaces(m,backContent(m))+'</div></div><div class="artwork-preview-hint">Move over the case to tilt · click to flip</div></div>'+
+      '<div class="artwork-controls-column"><div class="modal-head"><div><div class="eyebrow">TMDB ARTWORK</div><h2 id="asset-title">Customize case artwork</h2><p class="asset-sub">Choose the artwork you want to use for this movie.</p></div><button class="modal-close" onclick="closeAssetEditor()" aria-label="Close">×</button></div>'+
+      (state.assetLoading?'<div class="add-status">Loading artwork from TMDB…</div>':state.assetError?'<div class="add-status error">'+state.assetError+'</div>':
+        assetSection("frontLogo",1,"Front logo","Used on the front, spine, and back of the VHS case.",frontLogoBody)+
+        assetSection("detailLogo",2,"Details-page logo","Independent from the logo used on the physical case.",detailLogoBody)+
+        assetSection("frontImage",3,"Front image","Choose any TMDB poster asset, including language-specific versions.",frontImageBody)+
+        assetSection("backStill",4,"Back still","Choose the TMDB backdrop/still shown behind the back-of-case information.",backStillBody)+
+        '<div class="asset-actions"><button class="ghost" onclick="closeAssetEditor()">Done</button></div>')+
+      '</div></section></div>';
 }
 function render(){app.innerHTML=header()+`<main class="content">${state.nav==="watchlist"?watchlist():state.nav==="history"?history():state.nav==="people"?people():state.nav==="settings"?settings():detail()}</main>`+addMovieModal()+attendanceModal()+assetEditor();bindLiveInputs();bindVhsTilt()}
 let addMovieSearchTimer=null;let addMovieSearchRequest=0;
