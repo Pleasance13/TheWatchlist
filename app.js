@@ -122,7 +122,7 @@ function detail(){
  <section class="detail ${m.watched?"history-detail":""}">
    <div class="detail-cover-column"><div class="detail-vhs" data-vhs="${m.id}" onclick="toggleCase(event,this)" title="Click the VHS case to flip it"><div class="vhs-stage">${caseFaces(m,backContent(m))}</div></div>${canEditCaseAssets()&&m.tmdbId?`<button class="watched-together-button artwork-button" onclick="openAssetEditor('${m.id}')">✎ Customize case artwork</button>`:""}</div>
    <div>
-    <div class="eyebrow" style="${m.watched?"display:none":""}">CURRENT RANK #${rankOf(m)}</div><div class="detail-title-row"><h2>${(caseAssets(m).detailLogoPath||m.logoPath||m.tmdbAssets?.logos?.[0]?.filePath)&&window.TMDB?'<img class="detail-logo" src="'+TMDB.image(caseAssets(m).detailLogoPath||m.logoPath||m.tmdbAssets?.logos?.[0]?.filePath,"w300")+'" alt="'+m.title+'">':'<span>'+m.title+'</span>'}</h2><button class="seen-button ${m.seen.includes("Josh")?"on":"off"}" data-movie-id="${m.id}" onclick="toggleSeen(this.dataset.movieId)" aria-label="${m.seen.includes("Josh")?"Mark as not seen":"Mark as seen"}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.2 12s3.4-6 9.8-6 9.8 6 9.8 6-3.4 6-9.8 6-9.8-6-9.8-6Z"/><circle cx="12" cy="12" r="2.8"/></svg><span class="seen-slash"></span><span>${m.seen.includes("Josh")?"I have seen this":"I have not seen this"}</span></button></div><div class="meta">${m.year} · ${m.genre} · ${m.director} · ${m.runtime}</div>
+    <div class="eyebrow" style="${m.watched?"display:none":""}">CURRENT RANK #${rankOf(m)}</div><div class="detail-title-row"><h2>${movieLogoPath(m,caseAssets(m).detailLogoPath)&&window.TMDB?'<img class="detail-logo" src="'+TMDB.image(movieLogoPath(m,caseAssets(m).detailLogoPath),"w300")+'" alt="'+m.title+'">':'<span>'+m.title+'</span>'}</h2><button class="seen-button ${m.seen.includes("Josh")?"on":"off"}" data-movie-id="${m.id}" onclick="toggleSeen(this.dataset.movieId)" aria-label="${m.seen.includes("Josh")?"Mark as not seen":"Mark as seen"}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.2 12s3.4-6 9.8-6 9.8 6 9.8 6-3.4 6-9.8 6-9.8-6-9.8-6Z"/><circle cx="12" cy="12" r="2.8"/></svg><span class="seen-slash"></span><span>${m.seen.includes("Josh")?"I have seen this":"I have not seen this"}</span></button></div><div class="meta">${m.year} · ${m.genre} · ${m.director} · ${m.runtime}</div>
     <div class="people-strip"><div class="people-strip-label">${m.watched?"WHO WATCHED":"RESPONSES"}</div>${m.watched?stack((m.watchedBy||[]).map(n=>[n,"green"])):stack(voterEntries(m))}</div>
     <div class="vote-box"><div class="vote-label">Your response</div><div class="votes">${[["must","Must Watch"],["interested","Interested"],["watch","I'd Watch"],["no","Not Interested"]].map(([k,l])=>`<button class="vote vote-${k} ${selected===k?"selected":""}" onclick="vote('${m.id}','${k}')">${l}</button>`).join("")}</div></div>
     ${state.showSynopsis?`<p class="detail-synopsis">${m.synopsis}</p>`:""}
@@ -273,6 +273,7 @@ window.closeAssetEditor=()=>{state.assetEditorOpen=false;state.assetMovieId=null
 window.chooseAsset=(type,encodedPath)=>{
   const m=movies.find(x=>x.id===state.assetMovieId);if(!m||!canEditCaseAssets())return;
   const view=preserveArtworkView();
+  const wasFlipped=view.flipped;
   const path=decodeURIComponent(encodedPath);
   const a=savedCaseAssets[m.id]||{};
   if(type==="logo")a.frontLogoPath=path;
@@ -280,9 +281,25 @@ window.chooseAsset=(type,encodedPath)=>{
   else if(type==="poster")a.frontImagePath=path;
   else if(type==="backdrop")a.backStillPath=path;
   savedCaseAssets[m.id]=a;saveCaseAssets();
-  if(type==="backdrop")view.flipped=true;
-  else if(type==="poster")view.flipped=false;
-  render();restoreArtworkView(view);
+  const targetFlipped=type==="backdrop"?true:type==="poster"?false:wasFlipped;
+  render();
+  requestAnimationFrame(()=>{
+    const preview=document.querySelector("[data-asset-preview]");
+    if(!preview)return;
+    const inner=preview.querySelector(".vhs-inner");
+    if(!inner)return;
+    if(type==="backdrop"||type==="poster"){
+      if(wasFlipped!==targetFlipped){
+        preview.classList.toggle("flipped",wasFlipped);
+        void inner.offsetWidth;
+        requestAnimationFrame(()=>preview.classList.toggle("flipped",targetFlipped));
+      }else{
+        preview.classList.toggle("flipped",targetFlipped);
+      }
+    }else{
+      preview.classList.toggle("flipped",wasFlipped);
+    }
+  });
 };
 window.setAssetDraft=(field,value)=>{
   const m=movies.find(x=>x.id===state.assetMovieId);if(!m||!canEditCaseAssets())return;
