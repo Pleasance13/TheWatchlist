@@ -36,6 +36,7 @@ function assetDraft(m){
     frontLogoPath:a.frontLogoPath!==undefined?a.frontLogoPath:(m.logoPath||null),
     frontLogoSize:num(a.frontLogoSize,22),
     frontLogoBottom:num(a.frontLogoBottom,6),
+    frontLogoVisible:a.frontLogoVisible!==false,
     detailLogoPath:a.detailLogoPath!==undefined?a.detailLogoPath:(m.logoPath||null),
     frontImagePath:a.frontImagePath!==undefined?a.frontImagePath:(m.textlessPosterPath||m.posterPath||null),
     frontImageX:num(a.frontImageX,50),
@@ -72,7 +73,7 @@ function caseFaces(m, backHtml, extraClass=""){
   const logoPath=assets.frontLogoPath!==undefined?assets.frontLogoPath:m.logoPath;
   const logo=logoPath&&window.TMDB?TMDB.image(logoPath,"w300"):"";
   const logoMarkup=logo?`<img class="vhs-logo" src="${logo}" alt="" aria-hidden="true">`:`<div class="vhs-logo-fallback">${m.title}</div>`;
-  const frontLogo=logo?`<div class="vhs-front-logo" style="--front-logo-size:${Number.isFinite(Number(assets.frontLogoSize))?Number(assets.frontLogoSize):22}%;--front-logo-bottom:${Number.isFinite(Number(assets.frontLogoBottom))?Number(assets.frontLogoBottom):6}%>${logoMarkup}</div>`:"";
+  const frontLogo=logo&&assets.frontLogoVisible!==false?`<div class="vhs-front-logo" style="--front-logo-size:${Number.isFinite(Number(assets.frontLogoSize))?Number(assets.frontLogoSize):22}%;--front-logo-bottom:${Number.isFinite(Number(assets.frontLogoBottom))?Number(assets.frontLogoBottom):6}%>${logoMarkup}</div>`:"";
   const spineMarkup=logo?`<img class="vhs-spine-logo" src="${logo}" alt="" aria-hidden="true">`:`<span class="spine-label">${m.title}</span>`;
   const style=`--poster-art:url("${frontImage}");--backdrop-art:url("${backdrop}")`;
   const objectPosition=`object-position:${Number.isFinite(Number(assets.frontImageX))?Number(assets.frontImageX):50}% ${Number.isFinite(Number(assets.frontImageY))?Number(assets.frontImageY):50}%`;
@@ -151,6 +152,7 @@ function assetEditor(){
   const d=assetDraft(m),tmdb=m.tmdbAssets||{};
   return `<div class="modal-backdrop open artwork-backdrop" onclick="if(event.target===this)closeAssetEditor()">
     <section class="asset-modal artwork-picker" role="dialog" aria-modal="true" aria-labelledby="asset-title">
+      <div class="artwork-live-preview"><div class="artwork-preview-label">LIVE PREVIEW</div><div class="artwork-preview-case" data-asset-preview data-vhs="${m.id}" title="Move the mouse over the case to tilt · click to flip"><div class="vhs-stage" onclick="toggleCase(event,this.parentElement)">${caseFaces(m,backContent(m))}</div></div><div class="artwork-preview-hint">Move over the case to tilt · click to flip</div></div>
       <div class="modal-head">
         <div>
           <div class="eyebrow">TMDB ARTWORK</div>
@@ -168,11 +170,12 @@ function assetEditor(){
               <div class="asset-heading">
                 <div><strong>1. Front logo</strong><span>Used on the front, spine, and back of the VHS case.</span></div>
               </div>
-              <div class="asset-grid logo-grid">${assetCards(tmdb.logos||[],"logo",d.frontLogoPath)}</div>
-              <div class="asset-controls">
+              <div class="asset-grid-scroll"><div class="asset-grid logo-grid">${assetCards(tmdb.logos||[],"logo",d.frontLogoPath)}</div>
+              </div><div class="asset-controls">
                 <label>Logo size <input type="range" min="10" max="40" value="${d.frontLogoSize}" oninput="setAssetDraft('frontLogoSize',this.value)"><b data-asset-value="frontLogoSize">${d.frontLogoSize}%</b></label>
                 <label>Vertical position <input type="range" min="0" max="30" value="${d.frontLogoBottom}" oninput="setAssetDraft('frontLogoBottom',this.value)"><b data-asset-value="frontLogoBottom">${d.frontLogoBottom}% from bottom</b></label>
               </div>
+              <label class="asset-toggle"><span><strong>Show logo on front</strong><small>Keep the logo on the back and spines even when hidden here.</small></span><button type="button" class="toggle ${d.frontLogoVisible?"on":""}" onclick="setAssetDraft('frontLogoVisible',${d.frontLogoVisible?"false":"true"})" aria-label="Toggle front logo"></button></label>
             </div>
 
             <div class="asset-section">
@@ -186,8 +189,8 @@ function assetEditor(){
               <div class="asset-heading">
                 <div><strong>3. Front image</strong><span>Choose any TMDB poster asset, including language-specific versions.</span></div>
               </div>
-              <div class="asset-grid poster-grid">${assetCards(tmdb.posters||[],"poster",d.frontImagePath)}</div>
-              <div class="asset-crop-preview">
+              <div class="asset-grid-scroll"><div class="asset-grid poster-grid">${assetCards(tmdb.posters||[],"poster",d.frontImagePath)}</div>
+              </div><div class="asset-crop-preview">
                 <img src="${assetImage(d.frontImagePath,"w500")}" alt="" style="object-position:${d.frontImageX}% ${d.frontImageY}%">
                 <div class="asset-crop-frame"></div>
                 <span>Case crop preview</span>
@@ -202,10 +205,10 @@ function assetEditor(){
               <div class="asset-heading">
                 <div><strong>4. Back still</strong><span>Choose the TMDB backdrop/still shown behind the back-of-case information.</span></div>
               </div>
-              <div class="asset-grid backdrop-grid">${assetCards(tmdb.backdrops||[],"backdrop",d.backStillPath)}</div>
+              <div class="asset-grid-scroll"><div class="asset-grid backdrop-grid">${assetCards(tmdb.backdrops||[],"backdrop",d.backStillPath)}</div>
             </div>
 
-            <div class="asset-actions">
+            </div><div class="asset-actions">
               <button class="ghost" onclick="closeAssetEditor()">Done</button>
             </div>`}
     </section>
