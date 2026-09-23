@@ -290,14 +290,14 @@ window.chooseAsset=(type,encodedPath)=>{
     if(!preview)return;
     const inner=preview.querySelector(".vhs-inner");
     if(!inner)return;
-    preview.classList.toggle("flipped",wasFlipped);
     if(type==="backdrop"||type==="poster"){
+      preview.classList.toggle("flipped",wasFlipped);
       if(wasFlipped!==targetFlipped){
-        inner.style.transition="none";
         void inner.offsetWidth;
-        inner.style.transition="";
         requestAnimationFrame(()=>preview.classList.toggle("flipped",targetFlipped));
       }
+    }else{
+      preview.classList.toggle("flipped",wasFlipped);
     }
   });
 };
