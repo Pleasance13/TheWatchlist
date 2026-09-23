@@ -107,6 +107,14 @@ export default async function handler(req, res) {
         || logos[0]
         || null;
 
+      // TMDB often provides textless poster variants as posters with no
+      // language tag. Prefer the highest-rated one when available.
+      const textlessPosters = (images.posters || [])
+        .filter(item => item.iso_639_1 === null)
+        .slice()
+        .sort((a, b) => (b.vote_average || 0) - (a.vote_average || 0));
+      const textlessPoster = textlessPosters[0] || null;
+
       return send(res, 200, {
         tmdbId: movie.id,
         title: movie.title,
