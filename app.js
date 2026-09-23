@@ -33,11 +33,11 @@ function assetDraft(m){
   const a=caseAssets(m);
   const num=(value,fallback)=>Number.isFinite(Number(value))?Number(value):fallback;
   return {
-    frontLogoPath:a.frontLogoPath!==undefined?a.frontLogoPath:(m.logoPath||null),
+    frontLogoPath:a.frontLogoPath||m.logoPath||null,
     frontLogoSize:num(a.frontLogoSize,22),
     frontLogoBottom:num(a.frontLogoBottom,6),
     frontLogoVisible:a.frontLogoVisible!==false,
-    detailLogoPath:a.detailLogoPath!==undefined?a.detailLogoPath:(m.logoPath||null),
+    detailLogoPath:a.detailLogoPath||m.logoPath||null,
     frontImagePath:a.frontImagePath!==undefined?a.frontImagePath:(m.textlessPosterPath||m.posterPath||null),
     frontImageX:num(a.frontImageX,50),
     frontImageY:num(a.frontImageY,50),
@@ -72,7 +72,7 @@ function caseFaces(m, backHtml, extraClass=""){
   const frontImage=frontPath&&window.TMDB?TMDB.image(frontPath,"w500"):defaultPoster;
   const backPath=assets.backStillPath||m.backdropPath||m.posterPath||null;
   const backdrop=backPath&&window.TMDB?TMDB.image(backPath,"w780"):poster;
-  const logoPath=assets.frontLogoPath!==undefined?assets.frontLogoPath:m.logoPath;
+  const logoPath=assets.frontLogoPath||m.logoPath||null;
   const logo=logoPath&&window.TMDB?TMDB.image(logoPath,"w300"):"";
   const logoMarkup=logo?`<img class="vhs-logo" src="${logo}" alt="" aria-hidden="true">`:`<div class="vhs-logo-fallback">${m.title}</div>`;
   const frontLogo=logo&&assets.frontLogoVisible!==false?`<div class="vhs-front-logo" style="--front-logo-size:${Number.isFinite(Number(assets.frontLogoSize))?Number(assets.frontLogoSize):22}%;--front-logo-bottom:${Number.isFinite(Number(assets.frontLogoBottom))?Number(assets.frontLogoBottom):6}%>${logoMarkup}</div>`:"";
@@ -155,7 +155,7 @@ function assetEditor(){
   return `<div class="modal-backdrop open artwork-backdrop" onclick="if(event.target===this)closeAssetEditor()">
     <section class="asset-modal artwork-picker" role="dialog" aria-modal="true" aria-labelledby="asset-title">
       <div class="artwork-live-preview"><div class="artwork-preview-label">LIVE PREVIEW</div><div class="artwork-preview-case" data-asset-preview data-vhs="${m.id}" title="Move the mouse over the case to tilt · click to flip"><div class="vhs-stage" onclick="toggleCase(event,this.parentElement)">${caseFaces(m,backContent(m))}</div></div><div class="artwork-preview-hint">Move over the case to tilt · click to flip</div></div>
-      <div class="modal-head">
+      <div class="artwork-controls-column"><div class="modal-head">
         <div>
           <div class="eyebrow">TMDB ARTWORK</div>
           <h2 id="asset-title">Customize case artwork</h2>
@@ -212,7 +212,7 @@ function assetEditor(){
 
             </div><div class="asset-actions">
               <button class="ghost" onclick="closeAssetEditor()">Done</button>
-            </div>`}
+            </div></div>`}
     </section>
   </div>`;
 }
@@ -257,10 +257,6 @@ window.setAssetDraft=(field,value)=>{
   a[field]=field==="frontLogoVisible"?Boolean(value):Number(value);savedCaseAssets[m.id]=a;saveCaseAssets();
   const label=document.querySelector('[data-asset-value="'+field+'"]');
   if(label)label.textContent=field==="frontLogoBottom"?value+"% from bottom":value+"%";
-  if(field==="frontImageX"||field==="frontImageY"){
-    const preview=document.querySelector(".asset-crop-preview img");
-    if(preview)preview.style.objectPosition=(field==="frontImageX"?value:(a.frontImageX??50))+"% "+(field==="frontImageY"?value:(a.frontImageY??50))+"%";
-  }
   const live=document.querySelector("[data-asset-preview] .vhs-inner");
   if(live){
     if(field==="frontLogoSize")live.style.setProperty("--front-logo-size",Number(value)+"%");
