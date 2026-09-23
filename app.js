@@ -89,6 +89,8 @@ function detail(){
     <div class="vote-box"><div class="vote-label">Your response</div><div class="votes">${[["must","Must Watch"],["interested","Interested"],["watch","I'd Watch"],["no","Not Interested"]].map(([k,l])=>`<button class="vote vote-${k} ${selected===k?"selected":""}" onclick="vote('${m.id}','${k}')">${l}</button>`).join("")}</div></div>
     ${state.showSynopsis?`<p class="detail-synopsis">${m.synopsis}</p>`:""}
     ${state.showNote&&m.note?`<div class="detail-note"><div class="detail-note-label"><span class="avatar">J</span><span>Suggested by Josh</span></div><div class="detail-note-text">${m.note}</div></div>`:""}
+    ${m.watched?`<button class="watched-together-button" onclick="markWatchedTogether("${m.id}",true)">✓ Watched together</button>`:`<button class="watched-together-button" onclick="markWatchedTogether("${m.id}")">✓ Mark watched together</button>`}
+    ${movieReviewsSection(m)}
    </div>
  </section>`;
 }
