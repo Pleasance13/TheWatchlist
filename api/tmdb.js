@@ -173,7 +173,28 @@ export default async function handler(req, res) {
         backdropPath: movie.backdrop_path || null,
         logoPath: logo ? logo.file_path : null,
         logoWidth: logo ? logo.width : null,
-        logoHeight: logo ? logo.height : null
+        logoHeight: logo ? logo.height : null,
+        logos: (images.logos || []).map(item => ({
+          filePath: item.file_path,
+          isoLanguage: item.iso_639_1 || null,
+          width: item.width || null,
+          height: item.height || null,
+          voteAverage: item.vote_average || 0
+        })),
+        posters: (images.posters || []).map(item => ({
+          filePath: item.file_path,
+          isoLanguage: item.iso_639_1 || null,
+          width: item.width || null,
+          height: item.height || null,
+          voteAverage: item.vote_average || 0
+        })),
+        backdrops: (images.backdrops || []).map(item => ({
+          filePath: item.file_path,
+          isoLanguage: item.iso_639_1 || null,
+          width: item.width || null,
+          height: item.height || null,
+          voteAverage: item.vote_average || 0
+        }))
       });
     }
 
