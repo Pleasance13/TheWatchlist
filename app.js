@@ -21,7 +21,7 @@ let watchedAttendance={};try{watchedAttendance=JSON.parse(localStorage.getItem("
 watchedMovies.forEach(id=>{const m=movies.find(x=>x.id===id);if(m){m.watched=true;m.watchedBy=watchedAttendance[id]||m.watchedBy||[]}});
 const currentUser="Josh";
 const serverUsers=["Josh","Sarah","Mike","Alex"];
-const state={nav:"watchlist",view:"list",search:"",filter:"all",posterSize:2,showSynopsis:true,showRatings:false,showNote:true,showTrailer:false,detail:null,showFilters:false,votes:{},addMovieOpen:false,addMovieQuery:"",addMovieResults:[],addMovieSelection:null,addMovieLoading:false,addMovieError:"",attendanceOpen:false,attendanceMovieId:null,attendanceSelected:[],assetEditorOpen:false,assetMovieId:null,assetLoading:false,assetError:""};
+const state={nav:"watchlist",view:"list",search:"",filter:"all",posterSize:2,showSynopsis:true,showRatings:false,showNote:true,showTrailer:false,detail:null,showFilters:false,votes:{},addMovieOpen:false,addMovieQuery:"",addMovieResults:[],addMovieSelection:null,addMovieLoading:false,addMovieError:"",attendanceOpen:false,attendanceMovieId:null,attendanceSelected:[],assetEditorOpen:false,assetMovieId:null,assetLoading:false,assetError:"",assetSections:{frontLogo:true,detailLogo:true,frontImage:true,backStill:true},assetLanguageGroups:{}};
 const app=document.querySelector("#app");
 let savedCaseAssets={};
 try{savedCaseAssets=JSON.parse(localStorage.getItem("watchlist-case-assets")||"{}");}catch(error){savedCaseAssets={}}
@@ -139,15 +139,73 @@ function attendanceModal(){
 }
 function assetImage(path,size="w185"){return path&&window.TMDB?TMDB.image(path,size):""}
 function assetLanguageLabel(a){return a.isoLanguage||"No language"}
+function assetLanguageKey(a){return a.isoLanguage||"none"}
+function assetLanguageName(key){return key==="none"?"No language":String(key).toUpperCase()}
 function assetCards(items,type,selected){
   if(!items?.length)return '<div class="asset-empty">No TMDB assets found.</div>';
-  return items.map(a=>{
-    const safe=encodeURIComponent(String(a.filePath));
-    const sel=selected===a.filePath?" selected":"";
-    const size=type==="logo"||type==="detail-logo"?"w300":type==="poster"?"w185":"w300";
-    return `<button class="asset-card${sel}" onclick="chooseAsset('${type}','${safe}')" title="${assetLanguageLabel(a)}"><img src="${assetImage(a.filePath,size)}" alt=""><span>${assetLanguageLabel(a)}</span></button>`;
+  const groups=new Map();
+  items.forEach(a=>{const key=assetLanguageKey(a);if(!groups.has(key))groups.set(key,[]);groups.get(key).push(a)});
+  return [...groups.entries()].map(([key,group])=>{
+    const id="asset-lang-"+type.replace(/[^a-z0-9]/gi,"")+"-"+key.replace(/[^a-z0-9]/gi,"none");
+    const open=state.assetLanguageGroups[id]!==false;
+    const cards=group.map(a=>{
+      const safe=encodeURIComponent(String(a.filePath));
+      const sel=selected===a.filePath?" selected":"";
+      const size=type==="logo"||type==="detail-logo"?"w300":type==="poster"?"w185":"w300";
+      return `<button class="asset-card${sel}" onclick="chooseAsset('${type}','${safe}')" title="${assetLanguageName(key)}"><img src="${assetImage(a.filePath,size)}" alt=""><span>${assetLanguageName(key)}</span></button>`;
+    }).join("");
+    return `<div class="asset-language-group ${open?"open":""}">
+      <button type="button" class="asset-language-heading" onclick="toggleAssetLanguage('${id}')" aria-expanded="${open}">
+        <strong>${assetLanguageName(key)}</strong><span>${group.length} asset${group.length===1?"":"s"} <b>${open?"−":"+"}</b></span>
+      </button>
+      ${open?`<div class="asset-language-grid">${cards}</div>`:""}
+    </div>`;
   }).join("")
 }
+function assetSection(id,number,title,description,body){
+  const open=state.assetSections[id]!==false;
+  return `<div class="asset-section ${open?"open":""}">
+    <button type="button" class="asset-heading asset-section-toggle" onclick="toggleAssetSection('${id}')" aria-expanded="${open}">
+      <span><strong>${number}. ${title}</strong><small>${description}</small></span><b>${open?"−":"+"}</b>
+    </button>
+    ${open?body:""}
+  </div>`
+}
+function preserveArtworkView(){
+  const controls=document.querySelector(".artwork-controls-column");
+  const grids=[...document.querySelectorAll(".artwork-controls-column .asset-grid-scroll")];
+  const preview=document.querySelector("[data-asset-preview]");
+  return {
+    controlsTop:controls?.scrollTop||0,
+    grids:grids.map((el,i)=>[i,el.scrollTop]),
+    flipped:preview?.classList.contains("flipped")||false
+  };
+}
+function restoreArtworkView(view){
+  if(!view)return;
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{
+    const controls=document.querySelector(".artwork-controls-column");
+    if(controls)controls.scrollTop=view.controlsTop;
+    [...document.querySelectorAll(".artwork-controls-column .asset-grid-scroll")].forEach((el,i)=>{
+      const saved=view.grids.find(x=>x[0]===i);
+      if(saved)el.scrollTop=saved[1];
+    });
+    const preview=document.querySelector("[data-asset-preview]");
+    if(preview)preview.classList.toggle("flipped",view.flipped);
+  }));
+}
+window.toggleAssetSection=id=>{
+  const view=preserveArtworkView();
+  state.assetSections[id]=state.assetSections[id]===false;
+  render();
+  restoreArtworkView(view);
+};
+window.toggleAssetLanguage=id=>{
+  const view=preserveArtworkView();
+  state.assetLanguageGroups[id]=state.assetLanguageGroups[id]===false;
+  render();
+  restoreArtworkView(view);
+};
 function assetEditor(){
   const m=movies.find(x=>x.id===state.assetMovieId);
   if(!state.assetEditorOpen||state.nav!=="detail"||state.detail!==state.assetMovieId||!m||!canEditCaseAssets())return "";
@@ -168,47 +226,30 @@ function assetEditor(){
         : state.assetError
           ? '<div class="add-status error">'+state.assetError+'</div>'
           : `
-            <div class="asset-section">
-              <div class="asset-heading">
-                <div><strong>1. Front logo</strong><span>Used on the front, spine, and back of the VHS case.</span></div>
-              </div>
-              <div class="asset-grid-scroll"><div class="asset-grid logo-grid">${assetCards(tmdb.logos||[],"logo",d.frontLogoPath)}</div>
-              </div><div class="asset-controls">
+            ${assetSection("frontLogo",1,"Front logo","Used on the front, spine, and back of the VHS case.",`
+              <div class="asset-grid-scroll"><div class="asset-grid logo-grid">${assetCards(tmdb.logos||[],"logo",d.frontLogoPath)}</div></div>
+              <div class="asset-controls">
                 <label>Logo size <input type="range" min="10" max="40" value="${d.frontLogoSize}" oninput="setAssetDraft('frontLogoSize',this.value)"><b data-asset-value="frontLogoSize">${d.frontLogoSize}%</b></label>
                 <label>Vertical position <input type="range" min="0" max="30" value="${d.frontLogoBottom}" oninput="setAssetDraft('frontLogoBottom',this.value)"><b data-asset-value="frontLogoBottom">${d.frontLogoBottom}% from bottom</b></label>
               </div>
-              <label class="asset-toggle"><span><strong>Show logo on front</strong><small>Keep the logo on the back and spines even when hidden here.</small></span><button type="button" class="toggle ${d.frontLogoVisible?"on":""}" onclick="setAssetDraft('frontLogoVisible',${d.frontLogoVisible?"false":"true"})" aria-label="Toggle front logo"></button></label>
-            </div>
+              <label class="asset-toggle"><span><strong>Show logo on front</strong><small>Keep the logo on the back and spines even when hidden here.</small></span><button type="button" class="toggle ${d.frontLogoVisible?"on":""}" onclick="setAssetDraft('frontLogoVisible',${d.frontLogoVisible?"false":"true"})" aria-label="Toggle front logo"></button></label>`)
 
-            <div class="asset-section">
-              <div class="asset-heading">
-                <div><strong>2. Details-page logo</strong><span>Independent from the logo used on the physical case.</span></div>
-              </div>
-              <div class="asset-grid-scroll"><div class="asset-grid logo-grid">${assetCards(tmdb.logos||[],"detail-logo",d.detailLogoPath)}</div></div>
-            </div>
+            ${assetSection("detailLogo",2,"Details-page logo","Independent from the logo used on the physical case.",`
+              <div class="asset-grid-scroll"><div class="asset-grid logo-grid">${assetCards(tmdb.logos||[],"detail-logo",d.detailLogoPath)}</div></div>`)}
 
-            <div class="asset-section">
-              <div class="asset-heading">
-                <div><strong>3. Front image</strong><span>Choose any TMDB poster asset, including language-specific versions.</span></div>
-              </div>
-              <div class="asset-grid-scroll"><div class="asset-grid poster-grid">${assetCards(tmdb.posters||[],"poster",d.frontImagePath)}</div>
-</div>
+            ${assetSection("frontImage",3,"Front image","Choose any TMDB poster asset, including language-specific versions.",`
+              <div class="asset-grid-scroll"><div class="asset-grid poster-grid">${assetCards(tmdb.posters||[],"poster",d.frontImagePath)}</div></div>
               <div class="asset-controls">
                 <label>Horizontal crop <input type="range" min="0" max="100" value="${d.frontImageX}" oninput="setAssetDraft('frontImageX',this.value)"><b data-asset-value="frontImageX">${d.frontImageX}%</b></label>
                 <label>Vertical crop <input type="range" min="0" max="100" value="${d.frontImageY}" oninput="setAssetDraft('frontImageY',this.value)"><b data-asset-value="frontImageY">${d.frontImageY}%</b></label>
-              </div>
-            </div>
+              </div>`)}
 
-            <div class="asset-section">
-              <div class="asset-heading">
-                <div><strong>4. Back still</strong><span>Choose the TMDB backdrop/still shown behind the back-of-case information.</span></div>
-              </div>
-              <div class="asset-grid-scroll"><div class="asset-grid backdrop-grid">${assetCards(tmdb.backdrops||[],"backdrop",d.backStillPath)}</div>
-            </div>
-<div class="asset-controls">
+            ${assetSection("backStill",4,"Back still","Choose the TMDB backdrop/still shown behind the back-of-case information.",`
+              <div class="asset-grid-scroll"><div class="asset-grid backdrop-grid">${assetCards(tmdb.backdrops||[],"backdrop",d.backStillPath)}</div></div>
+              <div class="asset-controls">
                 <label>Horizontal position <input type="range" min="0" max="100" value="${d.backStillX}" oninput="setAssetDraft(&quot;backStillX&quot;,this.value)"><b data-asset-value="backStillX">${d.backStillX}%</b></label>
                 <label>Vertical position <input type="range" min="0" max="100" value="${d.backStillY}" oninput="setAssetDraft(&quot;backStillY&quot;,this.value)"><b data-asset-value="backStillY">${d.backStillY}%</b></label>
-              </div>
+              </div>`)}
 
             </div><div class="asset-actions">
               <button class="ghost" onclick="closeAssetEditor()">Done</button>
@@ -243,13 +284,14 @@ window.openAssetEditor=async id=>{
 window.closeAssetEditor=()=>{state.assetEditorOpen=false;state.assetMovieId=null;state.assetLoading=false;render()};
 window.chooseAsset=(type,encodedPath)=>{
   const m=movies.find(x=>x.id===state.assetMovieId);if(!m||!canEditCaseAssets())return;
+  const view=preserveArtworkView();
   const path=decodeURIComponent(encodedPath);
   const a=savedCaseAssets[m.id]||{};
   if(type==="logo")a.frontLogoPath=path;
   else if(type==="detail-logo")a.detailLogoPath=path;
   else if(type==="poster")a.frontImagePath=path;
   else if(type==="backdrop")a.backStillPath=path;
-  savedCaseAssets[m.id]=a;saveCaseAssets();render()
+  savedCaseAssets[m.id]=a;saveCaseAssets();render();restoreArtworkView(view);
 };
 window.setAssetDraft=(field,value)=>{
   const m=movies.find(x=>x.id===state.assetMovieId);if(!m||!canEditCaseAssets())return;
