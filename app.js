@@ -21,7 +21,7 @@ let watchedAttendance={};try{watchedAttendance=JSON.parse(localStorage.getItem("
 watchedMovies.forEach(id=>{const m=movies.find(x=>x.id===id);if(m){m.watched=true;m.watchedBy=watchedAttendance[id]||m.watchedBy||[]}});
 const currentUser="Josh";
 const serverUsers=["Josh","Sarah","Mike","Alex"];
-const state={nav:"watchlist",view:"list",search:"",filter:"all",posterSize:2,showSynopsis:true,showRatings:false,showNote:true,showTrailer:false,detail:null,showFilters:false,votes:{},addMovieOpen:false,addMovieQuery:"",addMovieResults:[],addMovieSelection:null,addMovieLoading:false,addMovieError:"",attendanceOpen:false,attendanceMovieId:null,attendanceSelected:[],assetEditorOpen:false,assetMovieId:null,assetLoading:false,assetError:"",assetSections:{frontLogo:true,detailLogo:true,frontImage:true,backStill:true},assetLanguageGroups:{}};
+const state={nav:"watchlist",view:"list",search:"",filter:"all",posterSize:2,showSynopsis:true,showRatings:false,showNote:true,showTrailer:false,detail:null,showFilters:false,votes:{},addMovieOpen:false,addMovieQuery:"",addMovieResults:[],addMovieSelection:null,addMovieLoading:false,addMovieError:"",attendanceOpen:false,attendanceMovieId:null,attendanceSelected:[],assetEditorOpen:false,assetMovieId:null,assetLoading:false,assetError:"",assetSections:{frontLogo:true,detailLogo:true,frontImage:true,backStill:true},assetLanguageGroups:{},assetPreviewFlipped:false};
 const app=document.querySelector("#app");
 let savedCaseAssets={};
 try{savedCaseAssets=JSON.parse(localStorage.getItem("watchlist-case-assets")||"{}");}catch(error){savedCaseAssets={}}
@@ -175,6 +175,7 @@ function assetSection(id,number,title,description,body){
     ${open?body:""}
   </div>`
 }
+let assetPreviewFlipRequest=0;
 function preserveArtworkView(){
   const controls=document.querySelector(".artwork-controls-column");
   const grids=[...document.querySelectorAll(".artwork-controls-column .asset-grid-scroll")];
@@ -182,7 +183,7 @@ function preserveArtworkView(){
   return {
     controlsTop:controls?.scrollTop||0,
     grids:grids.map((el,i)=>[i,el.scrollTop]),
-    flipped:preview?.classList.contains("flipped")||false
+    flipped:state.assetPreviewFlipped
   };
 }
 function restoreArtworkView(view,restoreFlip=true){
@@ -200,6 +201,7 @@ function restoreArtworkView(view,restoreFlip=true){
 }
 window.toggleAssetSection=(id,event)=>{
   event?.stopPropagation();
+  ++assetPreviewFlipRequest;
   const view=preserveArtworkView();
   state.assetSections[id]=state.assetSections[id]===false;
   render();
@@ -207,6 +209,7 @@ window.toggleAssetSection=(id,event)=>{
 };
 window.toggleAssetLanguage=(id,event)=>{
   event?.stopPropagation();
+  ++assetPreviewFlipRequest;
   const view=preserveArtworkView();
   state.assetLanguageGroups[id]=state.assetLanguageGroups[id]===false;
   render();
@@ -250,7 +253,11 @@ let addMovieSearchTimer=null;let addMovieSearchRequest=0;
 function bindLiveInputs(){let s=document.querySelector("#search");if(s)s.addEventListener("input",e=>{state.search=e.target.value;updateListOnly()});let r=document.querySelector("#sizeRange");if(r)r.addEventListener("input",e=>setPosterSize(e.target.value));let a=document.querySelector("#addMovieSearch");if(a)a.addEventListener("input",e=>{state.addMovieQuery=e.target.value;clearTimeout(addMovieSearchTimer);const query=e.target.value.trim();if(!query){state.addMovieResults=[];state.addMovieError="";document.querySelector("#addMovieResults").innerHTML=addMovieResults();return}addMovieSearchTimer=setTimeout(()=>searchAddMovies(query),300)})}
 function updateListOnly(){let main=document.querySelector(".content");if(!main)return;let active=document.activeElement===document.querySelector("#search");let pos=document.querySelector("#search")?.selectionStart;main.innerHTML=watchlist();bindLiveInputs();bindVhsTilt();let s=document.querySelector("#search");if(active&&s){s.focus();s.setSelectionRange(pos,pos)}}
 function bindVhsTilt(){const cards=[...document.querySelectorAll("[data-vhs]")];cards.forEach(card=>{const stage=card.querySelector(".vhs-stage"),inner=card.querySelector(".vhs-inner");if(!stage||!inner)return;const r=stage.getBoundingClientRect();inner.style.setProperty("--box-width",r.width+"px");inner.style.setProperty("--box-height",r.height+"px")});if(window.__vhsMouseMove){window.removeEventListener("pointermove",window.__vhsMouseMove);window.removeEventListener("pointerleave",window.__vhsMouseLeave)}window.__vhsMouseMove=e=>{cards.forEach(card=>{const stage=card.querySelector(".vhs-stage");if(!stage)return;const r=stage.getBoundingClientRect(),x=(e.clientX-r.left)/r.width-.5,y=(e.clientY-r.top)/r.height-.5;const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));stage.style.setProperty("--tilt-x",clamp(-y*10,-10,10).toFixed(2)+"deg");stage.style.setProperty("--tilt-y",clamp(x*14,-20,20).toFixed(2)+"deg")})};window.__vhsMouseLeave=()=>cards.forEach(card=>{const stage=card.querySelector(".vhs-stage");if(stage){stage.style.setProperty("--tilt-x","0deg");stage.style.setProperty("--tilt-y","0deg")}});window.addEventListener("pointermove",window.__vhsMouseMove);window.addEventListener("pointerleave",window.__vhsMouseLeave)}
-window.toggleCase=(e,el)=>{if(!el||e.target.closest("button,input"))return;el.classList.toggle("flipped")};
+window.toggleCase=(e,el)=>{
+  if(!el||e.target.closest("button,input"))return;
+  el.classList.toggle("flipped");
+  if(el.closest("[data-asset-preview]"))state.assetPreviewFlipped=el.classList.contains("flipped");
+};
 window.openAddMovie=()=>{state.addMovieOpen=true;state.addMovieQuery="";state.addMovieResults=[];state.addMovieSelection=null;state.addMovieError="";state.addMovieLoading=false;render();requestAnimationFrame(()=>document.querySelector("#addMovieSearch")?.focus())};
 window.closeAddMovie=()=>{state.addMovieOpen=false;render()};
 window.searchAddMovies=async queryArg=>{const input=document.querySelector("#addMovieSearch");const query=(queryArg??input?.value??state.addMovieQuery??"").trim();if(!query)return;state.addMovieQuery=query;state.addMovieLoading=true;state.addMovieError="";state.addMovieResults=[];const request=++addMovieSearchRequest;const results=document.querySelector("#addMovieResults");if(results)results.innerHTML=addMovieResults();try{const data=await TMDB.search(query);if(request!==addMovieSearchRequest)return;state.addMovieResults=(data.results||[]).slice(0,8);const currentInput=document.querySelector("#addMovieSearch");if(currentInput?.value.trim()!==state.addMovieQuery.trim())return;state.addMovieLoading=false;if(results)results.innerHTML=addMovieResults();}catch(error){if(request!==addMovieSearchRequest)return;state.addMovieError=error.message||"TMDB search failed.";state.addMovieLoading=false;if(results)results.innerHTML=addMovieResults();}};
@@ -273,7 +280,7 @@ window.closeAssetEditor=()=>{state.assetEditorOpen=false;state.assetMovieId=null
 window.chooseAsset=(type,encodedPath)=>{
   const m=movies.find(x=>x.id===state.assetMovieId);if(!m||!canEditCaseAssets())return;
   const view=preserveArtworkView();
-  const wasFlipped=Boolean(view.flipped);
+  const wasFlipped=Boolean(state.assetPreviewFlipped);
   const path=decodeURIComponent(encodedPath);
   const a=savedCaseAssets[m.id]||{};
   if(type==="logo")a.frontLogoPath=path;
@@ -283,24 +290,26 @@ window.chooseAsset=(type,encodedPath)=>{
   savedCaseAssets[m.id]=a;saveCaseAssets();
 
   const targetFlipped=type==="backdrop"?true:type==="poster"?false:wasFlipped;
+  const shouldAnimateFlip=(type==="poster"||type==="backdrop")&&wasFlipped!==targetFlipped;
+  const request=++assetPreviewFlipRequest;
+  state.assetPreviewFlipped=targetFlipped;
 
   render();
   restoreArtworkView(view,false);
 
-  requestAnimationFrame(()=>{
-    const preview=document.querySelector("[data-asset-preview]");
-    const inner=preview?.querySelector(".vhs-inner");
-    if(!preview||!inner)return;
-
-    // Restore the side the user was already viewing. Nothing except a front/back
-    // asset selection is allowed to change the preview side.
-    preview.classList.toggle("flipped",wasFlipped);
-
-    if((type==="poster"||type==="backdrop")&&wasFlipped!==targetFlipped){
+  if(shouldAnimateFlip){
+    requestAnimationFrame(()=>{
+      if(request!==assetPreviewFlipRequest)return;
+      const preview=document.querySelector("[data-asset-preview]");
+      const inner=preview?.querySelector(".vhs-inner");
+      if(!preview||!inner)return;
+      preview.classList.toggle("flipped",wasFlipped);
       void inner.offsetWidth;
-      requestAnimationFrame(()=>preview.classList.toggle("flipped",targetFlipped));
-    }
-  });
+      requestAnimationFrame(()=>{
+        if(request===assetPreviewFlipRequest)preview.classList.toggle("flipped",targetFlipped);
+      });
+    });
+  }
 };
 window.toggleAssetLogo=(button)=>{
   const m=movies.find(x=>x.id===state.assetMovieId);if(!m||!canEditCaseAssets())return;
