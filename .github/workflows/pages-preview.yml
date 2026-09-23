@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - list-mode-improvement
+      - feature/tmdb-integration
   workflow_dispatch:
 
 permissions:
