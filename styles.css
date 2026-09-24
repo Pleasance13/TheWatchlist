@@ -1072,3 +1072,23 @@ button,input{font:inherit}button{color:inherit}.topbar{height:72px;padding:0 32p
   border-left:1.5px solid #15171a!important;border-bottom:1.5px solid #15171a!important;
   transform:rotate(-45deg) translate(1px,-1px)!important;
 }
+
+/* Precisely center the check glyph inside custom User(s) checkboxes */
+.filter-options .filter-choice input[type="checkbox"],
+.filter-dropdown .filter-options input[type="checkbox"],
+.filter-panel input.filter-user-checkbox{
+  position:relative!important;
+  display:inline-block!important;
+  vertical-align:middle!important;
+}
+.filter-options .filter-choice input[type="checkbox"]:checked::after,
+.filter-dropdown .filter-options input[type="checkbox"]:checked::after,
+.filter-panel input.filter-user-checkbox:checked::after{
+  position:absolute!important;
+  left:50%!important;top:50%!important;
+  width:6px!important;height:3px!important;
+  margin:0!important;padding:0!important;
+  transform:translate(-50%,-65%) rotate(-45deg)!important;
+  transform-origin:center!important;
+  box-sizing:content-box!important;
+}
