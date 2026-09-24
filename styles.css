@@ -1040,3 +1040,9 @@ button,input{font:inherit}button{color:inherit}.topbar{height:72px;padding:0 32p
 .upcoming-section{margin-top:34px;padding-top:4px}
 .upcoming-heading{font-size:clamp(20px,2.2vw,26px);font-weight:600;letter-spacing:-.025em;margin:0 0 18px;padding-bottom:12px;border-bottom:1px solid var(--line)}
 .upcoming-section .list,.upcoming-section .grid{margin-top:0}
+
+/* Keep detail action buttons aligned and visually balanced */
+.detail-movie-actions{display:flex!important;align-items:center!important;justify-content:flex-start!important;gap:12px!important;flex-wrap:wrap!important}
+.detail-movie-actions>button{box-sizing:border-box!important;display:inline-flex!important;align-items:center!important;justify-content:center!important;align-self:center!important;min-height:42px!important;height:42px!important;line-height:1!important;margin:0!important;vertical-align:middle!important}
+.detail-movie-actions .remove-movie-button{padding:0 12px!important;font-size:12px!important;font-weight:500!important}
+.detail-movie-actions .watched-together-button{padding:0 12px!important}
