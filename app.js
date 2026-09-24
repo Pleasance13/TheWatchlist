@@ -139,7 +139,7 @@ function gridView(items,historyMode=false){return `<div class="grid" style="--gr
 function applyAdvancedFilters(items,historyMode=false){
  let a=items.slice();
  const genres=state.genreFilters||[];
- if(genres.length)a=a.filter(m=>genres.every(g=>(m.genre||"").split(/\\s*[·,/&]\\s*/).map(x=>x.trim()).includes(g)));
+ if(genres.length)a=a.filter(m=>genres.every(g=>(m.genre||"").split(/\s*[·,/&]\s*/).map(x=>x.trim()).includes(g)));
  if(state.yearFrom)a=a.filter(m=>Number(m.year)>=Number(state.yearFrom));
  if(state.yearTo)a=a.filter(m=>Number(m.year)<=Number(state.yearTo));
  if(!historyMode&&state.interestUsers?.length&&state.interestLevel)a=a.filter(m=>state.interestUsers.some(p=>{
