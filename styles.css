@@ -1046,3 +1046,29 @@ button,input{font:inherit}button{color:inherit}.topbar{height:72px;padding:0 32p
 .detail-movie-actions>button{box-sizing:border-box!important;display:inline-flex!important;align-items:center!important;justify-content:center!important;align-self:center!important;min-height:42px!important;height:42px!important;line-height:1!important;margin:0!important;vertical-align:middle!important}
 .detail-movie-actions .remove-movie-button{padding:0 12px!important;font-size:12px!important;font-weight:500!important}
 .detail-movie-actions .watched-together-button{padding:0 12px!important}
+
+/* Use the same custom checked-box mark in every filter, including nested User(s) pickers */
+.filter-options .filter-choice input[type="checkbox"],
+.filter-dropdown .filter-options input[type="checkbox"],
+.filter-panel input.filter-user-checkbox{
+  appearance:none!important;-webkit-appearance:none!important;
+  display:inline-grid!important;place-content:center!important;
+  flex:0 0 13px!important;width:13px!important;height:13px!important;
+  min-width:13px!important;max-width:13px!important;
+  margin:0!important;padding:0!important;
+  border:1px solid #747b86!important;border-radius:2px!important;
+  background:#17191d!important;box-sizing:border-box!important;
+  accent-color:transparent!important;cursor:pointer!important;
+}
+.filter-options .filter-choice input[type="checkbox"]:checked,
+.filter-dropdown .filter-options input[type="checkbox"]:checked,
+.filter-panel input.filter-user-checkbox:checked{
+  background:#a5adba!important;border-color:#a5adba!important;
+}
+.filter-options .filter-choice input[type="checkbox"]:checked::after,
+.filter-dropdown .filter-options input[type="checkbox"]:checked::after,
+.filter-panel input.filter-user-checkbox:checked::after{
+  content:""!important;display:block!important;width:6px!important;height:3px!important;
+  border-left:1.5px solid #15171a!important;border-bottom:1.5px solid #15171a!important;
+  transform:rotate(-45deg) translate(1px,-1px)!important;
+}
