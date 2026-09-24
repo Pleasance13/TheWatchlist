@@ -1047,3 +1047,8 @@ button,input{font:inherit}button{color:inherit}.topbar{height:72px;padding:0 32p
 .detail-movie-actions .remove-movie-button{padding:0 12px!important;font-size:12px!important;font-weight:500!important}
 .detail-movie-actions .watched-together-button{padding:0 12px!important}
 
+
+/* Fine-tune only the User(s) checkmark position; leave Genre(s) untouched */
+.filter-panel input.filter-user-checkbox:checked::after{
+  transform:translateX(2px) rotate(-45deg) translate(1px,-1px)!important;
+}
