@@ -915,3 +915,25 @@ button,input{font:inherit}button{color:inherit}.topbar{height:72px;padding:0 32p
 .filter-panel .filter-control:nth-child(6)>.filter-dropdown>summary{min-width:95px}
 .filter-panel .filter-control:nth-child(7)>.filter-dropdown>summary{min-width:125px}
 @media(max-width:650px){.filter-panel{justify-content:center}.filter-control>.filter-dropdown[open]>.filter-menu{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);max-height:75vh;overflow:auto;z-index:2000}.filter-control>.filter-dropdown>summary{font-size:11px;padding:8px}.seen-filter-fields{grid-template-columns:1fr!important}}
+
+/* Corrective filter layout overrides */
+.filter-panel{display:flex!important;width:100%;max-width:100%;flex-flow:row wrap!important;justify-content:center!important;align-items:flex-start!important;gap:8px!important;padding:12px!important;box-sizing:border-box}
+.filter-panel>.filter-option-button,.filter-panel>.filter-control>.filter-dropdown>summary{display:inline-flex!important;flex:0 0 auto!important;width:max-content!important;min-width:0!important;max-width:100%;height:36px!important;min-height:36px!important;align-items:center!important;justify-content:center!important;white-space:nowrap!important;box-sizing:border-box!important;padding:8px 12px!important;font-size:12px!important;font-weight:600!important;border:1px solid var(--line)!important;border-radius:7px!important;background:var(--panel2)!important;color:var(--text)!important}
+.filter-panel>.filter-control{display:flex!important;flex:0 0 auto!important;flex-flow:row nowrap!important;align-items:center!important;width:max-content!important;max-width:100%;gap:4px!important}
+.filter-panel>.filter-control>.filter-dropdown{display:block!important;flex:0 0 auto!important;width:max-content!important;min-width:0!important;max-width:100%;position:relative!important}
+.filter-panel>.filter-control>.filter-dropdown>summary{width:max-content!important;min-width:0!important}
+.filter-panel .filter-menu{font-size:12px!important}
+.filter-panel .filter-options{display:flex!important;flex-direction:column!important;align-items:stretch!important;justify-content:flex-start!important;text-align:left!important;gap:7px!important}
+.filter-panel .filter-options .filter-choice{display:flex!important;flex-direction:row!important;align-items:center!important;justify-content:flex-start!important;text-align:left!important;width:100%!important;gap:8px!important}
+.filter-panel .filter-choice input{flex:0 0 auto!important;margin:0!important}
+.filter-panel .filter-choice span{display:block!important;text-align:left!important}
+.filter-panel .interest-filter-fields{display:grid!important;grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;align-items:start!important}
+.filter-panel .seen-filter-fields{display:grid!important;grid-template-columns:115px minmax(150px,1fr)!important;align-items:start!important}
+.filter-panel .seen-filter-fields>label:first-child{width:115px!important;min-width:115px!important;max-width:115px!important}
+.filter-panel .seen-filter-fields>label:first-child select{width:100%!important;max-width:100%!important}
+.filter-panel .seen-filter-fields>label:last-child{min-width:150px!important}
+.filter-panel .filter-dropdown.filter-nested{width:100%!important;min-width:0!important;max-width:100%!important}
+.filter-panel .filter-dropdown.filter-nested>summary{width:100%!important;box-sizing:border-box!important;text-align:left!important}
+.filter-panel .filter-clear{display:inline-flex!important;flex:0 0 25px!important;width:25px!important;min-width:25px!important;height:25px!important;align-items:center!important;justify-content:center!important;margin:0!important;padding:0!important}
+.filter-panel .filter-control:nth-child(2)>.filter-dropdown>summary,.filter-panel .filter-control:nth-child(3)>.filter-dropdown>summary,.filter-panel .filter-control:nth-child(4)>.filter-dropdown>summary,.filter-panel .filter-control:nth-child(5)>.filter-dropdown>summary,.filter-panel .filter-control:nth-child(6)>.filter-dropdown>summary,.filter-panel .filter-control:nth-child(7)>.filter-dropdown>summary{min-width:0!important}
+@media(max-width:650px){.filter-panel{justify-content:center!important}.filter-panel>.filter-control>.filter-dropdown[open]>.filter-menu{position:fixed!important;left:50%!important;top:50%!important;transform:translate(-50%,-50%)!important;max-height:75vh!important;overflow:auto!important;z-index:2000!important}.filter-panel .seen-filter-fields{grid-template-columns:105px minmax(0,1fr)!important}.filter-panel .seen-filter-fields>label:first-child{width:105px!important;min-width:105px!important;max-width:105px!important}}
