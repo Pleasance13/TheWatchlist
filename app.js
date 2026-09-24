@@ -78,7 +78,8 @@ function advancedFilterPanel(historyMode=false){
  const genres=genreList(),years=movies.map(m=>Number(m.year)).filter(y=>Number.isFinite(y)&&y>0),minYear=years.length?Math.min(...years):1888,maxYear=years.length?Math.max(...years):new Date().getFullYear();
  const suggesters=[...new Set(movies.map(m=>m.suggestedBy||m.addedBy||(m.note?"Josh":"")).filter(Boolean))].sort();
  const seenUsers=[...new Set(movies.flatMap(m=>m.seen||[]).concat(serverUsers))].sort((a,b)=>a===currentUser?-1:b===currentUser?1:a.localeCompare(b));
- const selected=state.genreFilters||[];\n const yearFromValue=Number(state.yearFrom)||minYear,yearToValue=Number(state.yearTo)||maxYear,yearFromPct=(yearFromValue-minYear)/(maxYear-minYear||1)*100,yearToPct=(yearToValue-minYear)/(maxYear-minYear||1)*100,yearTrack=`linear-gradient(to right,#555b65 0%,#555b65 ${yearFromPct}%,#aeb4be ${yearFromPct}%,#aeb4be ${yearToPct}%,#555b65 ${yearToPct}%,#555b65 100%)`;
+ const selected=state.genreFilters||[];
+ const yearFromValue=Number(state.yearFrom)||minYear,yearToValue=Number(state.yearTo)||maxYear,yearFromPct=(yearFromValue-minYear)/(maxYear-minYear||1)*100,yearToPct=(yearToValue-minYear)/(maxYear-minYear||1)*100,yearTrack=`linear-gradient(to right,#555b65 0%,#555b65 ${yearFromPct}%,#aeb4be ${yearFromPct}%,#aeb4be ${yearToPct}%,#555b65 ${yearToPct}%,#555b65 100%)`;
  const interestOptions=[["any","Any interest"],["must","Must watch"],["interested","Interested"],["watch","I'd watch"],["no","Not interested"],["none","No answer"]];
  const multi=(items,arr,handler)=>items.map(p=>`<label class="filter-choice"><input type="checkbox" value="${p}" ${arr.includes(p)?"checked":""} onchange="${handler}(this.value,this.checked)"><span>${p===currentUser?p+" (you)":p}</span></label>`).join("");
  return `<div class="filter-panel">
