@@ -1,0 +1,32 @@
+<svg version="1.2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 200" width="1000" height="200">
+	<defs>
+		<linearGradient id="g1" x2="1" gradientUnits="userSpaceOnUse" gradientTransform="matrix(949.176,237.294,-66.825,267.294,25.378,31.35)">
+			<stop offset="0" stop-color="#7edb6d"/>
+			<stop offset="1" stop-color="#7edb6d" stop-opacity="0"/>
+		</linearGradient>
+		<linearGradient id="g2" x2="1" gradientUnits="userSpaceOnUse" gradientTransform="matrix(948.94,237.235,-66.589,266.353,25.495,-2.121)">
+			<stop offset="0" stop-color="#e5da52"/>
+			<stop offset="1" stop-color="#e5da52" stop-opacity="0"/>
+		</linearGradient>
+		<linearGradient id="g3" x2="1" gradientUnits="userSpaceOnUse" gradientTransform="matrix(948.94,237.235,-66.589,266.353,25.495,-35.121)">
+			<stop offset="0" stop-color="#e29655"/>
+			<stop offset="1" stop-color="#e29655" stop-opacity="0"/>
+		</linearGradient>
+		<linearGradient id="g4" x2="1" gradientUnits="userSpaceOnUse" gradientTransform="matrix(949.176,237.294,-66.825,267.294,25.378,-68.65)">
+			<stop offset="0" stop-color="#e65d54"/>
+			<stop offset="1" stop-color="#e65d54" stop-opacity="0"/>
+		</linearGradient>
+	</defs>
+	<style>
+		.s0 { fill: url(#g1) } 
+		.s1 { fill: url(#g2) } 
+		.s2 { fill: url(#g3) } 
+		.s3 { fill: url(#g4) } 
+	</style>
+	<g id="Prism">
+		<path id="Green" fill-rule="evenodd" class="s0" d="m1000 133v34h-1000v-34z"/>
+		<path id="Yellow" fill-rule="evenodd" class="s1" d="m1000 100v33h-1000v-33z"/>
+		<path id="Orange" fill-rule="evenodd" class="s2" d="m1000 67v33h-1000v-33z"/>
+		<path id="Red" fill-rule="evenodd" class="s3" d="m1000 33v34h-1000v-34z"/>
+	</g>
+</svg>
