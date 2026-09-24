@@ -1131,3 +1131,30 @@ button,input{font:inherit}button{color:inherit}.topbar{height:72px;padding:0 32p
     linear-gradient(to bottom,rgba(216,88,80,.5),rgba(211,140,80,.5),rgba(211,201,76,.5),rgba(118,199,100,.5)) border-box!important;
 }
 .topbar .nav button.active::before{content:none!important;display:none!important}
+
+/* Prism tuning: fixed logo-aligned left edge and fixed full reach; animate horizontal scale only */
+.topbar .header-prism{
+  left:185px!important; /* logo's right edge in the existing header layout */
+  right:21.35vw!important; /* ends around the midpoint between Settings and the avatar */
+  width:auto!important;
+  height:36px!important; /* preserve the approved vertical scale */
+  transform:translateY(-50%) scaleX(.72)!important;
+  transform-origin:left center!important;
+  animation:watchlist-prism-horizontal 12.6s ease-in-out infinite!important;
+}
+.topbar .header-prism img{
+  width:100%!important;height:100%!important;
+  object-fit:fill!important;transform:none!important;
+}
+@keyframes watchlist-prism-horizontal{
+  0%,100%{transform:translateY(-50%) scaleX(.72)}
+  23%{transform:translateY(-50%) scaleX(1)}
+  48%{transform:translateY(-50%) scaleX(.84)}
+  73%{transform:translateY(-50%) scaleX(.96)}
+}
+@media(max-width:760px){
+ .topbar .header-prism{left:150px!important;right:115px!important;height:28px!important}
+}
+@media(prefers-reduced-motion:reduce){
+ .topbar .header-prism{animation:none!important;transform:translateY(-50%) scaleX(1)!important}
+}
