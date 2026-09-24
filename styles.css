@@ -982,3 +982,23 @@ button,input{font:inherit}button{color:inherit}.topbar{height:72px;padding:0 32p
 .filter-panel .dual-range input[type=range]::-moz-range-track{height:4px!important;background:transparent!important}
 .filter-panel .dual-range input[type=range]::-webkit-slider-thumb{position:relative!important;z-index:3!important;transform:translateY(-1px)!important}
 .filter-panel .dual-range input[type=range]::-moz-range-thumb{position:relative!important;z-index:3!important}
+
+/* Consistent dropdown affordance and correctly sized interest controls */
+.filter-panel .filter-dropdown>summary{list-style:none!important;display:flex!important;align-items:center!important;justify-content:space-between!important;gap:10px!important;white-space:nowrap!important;overflow:visible!important}
+.filter-panel .filter-dropdown>summary::-webkit-details-marker{display:none!important}
+.filter-panel .filter-dropdown:not(.filter-nested)>summary:after{content:"▾"!important;display:inline-block!important;flex:0 0 auto!important;margin-left:8px!important;font-size:11px!important;font-weight:600!important;color:var(--accent)!important;line-height:1!important}
+.filter-panel .filter-dropdown.filter-nested>summary:after{content:"▾"!important;color:var(--accent)!important;font-size:11px!important}
+.filter-panel .interest-filter-fields{grid-template-columns:minmax(125px,1fr) minmax(125px,1fr)!important;gap:10px!important;min-width:280px!important}
+.filter-panel [data-filter-id="interest"]>.filter-menu{min-width:310px!important;width:max-content!important;max-width:min(94vw,380px)!important;box-sizing:border-box!important}
+.filter-panel .interest-filter-fields>label{display:flex!important;flex-direction:column!important;align-items:stretch!important;min-width:0!important;width:100%!important}
+.filter-panel .interest-filter-fields>label>select,.filter-panel .interest-filter-fields .filter-nested>summary{width:100%!important;min-width:0!important;max-width:none!important;box-sizing:border-box!important}
+.filter-panel .interest-filter-fields .filter-nested>summary{overflow:visible!important;text-overflow:clip!important}
+.filter-panel .year-range-menu .dual-range{position:relative!important;isolation:isolate!important}
+.filter-panel .year-range-menu .dual-range:before{z-index:-1!important;background:var(--range-fill,linear-gradient(to right,var(--line2),#aeb4be,var(--line2)))!important;border-radius:4px!important}
+.filter-panel .year-range-menu .dual-range input[type=range]{position:absolute!important;inset:0!important;width:100%!important;height:30px!important;margin:0!important;background:transparent!important;appearance:none!important;-webkit-appearance:none!important;z-index:2!important}
+.filter-panel .year-range-menu .dual-range input[aria-label="From year"]{z-index:3!important}
+.filter-panel .year-range-menu .dual-range input[aria-label="To year"]{z-index:4!important}
+.filter-panel .year-range-menu .dual-range input[type=range]::-webkit-slider-thumb{position:relative!important;z-index:5!important;pointer-events:auto!important}
+.filter-panel .year-range-menu .dual-range input[type=range]::-moz-range-thumb{position:relative!important;z-index:5!important;pointer-events:auto!important}
+.filter-panel .year-range-menu .dual-range input[type=range]::-webkit-slider-runnable-track{background:transparent!important;height:4px!important}
+.filter-panel .year-range-menu .dual-range input[type=range]::-moz-range-track{background:transparent!important;height:4px!important}
