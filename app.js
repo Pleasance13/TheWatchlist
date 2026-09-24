@@ -187,7 +187,7 @@ function detail(){
     <div class="vote-box"><div class="vote-label">Your response</div><div class="votes">${[["must","Must Watch"],["interested","Interested"],["watch","I'd Watch"],["no","Not Interested"]].map(([k,l])=>`<button class="vote vote-${k} ${selected===k?"selected":""}" onclick="vote('${m.id}','${k}')">${l}</button>`).join("")}</div></div>
     ${state.showSynopsis?`<p class="detail-synopsis">${m.synopsis}</p>`:""}
     ${state.showNote&&m.note?`<div class="detail-note"><div class="detail-note-label"><span class="avatar">J</span><span>Suggested by Josh</span></div><div class="detail-note-text">${m.note}</div></div>`:""}
-    ${m.watched?`<div class="history-actions"><button class="watched-together-button" onclick="editWatchedBy(\'${m.id}\')">✎ Edit who watched</button><button class="watched-together-button" onclick="watchAgain(\'${m.id}\')">↻ Watch again</button></div>`:(m.addedBy===currentUser?`<div class="detail-movie-actions"><button class="watched-together-button" onclick="markWatchedTogether(\'${m.id}\',false)">✓ Mark watched together</button><button class="remove-movie-button" onclick="openRemoveMovie(\'${m.id}\')">Remove ✕</button></div>`:"")}
+    ${m.watched?`<div class="history-actions"><button class="watched-together-button" onclick="editWatchedBy(\'${m.id}\')">✎ Edit who watched</button><button class="watched-together-button" onclick="watchAgain(\'${m.id}\')">↻ Watch again</button></div>`:`<div class="detail-movie-actions"><button class="watched-together-button" onclick="markWatchedTogether(\'${m.id}\',false)">✓ Mark watched together</button><button class="remove-movie-button" onclick="openRemoveMovie(\'${m.id}\')">Remove ✕</button></div>`}
     ${movieReviewsSection(m)}
    </div>
  </section>`;
