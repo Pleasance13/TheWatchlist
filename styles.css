@@ -1053,87 +1053,72 @@ button,input{font:inherit}button{color:inherit}.topbar{height:72px;padding:0 32p
   transform:translateX(2px) rotate(-45deg) translate(1px,-1px)!important;
 }
 
-/* Header grid, layered prism light, and nav button treatment */
+
+/* Header treatment: decoration is strictly an absolute background layer, never a flex item */
 .topbar{
-  isolation:isolate;
-  overflow:hidden;
+  position:sticky!important;isolation:isolate!important;overflow:hidden!important;
   background-color:rgba(11,12,14,.96)!important;
-  background-image:
-    linear-gradient(to right,rgba(19,21,24,.5) 1px,transparent 1px),
-    linear-gradient(to bottom,rgba(19,21,24,.5) 1px,transparent 1px)!important;
-  background-size:16px 16px!important;
-  background-position:0 0!important;
+  background-image:linear-gradient(to right,rgba(19,21,24,.5) 1px,transparent 1px),linear-gradient(to bottom,rgba(19,21,24,.5) 1px,transparent 1px)!important;
+  background-size:16px 16px!important;background-position:0 0!important;
 }
 .topbar>*:not(.header-prism){position:relative;z-index:3}
 .header-prism{
-  position:absolute!important;
-  z-index:2!important;
-  left:clamp(190px,20vw,310px)!important;
-  right:clamp(155px,15vw,230px)!important;
-  top:50%!important;
-  height:34px!important;
-  transform:translateY(-50%)!important;
-  transform-origin:left center!important;
-  pointer-events:none!important;
-  display:flex!important;
-  align-items:center!important;
-  overflow:visible!important;
+  position:absolute!important;z-index:1!important;
+  left:185px!important;right:21.35vw!important;
+  top:50%!important;height:var(--header-logo-height,26px)!important;
+  width:auto!important;max-width:none!important;
+  transform:translateY(-50%)!important;transform-origin:left center!important;
+  display:block!important;overflow:visible!important;pointer-events:none!important;
+  animation:prism-beam-length 11.8s cubic-bezier(.45,0,.55,1) infinite!important;
 }
 .header-prism img{
-  display:block!important;
-  width:100%!important;
-  height:100%!important;
-  min-width:0!important;
-  object-fit:fill!important;
-  object-position:left center!important;
-  transform-origin:left center!important;
-  animation:watchlist-prism-pulse 7.8s ease-in-out infinite alternate!important;
-  filter:drop-shadow(0 0 5px rgba(130,190,220,.12));
+  display:block!important;width:100%!important;height:100%!important;
+  max-width:none!important;min-width:0!important;object-fit:fill!important;
+  transform:none!important;transform-origin:left center!important;opacity:.95!important;
 }
-@keyframes watchlist-prism-pulse{
-  0%{transform:scaleX(.13);opacity:.76}
-  18%{transform:scaleX(.39);opacity:.9}
-  37%{transform:scaleX(.82);opacity:1}
-  58%{transform:scaleX(.55);opacity:.83}
-  76%{transform:scaleX(1);opacity:.96}
-  100%{transform:scaleX(.27);opacity:.8}
+@keyframes prism-beam-length{
+  0%{width:4%}18%{width:72%}39%{width:43%}61%{width:100%}82%{width:57%}100%{width:4%}
 }
-.topbar .nav{position:relative;z-index:4;gap:6px}
+.topbar .nav{position:relative!important;z-index:4!important;gap:5px}
 .topbar .nav button{
-  background:#0b0c0e!important;
-  border:1px solid #141619!important;
-  border-radius:8px!important;
-  color:var(--muted)!important;
-  position:relative!important;
-  isolation:isolate!important;
+  box-sizing:border-box!important;position:relative!important;isolation:isolate!important;
+  background:#0b0c0e!important;border:1px solid #141619!important;
+  border-radius:8px!important;color:var(--muted)!important;
 }
 .topbar .nav button.active{
-  background:var(--panel)!important;
-  border:1px solid transparent!important;
-  color:var(--text)!important;
+  background:var(--panel)!important;border:1px solid transparent!important;color:var(--text)!important;
 }
 .topbar .nav button.active::before{
-  content:""!important;
-  position:absolute!important;
-  inset:-1px!important;
-  border-radius:inherit!important;
-  padding:1px!important;
-  background:linear-gradient(to bottom,#d85850,#d38c50,#d3c94c,#76c764)!important;
-  opacity:.5!important;
-  -webkit-mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0)!important;
-  -webkit-mask-composite:xor!important;
-  mask-composite:exclude!important;
-  pointer-events:none!important;
-  z-index:-1!important;
+  content:""!important;position:absolute!important;inset:-1px!important;
+  border:1px solid transparent!important;border-radius:inherit!important;
+  background:linear-gradient(to bottom,#d85850,#d38c50,#d3c94c,#76c764) border-box!important;
+  -webkit-mask:linear-gradient(#fff 0 0) padding-box,linear-gradient(#fff 0 0)!important;
+  -webkit-mask-composite:xor!important;mask-composite:exclude!important;
+  opacity:.5!important;pointer-events:none!important;z-index:0!important;
 }
+.topbar .nav button>span{position:relative!important;z-index:2!important}
 .topbar .nav button:hover:not(.active){color:var(--text)!important;border-color:#25282d!important}
-.topbar .brand{z-index:4!important}
-.topbar .brand-logo{height:34px!important;width:auto!important;max-width:clamp(150px,18vw,230px)!important;max-height:34px!important;object-fit:contain!important}
-@media(max-width:760px){
- .header-prism{left:150px!important;right:115px!important;height:28px!important;opacity:.75}
- .topbar .brand-logo{height:28px!important;max-height:28px!important;max-width:130px!important}
- .topbar{padding-left:14px!important;padding-right:14px!important}
- .topbar .nav{gap:3px}
- .topbar .nav button{padding:7px 7px!important;font-size:12px}
+@media(prefers-reduced-motion:reduce){.header-prism{animation:none!important;width:55%!important}}
+/* Fix only the two nested User(s) checklists. Genre(s) styling remains untouched. */
+.filter-panel details[data-filter-id="interest-users"] .filter-choice input[type="checkbox"],
+.filter-panel details[data-filter-id="seen-users"] .filter-choice input[type="checkbox"]{
+  appearance:none!important;-webkit-appearance:none!important;
+  display:inline-grid!important;place-content:center!important;
+  position:relative!important;flex:0 0 13px!important;
+  width:13px!important;height:13px!important;min-width:13px!important;max-width:13px!important;
+  margin:0!important;padding:0!important;border:1px solid #747b86!important;
+  border-radius:2px!important;background:#17191d!important;box-sizing:border-box!important;
 }
-@media(prefers-reduced-motion:reduce){.header-prism img{animation:none!important;transform:scaleX(.7)!important}}
+.filter-panel details[data-filter-id="interest-users"] .filter-choice input[type="checkbox"]:checked,
+.filter-panel details[data-filter-id="seen-users"] .filter-choice input[type="checkbox"]:checked{
+  background-color:#a5adba!important;border-color:#a5adba!important;
+}
+.filter-panel details[data-filter-id="interest-users"] .filter-choice input[type="checkbox"]:checked::after,
+.filter-panel details[data-filter-id="seen-users"] .filter-choice input[type="checkbox"]:checked::after{
+  content:""!important;display:block!important;position:absolute!important;
+  left:50%!important;top:50%!important;width:6px!important;height:3px!important;
+  margin:0!important;padding:0!important;border-left:1.5px solid #15171a!important;
+  border-bottom:1.5px solid #15171a!important;
+  transform:translate(-50%,-65%) rotate(-45deg)!important;transform-origin:center!important;
+  box-sizing:content-box!important;
+}
