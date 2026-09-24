@@ -1180,3 +1180,25 @@ button,input{font:inherit}button{color:inherit}.topbar{height:72px;padding:0 32p
   74%{transform:scaleX(.96)}
 }
 @media(prefers-reduced-motion:reduce){.topbar .header-prism img{animation:none!important;transform:scaleX(1)!important}}
+
+/* Prism fills the measured logo-to-avatar gap, anchored at the logo edge; over-stretch horizontally */
+.topbar .header-prism{
+  transform:translateY(-50%)!important;
+  transform-origin:left center!important;
+  overflow:visible!important;
+}
+.topbar .header-prism img{
+  width:100%!important;height:100%!important;
+  object-fit:fill!important;
+  transform-origin:left center!important;
+  animation:prism-long-beam 10.8s ease-in-out infinite!important;
+}
+@keyframes prism-long-beam{
+  0%,100%{transform:scaleX(1.65)}
+  24%{transform:scaleX(2.6)}
+  49%{transform:scaleX(1.9)}
+  75%{transform:scaleX(3.1)}
+}
+@media(prefers-reduced-motion:reduce){
+ .topbar .header-prism img{animation:none!important;transform:scaleX(2.6)!important}
+}
