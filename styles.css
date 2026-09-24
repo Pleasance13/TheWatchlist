@@ -1158,3 +1158,25 @@ button,input{font:inherit}button{color:inherit}.topbar{height:72px;padding:0 32p
 @media(prefers-reduced-motion:reduce){
  .topbar .header-prism{animation:none!important;transform:translateY(-50%) scaleX(1)!important}
 }
+
+/* Responsive prism geometry is measured from the actual logo and avatar in app.js */
+.topbar .header-prism{
+  position:absolute!important;left:0;right:auto;top:0;
+  width:0;height:var(--prism-height,36px);
+  transform:none!important;transform-origin:left center!important;
+  animation:none!important;overflow:visible!important;pointer-events:none!important;
+  z-index:1!important;display:block!important;
+}
+.topbar .header-prism img{
+  width:100%!important;height:100%!important;max-width:none!important;min-width:0!important;
+  object-fit:fill!important;object-position:left center!important;
+  transform-origin:left center!important;
+  animation:prism-responsive-stretch 12.6s ease-in-out infinite!important;
+}
+@keyframes prism-responsive-stretch{
+  0%,100%{transform:scaleX(.58)}
+  22%{transform:scaleX(1)}
+  48%{transform:scaleX(.78)}
+  74%{transform:scaleX(.96)}
+}
+@media(prefers-reduced-motion:reduce){.topbar .header-prism img{animation:none!important;transform:scaleX(1)!important}}
