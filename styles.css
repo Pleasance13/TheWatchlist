@@ -1052,3 +1052,88 @@ button,input{font:inherit}button{color:inherit}.topbar{height:72px;padding:0 32p
 .filter-panel input.filter-user-checkbox:checked::after{
   transform:translateX(2px) rotate(-45deg) translate(1px,-1px)!important;
 }
+
+/* Header grid, layered prism light, and nav button treatment */
+.topbar{
+  isolation:isolate;
+  overflow:hidden;
+  background-color:rgba(11,12,14,.96)!important;
+  background-image:
+    linear-gradient(to right,rgba(19,21,24,.5) 1px,transparent 1px),
+    linear-gradient(to bottom,rgba(19,21,24,.5) 1px,transparent 1px)!important;
+  background-size:16px 16px!important;
+  background-position:0 0!important;
+}
+.topbar>*:not(.header-prism){position:relative;z-index:3}
+.header-prism{
+  position:absolute!important;
+  z-index:2!important;
+  left:clamp(190px,20vw,310px)!important;
+  right:clamp(155px,15vw,230px)!important;
+  top:50%!important;
+  height:34px!important;
+  transform:translateY(-50%)!important;
+  transform-origin:left center!important;
+  pointer-events:none!important;
+  display:flex!important;
+  align-items:center!important;
+  overflow:visible!important;
+}
+.header-prism img{
+  display:block!important;
+  width:100%!important;
+  height:100%!important;
+  min-width:0!important;
+  object-fit:fill!important;
+  object-position:left center!important;
+  transform-origin:left center!important;
+  animation:watchlist-prism-pulse 7.8s ease-in-out infinite alternate!important;
+  filter:drop-shadow(0 0 5px rgba(130,190,220,.12));
+}
+@keyframes watchlist-prism-pulse{
+  0%{transform:scaleX(.13);opacity:.76}
+  18%{transform:scaleX(.39);opacity:.9}
+  37%{transform:scaleX(.82);opacity:1}
+  58%{transform:scaleX(.55);opacity:.83}
+  76%{transform:scaleX(1);opacity:.96}
+  100%{transform:scaleX(.27);opacity:.8}
+}
+.topbar .nav{position:relative;z-index:4;gap:6px}
+.topbar .nav button{
+  background:#0b0c0e!important;
+  border:1px solid #141619!important;
+  border-radius:8px!important;
+  color:var(--muted)!important;
+  position:relative!important;
+  isolation:isolate!important;
+}
+.topbar .nav button.active{
+  background:var(--panel)!important;
+  border:1px solid transparent!important;
+  color:var(--text)!important;
+}
+.topbar .nav button.active::before{
+  content:""!important;
+  position:absolute!important;
+  inset:-1px!important;
+  border-radius:inherit!important;
+  padding:1px!important;
+  background:linear-gradient(to bottom,#d85850,#d38c50,#d3c94c,#76c764)!important;
+  opacity:.5!important;
+  -webkit-mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0)!important;
+  -webkit-mask-composite:xor!important;
+  mask-composite:exclude!important;
+  pointer-events:none!important;
+  z-index:-1!important;
+}
+.topbar .nav button:hover:not(.active){color:var(--text)!important;border-color:#25282d!important}
+.topbar .brand{z-index:4!important}
+.topbar .brand-logo{height:34px!important;width:auto!important;max-width:clamp(150px,18vw,230px)!important;max-height:34px!important;object-fit:contain!important}
+@media(max-width:760px){
+ .header-prism{left:150px!important;right:115px!important;height:28px!important;opacity:.75}
+ .topbar .brand-logo{height:28px!important;max-height:28px!important;max-width:130px!important}
+ .topbar{padding-left:14px!important;padding-right:14px!important}
+ .topbar .nav{gap:3px}
+ .topbar .nav button{padding:7px 7px!important;font-size:12px}
+}
+@media(prefers-reduced-motion:reduce){.header-prism img{animation:none!important;transform:scaleX(.7)!important}}
