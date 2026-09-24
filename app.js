@@ -196,7 +196,7 @@ function restoreArtworkView(view,restoreFlip=true){
       if(saved)el.scrollTop=saved[1];
     });
     const preview=document.querySelector("[data-asset-preview]");
-    if(preview&&restoreFlip)preview.classList.toggle("flipped",view.flipped);
+    if(preview&&restoreFlip)preview.classList.toggle("flipped",Boolean(view.flipped));
   }));
 }
 window.toggleAssetSection=(id,event)=>{
