@@ -292,8 +292,10 @@ window.chooseAsset=(type,encodedPath)=>{
   const targetFlipped=type==="backdrop"?true:type==="poster"?false:wasFlipped;
   const shouldAnimateFlip=(type==="poster"||type==="backdrop")&&wasFlipped!==targetFlipped;
   const request=++assetPreviewFlipRequest;
-  state.assetPreviewFlipped=targetFlipped;
 
+  // When changing to the opposite side, render the preview on its current side
+  // first so the existing 3D transition can animate from that side to the target.
+  state.assetPreviewFlipped=shouldAnimateFlip?wasFlipped:targetFlipped;
   render();
   restoreArtworkView(view);
 
@@ -303,10 +305,11 @@ window.chooseAsset=(type,encodedPath)=>{
       const preview=document.querySelector("[data-asset-preview]");
       const inner=preview?.querySelector(".vhs-inner");
       if(!preview||!inner)return;
-      preview.classList.toggle("flipped",wasFlipped);
+      state.assetPreviewFlipped=targetFlipped;
       void inner.offsetWidth;
       requestAnimationFrame(()=>{
-        if(request===assetPreviewFlipRequest)preview.classList.toggle("flipped",targetFlipped);
+        if(request!==assetPreviewFlipRequest)return;
+        preview.classList.toggle("flipped",targetFlipped);
       });
     });
   }
