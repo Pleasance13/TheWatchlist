@@ -186,7 +186,7 @@ function preserveArtworkView(){
     flipped:state.assetPreviewFlipped
   };
 }
-function restoreArtworkView(view,restoreFlip=true){
+function restoreArtworkView(view){
   if(!view)return;
   requestAnimationFrame(()=>requestAnimationFrame(()=>{
     const controls=document.querySelector(".artwork-controls-column");
@@ -196,7 +196,7 @@ function restoreArtworkView(view,restoreFlip=true){
       if(saved)el.scrollTop=saved[1];
     });
     const preview=document.querySelector("[data-asset-preview]");
-    if(preview&&restoreFlip)preview.classList.toggle("flipped",view.flipped);
+    if(preview)preview.classList.toggle("flipped",Boolean(state.assetPreviewFlipped));
   }));
 }
 window.toggleAssetSection=(id,event)=>{
@@ -238,7 +238,7 @@ function assetEditor(){
     '</div>';
   return '<div class="modal-backdrop open artwork-backdrop" onclick="if(event.target===this)closeAssetEditor()">'+
     '<section class="asset-modal artwork-picker" role="dialog" aria-modal="true" aria-labelledby="asset-title">'+
-      '<div class="artwork-live-preview"><div class="artwork-preview-label">LIVE PREVIEW</div><div class="artwork-preview-case" data-asset-preview data-vhs="'+m.id+'" title="Move the mouse over the case to tilt · click to flip"><div class="vhs-stage" onclick="toggleCase(event,this.parentElement)">'+caseFaces(m,backContent(m))+'</div></div><div class="artwork-preview-hint">Move over the case to tilt · click to flip</div></div>'+
+      '<div class="artwork-live-preview"><div class="artwork-preview-label">LIVE PREVIEW</div><div class="artwork-preview-case'+(state.assetPreviewFlipped?" flipped":"")+'" data-asset-preview data-vhs="'+m.id+'" title="Move the mouse over the case to tilt · click to flip"><div class="vhs-stage" onclick="toggleCase(event,this.parentElement)">'+caseFaces(m,backContent(m))+'</div></div><div class="artwork-preview-hint">Move over the case to tilt · click to flip</div></div>'+
       '<div class="artwork-controls-column"><div class="modal-head"><div><div class="eyebrow">TMDB ARTWORK</div><h2 id="asset-title">Customize case artwork</h2><p class="asset-sub">Choose the artwork you want to use for this movie.</p></div><button class="modal-close" onclick="closeAssetEditor()" aria-label="Close">×</button></div>'+
       (state.assetLoading?'<div class="add-status">Loading artwork from TMDB…</div>':state.assetError?'<div class="add-status error">'+state.assetError+'</div>':
         assetSection("frontLogo",1,"Front logo","Used on the front, spine, and back of the VHS case.",frontLogoBody)+
@@ -292,10 +292,12 @@ window.chooseAsset=(type,encodedPath)=>{
   const targetFlipped=type==="backdrop"?true:type==="poster"?false:wasFlipped;
   const shouldAnimateFlip=(type==="poster"||type==="backdrop")&&wasFlipped!==targetFlipped;
   const request=++assetPreviewFlipRequest;
-  state.assetPreviewFlipped=targetFlipped;
 
+  // When changing to the opposite side, render the preview on its current side
+  // first so the existing 3D transition can animate from that side to the target.
+  state.assetPreviewFlipped=shouldAnimateFlip?wasFlipped:targetFlipped;
   render();
-  restoreArtworkView(view,false);
+  restoreArtworkView(view);
 
   if(shouldAnimateFlip){
     requestAnimationFrame(()=>{
@@ -303,10 +305,11 @@ window.chooseAsset=(type,encodedPath)=>{
       const preview=document.querySelector("[data-asset-preview]");
       const inner=preview?.querySelector(".vhs-inner");
       if(!preview||!inner)return;
-      preview.classList.toggle("flipped",wasFlipped);
+      state.assetPreviewFlipped=targetFlipped;
       void inner.offsetWidth;
       requestAnimationFrame(()=>{
-        if(request===assetPreviewFlipRequest)preview.classList.toggle("flipped",targetFlipped);
+        if(request!==assetPreviewFlipRequest)return;
+        preview.classList.toggle("flipped",targetFlipped);
       });
     });
   }
