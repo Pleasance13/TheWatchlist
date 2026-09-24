@@ -1002,3 +1002,18 @@ button,input{font:inherit}button{color:inherit}.topbar{height:72px;padding:0 32p
 .filter-panel .year-range-menu .dual-range input[type=range]::-moz-range-thumb{position:relative!important;z-index:5!important;pointer-events:auto!important}
 .filter-panel .year-range-menu .dual-range input[type=range]::-webkit-slider-runnable-track{background:transparent!important;height:4px!important}
 .filter-panel .year-range-menu .dual-range input[type=range]::-moz-range-track{background:transparent!important;height:4px!important}
+
+/* One arrow glyph source only: hide native details marker and append the same blue caret */
+.filter-panel .filter-dropdown>summary{list-style:none!important;position:relative!important}
+.filter-panel .filter-dropdown>summary::-webkit-details-marker{display:none!important}
+.filter-panel .filter-dropdown>summary::marker{content:""!important;display:none!important}
+.filter-panel .filter-dropdown:not(.filter-nested)>summary:after{content:""!important;display:none!important}
+.filter-panel .filter-dropdown.filter-nested>summary:after{content:""!important;display:none!important}
+.filter-panel .filter-dropdown>summary{padding-right:24px!important}
+.filter-panel .filter-dropdown>summary:before{content:"";position:absolute;right:10px;top:50%;width:6px;height:6px;border-right:1.5px solid var(--accent);border-bottom:1.5px solid var(--accent);transform:translateY(-70%) rotate(45deg);pointer-events:none}
+.filter-panel .filter-dropdown[open]>summary:before{transform:translateY(-25%) rotate(225deg)}
+.filter-panel .filter-dropdown.filter-nested>summary{padding-right:24px!important}
+.filter-panel .filter-dropdown.filter-nested>summary:before{right:10px!important}
+/* Dynamic range fill only; no static fallback gradient */
+.filter-panel .year-range-menu .dual-range:before{background:var(--range-fill)!important;background-image:var(--range-fill)!important}
+.filter-panel .year-range-menu .dual-range{background:transparent!important}
