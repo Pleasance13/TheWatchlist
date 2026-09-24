@@ -133,7 +133,28 @@ function backContent(m){
 }
 function caseArticle(m,extra=""){const notInterested=currentVote(m.id)==="no";return `<article class="vhs ${extra} ${notInterested?"not-interested-card":""}" data-vhs="${m.id}" data-movie-id="${m.id}"><div class="vhs-stage" onclick="toggleCase(event,this.parentElement)">${caseFaces(m,backContent(m))}</div><div class="grid-title" data-open-movie="${m.id}" onclick="event.stopPropagation();openMovie(this.dataset.openMovie)">${m.title}</div><div class="grid-meta" data-open-movie="${m.id}" onclick="event.stopPropagation();openMovie(this.dataset.openMovie)">${m.year} · ${m.genre}</div>${responseButtons(m,true)}</article>`}
 function gridView(items,historyMode=false){return `<div class="grid" style="--grid-cols:${[12,8,6,5][state.posterSize-1]||8}">${items.map(m=>caseArticle(m,historyMode?"history-movie":"")).join("")}</div>`}
-function applyAdvancedFilters(items){let a=items.slice();const genres=state.genreFilters||[];if(genres.length)a=a.filter(m=>genres.every(g=>(m.genre||"").split(/\\s*[·,/&]\\s*/).map(x=>x.trim()).includes(g)));if(state.yearFrom)a=a.filter(m=>Number(m.year)>=Number(state.yearFrom));if(state.yearTo)a=a.filter(m=>Number(m.year)<=Number(state.yearTo));if(state.interestUser&&state.interestLevel)a=a.filter(m=>{const p=state.interestUser;const raw=p===currentUser?currentVote(m.id):(m.voters||[]).find(([n])=>n===p)?.[1];if(p===currentUser)return raw===state.interestLevel;return state.interestLevel==="must"||state.interestLevel==="interested"?raw==="green":state.interestLevel==="watch"?raw==="yellow":raw==="red"});if(state.seenUsers?.length)a=a.filter(m=>{const has=state.seenUsers.some(p=>(m.seen||[]).includes(p));return state.seenMode==="not"?!has:has});if(state.rewatchUsers?.length)a=a.filter(m=>(m.watchedBy||[]).some(p=>state.rewatchUsers.includes(p)));if(state.suggestedBy)a=a.filter(m=>(m.suggestedBy||m.addedBy||(m.note?"Josh":""))===state.suggestedBy);return a}
+function applyAdvancedFilters(items){
+ let a=items.slice();
+ const genres=state.genreFilters||[];
+ if(genres.length)a=a.filter(m=>genres.every(g=>(m.genre||"").split(/\s*[·,/&]\s*/).map(x=>x.trim()).includes(g)));
+ if(state.yearFrom)a=a.filter(m=>Number(m.year)>=Number(state.yearFrom));
+ if(state.yearTo)a=a.filter(m=>Number(m.year)<=Number(state.yearTo));
+ if(state.interestUser&&state.interestLevel)a=a.filter(m=>{
+   const p=state.interestUser;
+   if(p===currentUser)return currentVote(m.id)===state.interestLevel;
+   const raw=(m.voters||[]).find(([n])=>n===p)?.[1];
+   if(state.interestLevel==="must"||state.interestLevel==="interested")return raw==="green";
+   if(state.interestLevel==="watch")return raw==="yellow";
+   return raw==="red";
+ });
+ if(state.seenUsers?.length)a=a.filter(m=>{
+   const seen=state.seenUsers.map(p=>(m.seen||[]).includes(p));
+   return state.seenMode==="not"?seen.every(v=>!v):seen.every(Boolean);
+ });
+ if(state.rewatchUsers?.length)a=a.filter(m=>(m.watchedBy||[]).some(p=>state.rewatchUsers.includes(p)));
+ if(state.suggestedBy)a=a.filter(m=>(m.suggestedBy||m.addedBy||(m.note?"Josh":""))===state.suggestedBy);
+ return a;
+}
 function watchlist(){
  let a=movies.filter(m=>!m.watched&&((m.title+" "+m.genre).toLowerCase().includes(state.search.toLowerCase())));
  a=applyAdvancedFilters(a);a.sort((x,y)=>y.score-x.score);
