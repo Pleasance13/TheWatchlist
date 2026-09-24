@@ -13,15 +13,17 @@ let savedMovies=[];
 try{savedMovies=JSON.parse(localStorage.getItem("watchlist-added-movies")||"[]");}catch(error){savedMovies=[];}
 seedMovies.forEach(m=>{if(m.note)m.addedBy="Josh";});
 const movies=[...seedMovies,...savedMovies];
-const baseScores=Object.fromEntries(movies.map(m=>[m.id,m.score||0]));
+const baseScores=Object.fromEntries(movies.map(m=>[m.id,Number(m.score)||0]));
+let stateVotesPlaceholder={};try{stateVotesPlaceholder=JSON.parse(localStorage.getItem('watchlist-votes')||'{}')}catch(error){stateVotesPlaceholder={}}
 let movieReviews={};let watchedMovies=[];
 try{movieReviews=JSON.parse(localStorage.getItem("watchlist-movie-reviews")||"{}");}catch(error){movieReviews={}}
 try{watchedMovies=JSON.parse(localStorage.getItem("watchlist-watched-movies")||"[]");}catch(error){watchedMovies=[]}
 let watchedAttendance={};try{watchedAttendance=JSON.parse(localStorage.getItem("watchlist-watched-attendance")||"{}")}catch(error){watchedAttendance={}}
 watchedMovies.forEach(id=>{const m=movies.find(x=>x.id===id);if(m){m.watched=true;m.watchedBy=watchedAttendance[id]||m.watchedBy||[]}});
 const currentUser="Josh";
+let removedMovieIds=[];try{removedMovieIds=JSON.parse(localStorage.getItem("watchlist-removed-movies")||"[]")}catch(error){removedMovieIds=[]}for(let i=movies.length-1;i>=0;i--){if(removedMovieIds.includes(movies[i].id))movies.splice(i,1)}
 const serverUsers=["Josh","Sarah","Dan","Sam","Alex"];
-const state={nav:"watchlist",view:"list",search:"",filter:"all",posterSize:2,showSynopsis:true,showRatings:false,showNote:true,showTrailer:false,detail:null,showFilters:false,genreFilters:[],yearFrom:"",yearTo:"",interestUsers:[],interestLevel:"",seenMode:"seen",seenUsers:[],rewatchStatus:"",watchedWith:"",suggestedBy:"",votes:{},addMovieOpen:false,addMovieQuery:"",addMovieResults:[],addMovieSelection:null,addMovieLoading:false,addMovieError:"",attendanceOpen:false,attendanceMovieId:null,attendanceSelected:[],assetEditorOpen:false,assetMovieId:null,assetLoading:false,assetError:"",assetSections:{frontLogo:true,detailLogo:true,frontImage:true,backStill:true},assetLanguageGroups:{},assetPreviewFlipped:false};
+const state={nav:"watchlist",view:"list",search:"",filter:"all",posterSize:2,showSynopsis:true,showRatings:false,showNote:true,showTrailer:false,detail:null,showFilters:false,genreFilters:[],yearFrom:"",yearTo:"",interestUsers:[],interestLevel:"",seenMode:"seen",seenUsers:[],rewatchStatus:"",watchedWith:"",suggestedBy:"",votes:stateVotesPlaceholder||{},removeMovieId:null,addMovieOpen:false,addMovieQuery:"",addMovieResults:[],addMovieSelection:null,addMovieLoading:false,addMovieError:"",attendanceOpen:false,attendanceMovieId:null,attendanceSelected:[],assetEditorOpen:false,assetMovieId:null,assetLoading:false,assetError:"",assetSections:{frontLogo:true,detailLogo:true,frontImage:true,backStill:true},assetLanguageGroups:{},assetPreviewFlipped:false};
 const app=document.querySelector("#app");
 let savedCaseAssets={};
 try{savedCaseAssets=JSON.parse(localStorage.getItem("watchlist-case-assets")||"{}");}catch(error){savedCaseAssets={}}
@@ -157,10 +159,13 @@ function applyAdvancedFilters(items,historyMode=false){
  return a;
 }
 
+function isUpcomingMovie(m){const y=Number(m.year);return !y||!Number.isFinite(y)||y>new Date().getFullYear()||Boolean(m.releaseDate&&new Date(m.releaseDate)>new Date())}
+function upcomingSection(items){if(!items.length)return '';return '<section class="upcoming-section"><h2 class="upcoming-heading">Upcoming releases</h2>'+(state.view==='list'?listView(items,false):gridView(items,false))+'</section>'}
 function watchlist(){
- let a=movies.filter(m=>!m.watched&&((m.title+" "+m.genre).toLowerCase().includes(state.search.toLowerCase())));
- a=applyAdvancedFilters(a);a.sort((x,y)=>y.score-x.score);
- return `<div class="hero"><div><div class="eyebrow">YOUR SERVER'S MOVIE LIBRARY</div><h1>Watchlist</h1><p class="sub">${a.length} movies waiting for a movie night.</p></div><button class="primary" onclick="openAddMovie()">＋ Add movie</button></div>${toolbar()}${a.length?(state.view==="list"?listView(a,false):gridView(a,false)):`<div class="empty">Nothing matches those filters.</div>`}`;
+ let a=movies.filter(m=>!m.watched&&((m.title+' '+m.genre).toLowerCase().includes(state.search.toLowerCase())));
+ a=applyAdvancedFilters(a);const released=a.filter(m=>!isUpcomingMovie(m)).sort((x,y)=>(Number(y.score)||0)-(Number(x.score)||0));const upcoming=a.filter(isUpcomingMovie).sort((x,y)=>(Number(x.year)||9999)-(Number(y.year)||9999)||x.title.localeCompare(y.title));
+ const count=a.length;const mainContent=(released.length?(state.view==='list'?listView(released,false):gridView(released,false)):'')+upcomingSection(upcoming);
+ return '<div class="hero"><div><div class="eyebrow">YOUR SERVER\'S MOVIE LIBRARY</div><h1>Watchlist</h1><p class="sub">'+count+' movies waiting for a movie night.</p></div><button class="primary" onclick="openAddMovie()">＋ Add movie</button></div>'+toolbar()+(count?mainContent:'<div class="empty">Nothing matches those filters.</div>');
 }
 function history(){let a=movies.filter(m=>m.watched&&((m.title+" "+m.genre).toLowerCase().includes(state.search.toLowerCase())));a=applyAdvancedFilters(a,true);return `<div class="hero"><div><div class="eyebrow">THE GROUP ARCHIVE</div><h1>History</h1><p class="sub">Movies you've watched together, kept around so nobody has to remember.</p></div></div>${toolbar(true)}${a.length?(state.view==="list"?listView(a,true):gridView(a,true)):`<div class="empty">Nothing matches your filters.</div>`}`}
 function personVote(m,p){if(p==="Josh"){const mine=currentVote(m.id);if(mine)return {must:"green",interested:"green",watch:"yellow",no:"red"}[mine]||null}const v=m.voters.find(([n])=>n===p);return v?v[1]:null}
@@ -431,7 +436,7 @@ window.clearOneFilter=key=>{if(key==="yearFrom"||key==="yearTo"){state.yearFrom=
 window.closeFilterDropdowns=()=>document.querySelectorAll(".filter-dropdown[open]").forEach(el=>el.open=false);if(!window.__filterOutsideBound){document.addEventListener("click",e=>{if(!e.target.closest(".filter-dropdown"))window.closeFilterDropdowns()});window.__filterOutsideBound=true;}
 window.clearAllFilters=()=>{state.genreFilters=[];state.yearFrom="";state.yearTo="";state.interestUsers=[];state.interestLevel="";state.seenMode="seen";state.seenUsers=[];state.rewatchStatus="";state.suggestedBy="";state.filter="all";state.search="";render()};
 window.resetAdvancedFilters=window.clearAllFilters;
-window.vote=(id,k)=>{const old=state.votes[id];if(old===k)return;const before=new Map([...document.querySelectorAll("[data-movie-id]")].map(el=>[el.dataset.movieId,el.getBoundingClientRect()]));const weights={must:5,interested:3,watch:1,no:0};const m=movies.find(x=>x.id===id);m.score=baseScores[id]+weights[k];state.votes[id]=k;render();requestAnimationFrame(()=>{document.querySelectorAll("[data-movie-id]").forEach(el=>{const first=before.get(el.dataset.movieId);if(!first)return;const last=el.getBoundingClientRect();const dx=first.left-last.left,dy=first.top-last.top;if(Math.abs(dx)+Math.abs(dy)>1){el.animate([{transform:`translate(${dx}px,${dy}px)`},{transform:"translate(0,0)"}],{duration:420,easing:"cubic-bezier(.2,.75,.2,1)"})}})})};
+window.vote=(id,k)=>{const old=state.votes[id];if(old===k)return;const before=new Map([...document.querySelectorAll("[data-movie-id]")].map(el=>[el.dataset.movieId,el.getBoundingClientRect()]));const weights={must:5,interested:3,watch:1,no:0};const m=movies.find(x=>x.id===id);if(!m)return;state.votes[id]=k;m.score=(Number(baseScores[id])||0)+(weights[k]??0);try{localStorage.setItem("watchlist-votes",JSON.stringify(state.votes));localStorage.setItem("watchlist-added-movies",JSON.stringify(movies.filter(x=>x.id.startsWith("tmdb-"))))}catch(error){}render();requestAnimationFrame(()=>{document.querySelectorAll("[data-movie-id]").forEach(el=>{const first=before.get(el.dataset.movieId);if(!first)return;const last=el.getBoundingClientRect();const dx=first.left-last.left,dy=first.top-last.top;if(Math.abs(dx)+Math.abs(dy)>1){el.animate([{transform:`translate(${dx}px,${dy}px)`},{transform:"translate(0,0)"}],{duration:420,easing:"cubic-bezier(.2,.75,.2,1)"})}})})};
 window.toggleSeen=id=>{const m=movies.find(x=>x.id===id);if(!m)return;const i=m.seen.indexOf("Josh");if(i===-1)m.seen.push("Josh");else m.seen.splice(i,1);render()};
 function attendanceDefaults(m){const selected=new Set();(m.voters||[]).forEach(([name,color])=>{if(color==="green"||color==="yellow")selected.add(name)});const mine=currentVote(m.id);if(mine&&mine!=="no")selected.add(currentUser);return serverUsers.filter(name=>selected.has(name))}
 window.openAttendance=id=>{const m=movies.find(x=>x.id===id);if(!m)return;state.attendanceMovieId=id;state.attendanceSelected=(m.watchedBy&&m.watchedBy.length)?[...m.watchedBy]:attendanceDefaults(m);state.attendanceOpen=true;render()};
