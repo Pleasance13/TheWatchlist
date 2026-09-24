@@ -1017,3 +1017,15 @@ button,input{font:inherit}button{color:inherit}.topbar{height:72px;padding:0 32p
 /* Dynamic range fill only; no static fallback gradient */
 .filter-panel .year-range-menu .dual-range:before{background:var(--range-fill)!important;background-image:var(--range-fill)!important}
 .filter-panel .year-range-menu .dual-range{background:transparent!important}
+
+/* Proposed compact dropdown-select treatment for rewatch and multi-choice lists */
+.brand{display:flex!important;align-items:center!important;gap:0!important}
+.brand-logo{display:block!important;width:178px!important;max-width:38vw!important;height:auto!important;max-height:38px!important;object-fit:contain!important;object-position:left center!important}
+.brand-mark{display:none!important}
+.filter-panel .filter-options .filter-choice{display:flex!important;align-items:center!important;justify-content:flex-start!important;gap:7px!important;width:100%!important;min-height:18px!important;margin:0!important;padding:1px 2px!important;text-align:left!important;box-sizing:border-box!important}
+.filter-panel .filter-options .filter-choice input[type=checkbox]{appearance:none!important;-webkit-appearance:none!important;display:inline-grid!important;place-content:center!important;flex:0 0 13px!important;width:13px!important;height:13px!important;min-width:13px!important;max-width:13px!important;margin:0!important;padding:0!important;border:1px solid #747b86!important;border-radius:2px!important;background:#17191d!important;box-sizing:border-box!important;cursor:pointer!important}
+.filter-panel .filter-options .filter-choice input[type=checkbox]:checked{background:#a5adba!important;border-color:#a5adba!important}
+.filter-panel .filter-options .filter-choice input[type=checkbox]:checked:after{content:"";width:6px;height:3px;border-left:1.5px solid #15171a;border-bottom:1.5px solid #15171a;transform:rotate(-45deg) translate(1px,-1px)}
+.filter-panel .filter-options .filter-choice span{flex:0 1 auto!important;width:auto!important;text-align:left!important;white-space:normal!important}
+.filter-panel .rewatch-select{width:100%!important;min-width:130px!important}
+.filter-panel .year-range-menu .dual-range:before{background:var(--range-fill)!important;background-image:var(--range-fill)!important}
