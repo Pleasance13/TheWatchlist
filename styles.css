@@ -1232,3 +1232,12 @@ button,input{font:inherit}button{color:inherit}.topbar{height:72px;padding:0 32p
   object-fit:fill!important;
   transform:none!important;animation:none!important;
 }
+
+
+/* Detail response hover labels and spacing for the seen toggle */
+.detail-title-row{gap:16px!important}
+.detail-title-row .seen-button{margin-left:8px!important}
+.stack .ring{position:relative}
+.stack .response-tooltip{position:absolute;left:50%;bottom:calc(100% + 9px);transform:translate(-50%,4px);z-index:30;white-space:nowrap;padding:6px 9px;border:1px solid var(--line2);border-radius:6px;background:#111316;color:var(--text);font-size:11px;font-weight:600;line-height:1.2;box-shadow:0 5px 18px rgba(0,0,0,.4);opacity:0;visibility:hidden;pointer-events:none;transition:opacity .12s ease,transform .12s ease}
+.stack .ring:hover .response-tooltip,.stack .ring:focus-within .response-tooltip{opacity:1;visibility:visible;transform:translate(-50%,0)}
+@media(max-width:520px){.detail-title-row{gap:10px!important}.detail-title-row .seen-button{margin-left:4px!important}}
