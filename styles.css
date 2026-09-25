@@ -779,15 +779,15 @@ button,input{font:inherit}button{color:inherit}.topbar{height:72px;padding:0 32p
   height:auto;
   z-index:30;
   display:block;
-  background-image:url("stickers.png");
+  background-image:url("stickers-v2.png");
   background-repeat:no-repeat;
   background-size:auto 100%;
   background-position:0 0;
   pointer-events:none;
   filter:drop-shadow(1px 2px 1px rgba(0,0,0,.42));
   overflow:hidden;
-  -webkit-mask-image:url("stickers.png");
-  mask-image:url("stickers.png");
+  -webkit-mask-image:url("stickers-v2.png");
+  mask-image:url("stickers-v2.png");
   -webkit-mask-repeat:no-repeat;
   mask-repeat:no-repeat;
   -webkit-mask-size:auto 100%;
@@ -795,6 +795,7 @@ button,input{font:inherit}button{color:inherit}.topbar{height:72px;padding:0 32p
   -webkit-mask-position:0 0;
   mask-position:0 0
 }
+.rank-sticker-number{display:none!important}
 .rank-sticker-number{
   position:absolute;
   inset:0;
