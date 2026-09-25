@@ -856,7 +856,7 @@ button,input{font:inherit}button{color:inherit}.topbar{height:72px;padding:0 32p
 }
 @keyframes rank-sticker-list-shine{
   0%{background-position:0% 0%}
-  100%{background-position:-60% 150%}
+  100%{background-position:-150% 60%}
 }
 .asset-preview .rank-sticker,.artwork-preview .rank-sticker,.artwork-preview-case .rank-sticker{display:none}
 @media (max-width:700px){
