@@ -1329,13 +1329,10 @@ button,input{font:inherit}button{color:inherit}.topbar{height:72px;padding:0 32p
     #0000ff 28.56%,#4b0082 35.7%,#8b00ff 42.84%,#ff0000 50%,
     #8b00ff 57.14%,#4b0082 64.28%,#0000ff 71.42%,#00a000 78.56%,
     #ffff00 85.7%,#ff8000 92.84%,#ff0000 100%);
-  background-size:300% 300%;
-  background-position:0% 0%;
-  background-repeat:repeat;
+  background-size:inherit;
+  background-position:inherit;
+  background-repeat:inherit;
   opacity:.75;
   mix-blend-mode:soft-light;
   pointer-events:none;
-}
-.list-rank-sticker .rank-sticker-shine:after{
-  animation:rank-sticker-list-shine 5.8s linear infinite;
 }
