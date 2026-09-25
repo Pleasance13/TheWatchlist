@@ -832,21 +832,37 @@ button,input{font:inherit}button{color:inherit}.topbar{height:72px;padding:0 32p
   flex:0 0 45px
 }
 .list-rank-sticker .rank-sticker-number{font-size:14px}
-/* List and grid use the exact same shine element bounds and diffusion field.
-   Only the gradient's motion differs: grid follows tilt; list animates itself. */
+/* List keeps its own moving holographic gradient field, while inheriting
+   the same #1 diffusion filter from .rank-sticker-1 .rank-sticker-shine.
+   Grid/detail styles above are intentionally untouched. */
 .list-rank-sticker .rank-sticker-shine{
-  inset:-30% -65%;
-  width:auto;
-  left:auto;
+  display:block;
+  width:600%;
+  left:-250%;
   right:auto;
-  top:auto;
-  bottom:auto;
+  top:-80%;
+  bottom:-80%;
+  background:linear-gradient(
+    90deg,
+    rgba(255,255,255,0) 0%,
+    rgba(0,0,0,0) 12%,
+    rgba(0,0,0,.8) 22%,
+    rgba(255,255,255,.8) 34%,
+    rgba(0,0,0,.8) 46%,
+    rgba(255,255,255,.8) 58%,
+    rgba(0,0,0,.8) 70%,
+    rgba(255,255,255,0) 88%,
+    rgba(255,255,255,0) 100%
+  );
+  background-size:33.333333% 100%;
+  background-repeat:repeat-x;
   animation:rank-sticker-list-shine 5.8s linear infinite;
-  transform:none;
+  transform:rotate(28deg);
+  transform-origin:center
 }
 @keyframes rank-sticker-list-shine{
-  0%{background-position:0% center}
-  100%{background-position:100% center}
+  0%{background-position:0% 50%}
+  100%{background-position:100% 50%}
 }
 .asset-preview .rank-sticker,.artwork-preview .rank-sticker,.artwork-preview-case .rank-sticker{display:none}
 @media (max-width:700px){
