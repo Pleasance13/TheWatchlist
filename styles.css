@@ -1331,7 +1331,7 @@ button,input{font:inherit}button{color:inherit}.topbar{height:72px;padding:0 32p
     #0000ff 28.56%,#4b0082 35.7%,#8b00ff 42.84%,#ff0000 50%,
     #8b00ff 57.14%,#4b0082 64.28%,#0000ff 71.42%,#00a000 78.56%,
     #ffff00 85.7%,#ff8000 92.84%,#ff0000 100%);
-  background-size:300% 100%;
+  background-size:300% 300%;
   background-position:calc(50% + var(--sticker-shine,0%)) center;
   background-repeat:repeat-x;
   opacity:.75;
@@ -1342,6 +1342,6 @@ button,input{font:inherit}button{color:inherit}.topbar{height:72px;padding:0 32p
   animation:rank-sticker-rainbow-travel 5.8s linear infinite;
 }
 @keyframes rank-sticker-rainbow-travel{
-  0%{background-position:0% center}
-  100%{background-position:150% center}
+  0%{background-position:0% 0%}
+  100%{background-position:150% 150%}
 }
