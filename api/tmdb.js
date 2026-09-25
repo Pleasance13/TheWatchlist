@@ -66,15 +66,10 @@ export default async function handler(req, res) {
         language: "en-US"
       });
 
-      // Keep TMDB's relevance ordering within each language group, but put
-      // English-language movies first so mixed-language searches don't get
-      // dominated by unrelated non-English matches.
-      const ordered = (data.results || []).slice().sort((a, b) => {
-        const aEnglish = a.original_language === "en" ? 1 : 0;
-        const bEnglish = b.original_language === "en" ? 1 : 0;
-        if (aEnglish !== bEnglish) return bEnglish - aEnglish;
-        return (b.popularity || 0) - (a.popularity || 0);
-      }).slice(0, 8);
+      // Preserve TMDB's relevance-ranked search results. Re-sorting by
+      // popularity can push an unrelated, similarly named title ahead of
+      // the exact title the user searched for (e.g. "Ben 10" for "The Ten").
+      const ordered = (data.results || []).slice(0, 8);
 
       const results = await Promise.all(ordered.map(async movie => {
         let images = {};
