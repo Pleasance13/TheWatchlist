@@ -811,8 +811,9 @@ button,input{font:inherit}button{color:inherit}.topbar{height:72px;padding:0 32p
     rgba(255,255,255,0) 100%
   );
   mix-blend-mode:overlay;
-  transform:translateX(var(--sticker-shine,0%));
-  transition:transform .08s linear;
+  transform:none;
+  background-position:calc(50% + var(--sticker-shine,0%)) center;
+  transition:background-position .08s linear;
   pointer-events:none
 }
 .list .rank{display:flex;align-items:center;justify-content:center}
@@ -849,12 +850,12 @@ button,input{font:inherit}button{color:inherit}.topbar{height:72px;padding:0 32p
   background-size:33.333333% 100%;
   background-repeat:repeat-x;
   animation:rank-sticker-list-shine 5.8s linear infinite;
-  transform:rotate(28deg) translateX(0);
+  transform:rotate(28deg);
   transform-origin:center
 }
 @keyframes rank-sticker-list-shine{
-  0%{transform:rotate(28deg) translateX(0)}
-  100%{transform:rotate(28deg) translateX(-33.333333%)}
+  0%{background-position:0% 50%}
+  100%{background-position:100% 50%}
 }
 .asset-preview .rank-sticker,.artwork-preview .rank-sticker,.artwork-preview-case .rank-sticker{display:none}
 @media (max-width:700px){
@@ -1259,11 +1260,11 @@ button,input{font:inherit}button{color:inherit}.topbar{height:72px;padding:0 32p
 
 /* Repo-local rank sticker font and fixed holographic diffusion. */
 @font-face{font-family:"Permanent Marker";src:url("./PermanentMarker-Regular.ttf") format("truetype");font-style:normal;font-weight:400;font-display:swap}
-/* Apply displacement after the sticker's layers are composited. The filter lives
-   on the stationary sticker box, not the animated shine child, so its noise field
-   remains fixed while the holographic bands pass through it. */
-.rank-sticker-1{
-  filter:drop-shadow(1px 2px 1px rgba(0,0,0,.42)) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180' viewBox='0 0 180 180'%3E%3Cfilter id='fixedDiffusion' x='-20%25' y='-20%25' width='140%25' height='140%25' color-interpolation-filters='sRGB'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.19 .24' numOctaves='2' seed='23' stitchTiles='stitch' result='noise'/%3E%3CfeDisplacementMap in='SourceGraphic' in2='noise' scale='8' xChannelSelector='R' yChannelSelector='G'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23fixedDiffusion)'/%3E%3C/svg%3E#fixedDiffusion");
+/* Diffuse only the holographic gradient layer. The shine element itself stays
+   stationary; its background moves beneath a fixed displacement field. */
+.rank-sticker-1{filter:drop-shadow(1px 2px 1px rgba(0,0,0,.42))}
+.rank-sticker-1 .rank-sticker-shine{
+  filter:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180' viewBox='0 0 180 180'%3E%3Cfilter id='gradientDiffusion' x='-15%25' y='-15%25' width='130%25' height='130%25' color-interpolation-filters='sRGB'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.19 .24' numOctaves='2' seed='23' stitchTiles='stitch' result='noise'/%3E%3CfeDisplacementMap in='SourceGraphic' in2='noise' scale='9' xChannelSelector='R' yChannelSelector='G'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23gradientDiffusion)'/%3E%3C/svg%3E#gradientDiffusion");
 }
-/* A separate stationary fine-grain overlay adds subtle surface texture. */
+/* Keep a subtle, fixed grain pass clipped to the sticker's existing alpha. */
 .rank-sticker-1:after{content:"";position:absolute;inset:0;pointer-events:none;opacity:.18;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='90' height='90'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.78' numOctaves='2' seed='19' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");background-size:46px 46px;background-position:center;mix-blend-mode:soft-light}
