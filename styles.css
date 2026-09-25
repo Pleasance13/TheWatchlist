@@ -815,7 +815,7 @@ button,input{font:inherit}button{color:inherit}.topbar{height:72px;padding:0 32p
   position:absolute;
   inset:-30% -65%;
   background:repeating-linear-gradient(
-    112deg,
+    0deg,
     rgba(255,255,255,0) 0%,
     rgba(0,0,0,0) 12%,
     rgba(0,0,0,.8) 22%,
@@ -829,8 +829,8 @@ button,input{font:inherit}button{color:inherit}.topbar{height:72px;padding:0 32p
   mix-blend-mode:overlay;
   /* Oversized gradient field lets pointer tilt shift the colors beneath the
      stationary element and its fixed diffusion map. */
-  background-size:300% 100%;
-  background-repeat:repeat-x;
+  background-size:300% 300%;
+  background-repeat:repeat;
   background-position:calc(50% + var(--sticker-shine,0%)) center;
   transform:none;
   transition:background-position .08s linear;
@@ -855,10 +855,8 @@ button,input{font:inherit}button{color:inherit}.topbar{height:72px;padding:0 32p
   animation:rank-sticker-list-shine 5.8s linear infinite;
 }
 @keyframes rank-sticker-list-shine{
-  0%{background-position:0% center}
-  /* With the shared 300%-wide background tile, 150% shifts it by exactly
-     one full tile width, so the repeated pattern meets itself at the loop. */
-  100%{background-position:150% center}
+  0%{background-position:0% 0%}
+  100%{background-position:-60% 150%}
 }
 .asset-preview .rank-sticker,.artwork-preview .rank-sticker,.artwork-preview-case .rank-sticker{display:none}
 @media (max-width:700px){
@@ -1339,9 +1337,5 @@ button,input{font:inherit}button{color:inherit}.topbar{height:72px;padding:0 32p
   pointer-events:none;
 }
 .list-rank-sticker .rank-sticker-shine:after{
-  animation:rank-sticker-rainbow-travel 5.8s linear infinite;
-}
-@keyframes rank-sticker-rainbow-travel{
-  0%{background-position:0% 0%}
-  100%{background-position:-60% 150%}
+  animation:rank-sticker-list-shine 5.8s linear infinite;
 }
