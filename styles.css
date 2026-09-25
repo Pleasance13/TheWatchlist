@@ -1320,27 +1320,26 @@ button,input{font:inherit}button{color:inherit}.topbar{height:72px;padding:0 32p
 .person-movies .person-movie .people-review-open,.person-movies .person-movie .people-review-close{display:inline-block!important;flex:0 0 auto!important}
 
 
-/* Experiment: a faint moving rainbow sheen layered over the #1 sticker's
-   existing holographic bands. It shares the same looping background travel. */
+/* Rainbow experiment: stack the rainbow above the original moving holographic
+   gradient, then let the parent shine's diffusion filter soften both layers. */
 .rank-sticker-1 .rank-sticker-shine:after{
   content:"";
   position:absolute;
   inset:0;
   background:linear-gradient(112deg,
-    rgba(255,65,125,.72) 0%,
-    rgba(255,166,65,.72) 16.6%,
-    rgba(255,244,100,.72) 33.2%,
-    rgba(95,245,165,.72) 49.8%,
-    rgba(75,175,255,.72) 66.4%,
-    rgba(164,105,255,.72) 83%,
-    rgba(255,65,125,.72) 100%);
+    #ff417d 0%,#ffa641 16.6%,#fff464 33.2%,#5ff5a5 49.8%,
+    #4bafff 66.4%,#a469ff 83%,#ff417d 100%);
   background-size:300% 100%;
   background-position:0% center;
   background-repeat:repeat-x;
-  opacity:.12;
+  opacity:.28;
   mix-blend-mode:soft-light;
   pointer-events:none;
 }
 .list-rank-sticker .rank-sticker-shine:after{
-  animation:rank-sticker-list-shine 5.8s linear infinite;
+  animation:rank-sticker-rainbow-travel 5.8s linear infinite;
+}
+@keyframes rank-sticker-rainbow-travel{
+  0%{background-position:0% center}
+  100%{background-position:150% center}
 }
