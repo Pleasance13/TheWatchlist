@@ -1319,5 +1319,3 @@ button,input{font:inherit}button{color:inherit}.topbar{height:72px;padding:0 32p
 .person-movies .person-movie .people-review-quote-text{display:block!important;flex:1 1 0%!important;width:0!important;min-width:0!important;max-width:100%!important;overflow:hidden!important;text-overflow:ellipsis!important;white-space:nowrap!important}
 .person-movies .person-movie .people-review-open,.person-movies .person-movie .people-review-close{display:inline-block!important;flex:0 0 auto!important}
 
-/* Keep the first-load beam slow and eased; subsequent renders stay fully open. */
-.topbar .header-prism.beam-intro.beam-intro-ready img{transition:transform 1.2s cubic-bezier(.65,0,.35,1)!important}
