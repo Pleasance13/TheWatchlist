@@ -1304,3 +1304,20 @@ button,input{font:inherit}button{color:inherit}.topbar{height:72px;padding:0 32p
 .topbar .header-prism.beam-intro img{transform:scaleX(0)!important;transform-origin:left center!important;transition:none!important}
 .topbar .header-prism.beam-intro.beam-intro-ready img{transform:scaleX(1)!important;transform-origin:left center!important;transition:transform .52s cubic-bezier(.18,.72,.25,1)!important}
 @media(prefers-reduced-motion:reduce){.topbar .header-prism.beam-intro img,.topbar .header-prism.beam-intro.beam-intro-ready img{transform:none!important;transition:none!important}}
+
+
+/* Definitive review-row sizing: the title and review label share the row,
+   and the review's text body gets only the remaining space after stars. */
+.person-movies .person-movie:has(.people-review-content){display:flex!important;align-items:center!important;justify-content:space-between!important;gap:12px!important;min-width:0}
+.person-movies .person-movie:has(.people-review-content)>span:first-child{flex:0 1 30%!important;width:30%!important;min-width:0!important;max-width:30%!important;overflow:hidden!important;text-overflow:ellipsis!important;white-space:nowrap!important}
+.person-movies .person-movie:has(.people-review-content)>span:last-child{display:flex!important;flex:1 1 70%!important;width:70%!important;min-width:0!important;max-width:70%!important;overflow:hidden!important}
+.person-movies .person-movie .people-review-content{display:flex!important;flex:1 1 100%!important;width:100%!important;min-width:0!important;max-width:100%!important;overflow:hidden!important;align-items:center!important;justify-content:flex-end!important;gap:5px!important;white-space:nowrap!important}
+.person-movies .person-movie .people-review-score{display:inline-flex!important;flex:0 0 auto!important;align-items:center!important}
+.person-movies .person-movie .people-review-copy{display:flex!important;flex:1 1 0%!important;width:0!important;min-width:0!important;max-width:100%!important;overflow:hidden!important;align-items:center!important;justify-content:flex-end!important;white-space:nowrap!important}
+.person-movies .person-movie .people-review-copy em{display:inline-flex!important;flex:1 1 0%!important;width:0!important;min-width:0!important;max-width:100%!important;overflow:hidden!important;white-space:nowrap!important}
+.person-movies .person-movie .people-review-quote{display:inline-flex!important;flex:1 1 0%!important;width:0!important;min-width:0!important;max-width:100%!important;overflow:hidden!important;white-space:nowrap!important}
+.person-movies .person-movie .people-review-quote-text{display:block!important;flex:1 1 0%!important;width:0!important;min-width:0!important;max-width:100%!important;overflow:hidden!important;text-overflow:ellipsis!important;white-space:nowrap!important}
+.person-movies .person-movie .people-review-open,.person-movies .person-movie .people-review-close{display:inline-block!important;flex:0 0 auto!important}
+
+/* Keep the first-load beam slow and eased; subsequent renders stay fully open. */
+.topbar .header-prism.beam-intro.beam-intro-ready img{transition:transform 1.2s cubic-bezier(.65,0,.35,1)!important}
