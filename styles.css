@@ -330,6 +330,13 @@ button,input{font:inherit}button{color:inherit}.topbar{height:72px;padding:0 32p
 /* People review ratings reuse the detail-page half-star component inline. */
 .person-movie .review-stars-inline{display:inline-flex;vertical-align:middle;gap:0;flex:0 0 auto;white-space:nowrap}
 .person-movie .review-stars-inline .rating-star{transform:scale(.72);transform-origin:center;margin:0 -3px}
+/* Compact People ratings use the same layered grey base + gold fill stars
+   as the movie detail reviews, including true half-star widths. */
+.person-movie .people-review-stars{display:inline-flex;gap:0;align-items:center;vertical-align:middle;flex:0 0 auto}
+.person-movie .people-review-stars .rating-star{width:16px;height:18px;font-size:17px;line-height:18px;position:relative;display:inline-block;margin:0 -1px}
+.person-movie .people-review-stars .star-base,.person-movie .people-review-stars .star-fill{width:16px;height:18px;font-size:17px;line-height:18px;overflow:hidden}
+.person-movie .people-review-stars .star-base{color:#444950}
+.person-movie .people-review-stars .star-fill{color:#d7c46d;position:absolute;left:0;top:0;white-space:nowrap}
 .person-movie .review-stars-inline .rating-star:last-child{margin-right:0}
 .person-interest.green{color:#9fd3aa}.person-interest.yellow{color:#d9c878}.person-interest.red{color:#cf8989}.person-seen{color:#9298a1}
 .person-empty{font-size:11px;color:#626871;padding:2px 0}
@@ -1262,13 +1269,13 @@ button,input{font:inherit}button{color:inherit}.topbar{height:72px;padding:0 32p
 .rank-sticker-1 .rank-sticker-shine:before{
   content:"";
   position:absolute;
-  inset:-5%;
+  inset:-12%;
   background-image:inherit;
   background-size:inherit;
   background-repeat:inherit;
   background-position:inherit;
-  filter:blur(11px);
-  opacity:.48;
+  filter:blur(15px) brightness(1.35);
+  opacity:.72;
   mix-blend-mode:screen;
   pointer-events:none;
 }
