@@ -1202,3 +1202,21 @@ button,input{font:inherit}button{color:inherit}.topbar{height:72px;padding:0 32p
 @media(prefers-reduced-motion:reduce){
  .topbar .header-prism img{animation:none!important;transform:scaleX(2.6)!important}
 }
+
+/* Experiment: prism spans the entire header from the viewport's left edge to right edge */
+.topbar .header-prism{
+  left:0!important;right:auto!important;
+  width:100%!important;
+  transform:translateY(-50%)!important;
+  transform-origin:left center!important;
+  overflow:hidden!important;
+}
+.topbar .header-prism img{
+  display:block!important;width:100%!important;height:100%!important;
+  max-width:none!important;min-width:0!important;
+  object-fit:fill!important;object-position:left center!important;
+  transform:none!important;animation:none!important;
+}
+@media(prefers-reduced-motion:reduce){
+ .topbar .header-prism img{transform:none!important;animation:none!important}
+}
