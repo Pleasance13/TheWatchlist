@@ -332,7 +332,7 @@ button,input{font:inherit}button{color:inherit}.topbar{height:72px;padding:0 32p
 .person-movie .review-stars-inline .rating-star{transform:scale(.72);transform-origin:center;margin:0 -3px}
 /* Compact People ratings use the same layered grey base + gold fill stars
    as the movie detail reviews, including true half-star widths. */
-.person-movie .people-review-stars{display:inline-flex;gap:0;align-items:center;vertical-align:middle;flex:0 0 auto}
+.person-movie .people-review-stars{display:inline-flex;gap:0;align-items:center;vertical-align:middle;flex:0 0 auto;position:relative;top:-2px}
 .person-movie .people-review-stars .rating-star{width:16px;height:18px;font-size:17px;line-height:18px;position:relative;display:inline-block;margin:0 -1px}
 .person-movie .people-review-stars .star-base,.person-movie .people-review-stars .star-fill{width:16px;height:18px;font-size:17px;line-height:18px;overflow:hidden}
 .person-movie .people-review-stars .star-base{color:#444950}
