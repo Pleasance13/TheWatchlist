@@ -1318,3 +1318,29 @@ button,input{font:inherit}button{color:inherit}.topbar{height:72px;padding:0 32p
 .person-movies .person-movie .people-review-quote{display:inline-flex!important;flex:1 1 0%!important;width:0!important;min-width:0!important;max-width:100%!important;overflow:hidden!important;white-space:nowrap!important}
 .person-movies .person-movie .people-review-quote-text{display:block!important;flex:1 1 0%!important;width:0!important;min-width:0!important;max-width:100%!important;overflow:hidden!important;text-overflow:ellipsis!important;white-space:nowrap!important}
 .person-movies .person-movie .people-review-open,.person-movies .person-movie .people-review-close{display:inline-block!important;flex:0 0 auto!important}
+
+
+/* Experiment: a faint moving rainbow sheen layered over the #1 sticker's
+   existing holographic bands. It shares the same looping background travel. */
+.rank-sticker-1 .rank-sticker-shine:after{
+  content:"";
+  position:absolute;
+  inset:0;
+  background:linear-gradient(112deg,
+    rgba(255,65,125,.72) 0%,
+    rgba(255,166,65,.72) 16.6%,
+    rgba(255,244,100,.72) 33.2%,
+    rgba(95,245,165,.72) 49.8%,
+    rgba(75,175,255,.72) 66.4%,
+    rgba(164,105,255,.72) 83%,
+    rgba(255,65,125,.72) 100%);
+  background-size:300% 100%;
+  background-position:0% center;
+  background-repeat:repeat-x;
+  opacity:.12;
+  mix-blend-mode:soft-light;
+  pointer-events:none;
+}
+.list-rank-sticker .rank-sticker-shine:after{
+  animation:rank-sticker-list-shine 5.8s linear infinite;
+}
