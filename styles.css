@@ -1332,7 +1332,7 @@ button,input{font:inherit}button{color:inherit}.topbar{height:72px;padding:0 32p
   background-size:300% 100%;
   background-position:0% center;
   background-repeat:repeat-x;
-  opacity:.28;
+  opacity:.55;
   mix-blend-mode:soft-light;
   pointer-events:none;
 }
