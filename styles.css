@@ -1326,7 +1326,7 @@ button,input{font:inherit}button{color:inherit}.topbar{height:72px;padding:0 32p
   content:"";
   position:absolute;
   inset:0;
-  background:repeating-linear-gradient(90deg,
+  background:repeating-linear-gradient(112deg,
     #ff0000 0%,#ff8000 7.14%,#ffff00 14.28%,#00a000 21.42%,
     #0000ff 28.56%,#4b0082 35.7%,#8b00ff 42.84%,#ff0000 50%,
     #8b00ff 57.14%,#4b0082 64.28%,#0000ff 71.42%,#00a000 78.56%,
