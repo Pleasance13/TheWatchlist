@@ -811,8 +811,12 @@ button,input{font:inherit}button{color:inherit}.topbar{height:72px;padding:0 32p
     rgba(255,255,255,0) 100%
   );
   mix-blend-mode:overlay;
-  transform:none;
+  /* Oversized gradient field lets pointer tilt shift the colors beneath the
+     stationary element and its fixed diffusion map. */
+  background-size:300% 100%;
+  background-repeat:repeat-x;
   background-position:calc(50% + var(--sticker-shine,0%)) center;
+  transform:none;
   transition:background-position .08s linear;
   pointer-events:none
 }
