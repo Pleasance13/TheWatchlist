@@ -1252,5 +1252,21 @@ button,input{font:inherit}button{color:inherit}.topbar{height:72px;padding:0 32p
 .rank-sticker-1 .rank-sticker-shine{
   filter:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180' viewBox='0 0 180 180'%3E%3Cfilter id='gradientDiffusion' x='-15%25' y='-15%25' width='130%25' height='130%25' color-interpolation-filters='sRGB'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.19 .24' numOctaves='2' seed='23' stitchTiles='stitch' result='noise'/%3E%3CfeDisplacementMap in='SourceGraphic' in2='noise' scale='9' xChannelSelector='R' yChannelSelector='G'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23gradientDiffusion)'/%3E%3C/svg%3E#gradientDiffusion");
 }
+/* Soft specular bloom follows the exact holographic bands beneath it.
+   Inheriting the shine's gradient and background-position keeps the glow
+   synchronized with both pointer tilt and the list's looping animation. */
+.rank-sticker-1 .rank-sticker-shine:before{
+  content:"";
+  position:absolute;
+  inset:0;
+  background-image:inherit;
+  background-size:inherit;
+  background-repeat:inherit;
+  background-position:inherit;
+  filter:blur(7px);
+  opacity:.48;
+  mix-blend-mode:screen;
+  pointer-events:none;
+}
 /* Keep a subtle, fixed grain pass clipped to the sticker's existing alpha. */
 .rank-sticker-1:after{content:"";position:absolute;inset:0;pointer-events:none;opacity:.18;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='90' height='90'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.78' numOctaves='2' seed='19' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");background-size:46px 46px;background-position:center;mix-blend-mode:soft-light}
