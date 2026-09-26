@@ -11,7 +11,7 @@ const seedMovies=[
 
 let savedMovies=[];
 try{savedMovies=JSON.parse(localStorage.getItem("watchlist-added-movies")||"[]");}catch(error){savedMovies=[];}
-seedMovies.forEach(m=>{if(m.note)m.addedBy="Josh";});
+seedMovies.forEach(m=>{m.suggestedBy="Josh";m.addedBy="Josh";});
 const movies=[...seedMovies,...savedMovies];
 const baseScores=Object.fromEntries(movies.map(m=>[m.id,m.id.startsWith("tmdb-")?0:(Number(m.score)||0)]));
 let stateVotesPlaceholder={};try{stateVotesPlaceholder=JSON.parse(localStorage.getItem('watchlist-votes')||'{}')}catch(error){stateVotesPlaceholder={}}
