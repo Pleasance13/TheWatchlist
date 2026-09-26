@@ -1526,3 +1526,27 @@ button,input{font:inherit}button{color:inherit}.topbar{height:72px;padding:0 32p
   min-width:0!important;max-width:100%!important;overflow:hidden!important;
   text-overflow:ellipsis!important;white-space:nowrap!important;
 }
+
+
+/* Suggested-by card actions: subtle, right aligned, and balanced when the note is blank. */
+.detail-note{position:relative}
+.detail-note-actions{display:flex;justify-content:flex-end;margin-top:9px}
+.detail-note-empty{min-height:48px;box-sizing:border-box;padding-bottom:10px!important}
+.detail-note-empty .detail-note-label{margin-bottom:0}
+.detail-note-empty .detail-note-actions{position:absolute;right:12px;bottom:9px;margin:0}
+.edit-suggestion-note{
+  appearance:none;border:1px solid #454a53;background:rgba(255,255,255,.035);
+  color:#c2c6cd;border-radius:6px;padding:5px 9px;font:inherit;font-size:10px;
+  font-weight:600;cursor:pointer;line-height:1.3
+}
+.edit-suggestion-note:hover{background:rgba(255,255,255,.075);border-color:#626873;color:#e3e5e9}
+.note-editor-modal .add-label{margin-top:14px}
+.note-editor-modal .review-text{margin-top:7px;min-height:96px}
+.note-editor-modal .add-form-actions{margin-top:14px}
+
+/* Ensure People-page star fills honor each half/full rating width, independent
+   of the generic review-star gradient rules. */
+.person-movie .people-review-stars .star-fill{
+  width:var(--people-star-fill)!important;
+  max-width:100%!important;
+}
