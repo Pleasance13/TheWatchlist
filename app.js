@@ -86,7 +86,7 @@ function advancedFilterPanel(historyMode=false){
  const selected=state.genreFilters||[];
  const yearFromValue=Number(state.yearFrom)||minYear,yearToValue=Number(state.yearTo)||maxYear,yearFromPct=(yearFromValue-minYear)/(maxYear-minYear||1)*100,yearToPct=(yearToValue-minYear)/(maxYear-minYear||1)*100,yearTrack=`linear-gradient(to right,#555b65 0%,#555b65 ${yearFromPct}%,#aeb4be ${yearFromPct}%,#aeb4be ${yearToPct}%,#555b65 ${yearToPct}%,#555b65 100%)`;
  const interestOptions=[["any","Any interest"],["must","Must watch"],["interested","Interested"],["watch","I'd watch"],["no","Not interested"],["none","No answer"]];
- const multi=(items,arr,handler)=>items.map(p=>`<label class="filter-choice"><input type="checkbox" value="${p}" ${arr.includes(p)?"checked":""} onchange="${handler}(this.value,this.checked)"><span>${p===currentUser?p+" (you)":p}</span></label>`).join("");
+ const multi=(items,arr,handler)=>items.map(p=>`<label class="filter-choice ${handler==="toggleInterestUser"||handler==="toggleSeenUser"?"filter-user-choice":""}"><input type="checkbox" value="${p}" ${arr.includes(p)?"checked":""} onchange="${handler}(this.value,this.checked)"><span>${p===currentUser?p+" (you)":p}</span></label>`).join("");
  return `<div class="filter-panel">
  <button class="filter-all filter-option-button" onclick="closeFilterDropdowns();clearAllFilters()">All movies</button>
  <div class="filter-control"><details class="filter-dropdown" data-filter-id="genre"><summary>Genre(s) ${selected.length?`<span class="filter-count">${selected.length}</span>`:""}</summary><div class="filter-menu"><div class="filter-options">${multi(genres,selected,"toggleGenre")}</div></div></details>${filterChip("Genre(s)","genreFilters")}</div>
