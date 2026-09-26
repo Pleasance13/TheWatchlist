@@ -1026,10 +1026,23 @@ button,input{font:inherit}button{color:inherit}.topbar{height:72px;padding:0 32p
 .brand{display:flex!important;align-items:center!important;gap:0!important}
 .brand-logo{display:block!important;width:178px!important;max-width:38vw!important;height:auto!important;max-height:38px!important;object-fit:contain!important;object-position:left center!important}
 .brand-mark{display:none!important}
+/* Shared custom checkbox styling for Genre(s), Interest-level users, and Seen-by users. */
 .filter-panel .filter-options .filter-choice{display:flex!important;align-items:center!important;justify-content:flex-start!important;gap:7px!important;width:100%!important;min-height:18px!important;margin:0!important;padding:1px 2px!important;text-align:left!important;box-sizing:border-box!important}
-.filter-panel .filter-options .filter-choice input[type=checkbox]{appearance:none!important;-webkit-appearance:none!important;display:inline-grid!important;place-content:center!important;flex:0 0 13px!important;width:13px!important;height:13px!important;min-width:13px!important;max-width:13px!important;margin:0!important;padding:0!important;border:1px solid #747b86!important;border-radius:2px!important;background:#17191d!important;box-sizing:border-box!important;cursor:pointer!important}
-.filter-panel .filter-options .filter-choice input[type=checkbox]:checked{background:#a5adba!important;border-color:#a5adba!important}
-.filter-panel .filter-options .filter-choice input[type=checkbox]:checked:after{content:"";width:6px;height:3px;border-left:1.5px solid #15171a;border-bottom:1.5px solid #15171a;transform:rotate(-45deg) translate(1px,-1px)}
+.filter-panel .filter-options .filter-choice input[type="checkbox"]{
+  appearance:none!important;-webkit-appearance:none!important;display:inline-block!important;
+  position:relative!important;flex:0 0 16px!important;width:16px!important;height:16px!important;
+  min-width:16px!important;max-width:16px!important;margin:0!important;padding:0!important;
+  border:1px solid #9a9da4!important;border-radius:3px!important;background:#24272c!important;
+  background-image:none!important;box-sizing:border-box!important;vertical-align:middle!important;cursor:pointer!important;
+}
+.filter-panel .filter-options .filter-choice input[type="checkbox"]::before,
+.filter-panel .filter-options .filter-choice input[type="checkbox"]::after{content:none!important;display:none!important}
+.filter-panel .filter-options .filter-choice input[type="checkbox"]:checked{
+  border-color:#d7d2c7!important;background-color:#d7d2c7!important;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2 6.2 4.6 8.7 10 3.3' fill='none' stroke='%2317191c' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")!important;
+  background-repeat:no-repeat!important;background-position:center!important;background-size:11px 11px!important;
+}
+.filter-panel .filter-options .filter-choice input[type="checkbox"]:focus-visible{outline:2px solid #aeb4be!important;outline-offset:2px!important}
 .filter-panel .filter-options .filter-choice span{flex:0 1 auto!important;width:auto!important;text-align:left!important;white-space:normal!important}
 .filter-panel .rewatch-select{width:100%!important;min-width:130px!important}
 .filter-panel .year-range-menu .dual-range:before{background:var(--range-fill)!important;background-image:var(--range-fill)!important}
@@ -1097,30 +1110,6 @@ button,input{font:inherit}button{color:inherit}.topbar{height:72px;padding:0 32p
 .topbar .nav button>span{position:relative!important;z-index:2!important}
 .topbar .nav button:hover:not(.active){color:var(--text)!important;border-color:#25282d!important}
 @media(prefers-reduced-motion:reduce){.header-prism{animation:none!important;width:55%!important}}
-/* Fix only the two nested User(s) checklists. Genre(s) styling remains untouched. */
-.filter-panel details[data-filter-id="interest-users"] .filter-choice input[type="checkbox"],
-.filter-panel details[data-filter-id="seen-users"] .filter-choice input[type="checkbox"]{
-  appearance:none!important;-webkit-appearance:none!important;
-  display:inline-grid!important;place-content:center!important;
-  position:relative!important;flex:0 0 13px!important;
-  width:13px!important;height:13px!important;min-width:13px!important;max-width:13px!important;
-  margin:0!important;padding:0!important;border:1px solid #747b86!important;
-  border-radius:2px!important;background:#17191d!important;box-sizing:border-box!important;
-}
-.filter-panel details[data-filter-id="interest-users"] .filter-choice input[type="checkbox"]:checked,
-.filter-panel details[data-filter-id="seen-users"] .filter-choice input[type="checkbox"]:checked{
-  background-color:#a5adba!important;border-color:#a5adba!important;
-}
-.filter-panel details[data-filter-id="interest-users"] .filter-choice input[type="checkbox"]:checked::after,
-.filter-panel details[data-filter-id="seen-users"] .filter-choice input[type="checkbox"]:checked::after{
-  content:""!important;display:block!important;position:absolute!important;
-  left:50%!important;top:50%!important;width:6px!important;height:3px!important;
-  margin:0!important;padding:0!important;border-left:1.5px solid #15171a!important;
-  border-bottom:1.5px solid #15171a!important;
-  transform:translate(-50%,-65%) rotate(-45deg)!important;transform-origin:center!important;
-  box-sizing:content-box!important;
-}
-
 /* Final precision pass: match the logo's 178:36 rendered proportions and use a robust gradient border */
 .header-prism{height:36px!important}
 .topbar .nav button.active{
@@ -1548,88 +1537,3 @@ button,input{font:inherit}button{color:inherit}.topbar{height:72px;padding:0 32p
 
 
 
-/* Draw a reliable visible checkmark for the nested Interest/Seen user pickers.
-   Genre(s) keeps its existing native checkbox styling. */
-.filter-options .filter-user-choice{
-  display:flex!important;
-  align-items:center!important;
-  gap:9px!important;
-  cursor:pointer;
-}
-.filter-options .filter-user-choice input[type="checkbox"]{
-  appearance:none!important;
-  -webkit-appearance:none!important;
-  display:grid!important;
-  place-content:center!important;
-  flex:0 0 16px!important;
-  width:16px!important;
-  height:16px!important;
-  min-width:16px!important;
-  margin:0!important;
-  padding:0!important;
-  border:1px solid #9a9da4!important;
-  border-radius:3px!important;
-  background:#24272c!important;
-  accent-color:initial!important;
-  cursor:pointer;
-}
-.filter-options .filter-user-choice input[type="checkbox"]::before{
-  content:""!important;
-  width:8px!important;
-  height:5px!important;
-  border-left:2px solid #17191c!important;
-  border-bottom:2px solid #17191c!important;
-  transform:rotate(-45deg) scale(0)!important;
-  transform-origin:center!important;
-}
-.filter-options .filter-user-choice input[type="checkbox"]:checked{
-  background:#d7d2c7!important;
-  border-color:#d7d2c7!important;
-}
-.filter-options .filter-user-choice input[type="checkbox"]:checked::before{
-  transform:rotate(-45deg) scale(1)!important;
-}
-.filter-options .filter-user-choice input[type="checkbox"]:focus-visible{
-  outline:2px solid #aeb4be!important;
-  outline-offset:2px!important;
-}
-
-
-/* Stable nested User(s) checkbox checkmark: use a centered SVG background,
-   not pseudo-elements on the checkbox (which produced stray vertical strokes). */
-.filter-panel .filter-options .filter-user-choice input[type="checkbox"]{
-  appearance:none!important;
-  -webkit-appearance:none!important;
-  display:inline-block!important;
-  position:relative!important;
-  flex:0 0 16px!important;
-  width:16px!important;
-  height:16px!important;
-  min-width:16px!important;
-  max-width:16px!important;
-  margin:0!important;
-  padding:0!important;
-  border:1px solid #9a9da4!important;
-  border-radius:3px!important;
-  background:#24272c!important;
-  background-image:none!important;
-  box-sizing:border-box!important;
-  vertical-align:middle!important;
-}
-.filter-panel .filter-options .filter-user-choice input[type="checkbox"]::before,
-.filter-panel .filter-options .filter-user-choice input[type="checkbox"]::after{
-  content:none!important;
-  display:none!important;
-}
-.filter-panel .filter-options .filter-user-choice input[type="checkbox"]:checked{
-  border-color:#d7d2c7!important;
-  background-color:#d7d2c7!important;
-  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2 6.2 4.6 8.7 10 3.3' fill='none' stroke='%2317191c' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")!important;
-  background-repeat:no-repeat!important;
-  background-position:center!important;
-  background-size:11px 11px!important;
-}
-.filter-panel .filter-options .filter-user-choice input[type="checkbox"]:focus-visible{
-  outline:2px solid #aeb4be!important;
-  outline-offset:2px!important;
-}
