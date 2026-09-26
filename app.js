@@ -12,6 +12,7 @@ const seedMovies=[
 let savedMovies=[];
 try{savedMovies=JSON.parse(localStorage.getItem("watchlist-added-movies")||"[]");}catch(error){savedMovies=[];}
 seedMovies.forEach(m=>{m.suggestedBy="Josh";m.addedBy="Josh";});
+let seedSuggestionNotes={};try{seedSuggestionNotes=JSON.parse(localStorage.getItem("watchlist-suggestion-notes")||"{}")}catch(error){seedSuggestionNotes={}}seedMovies.forEach(m=>{if(Object.prototype.hasOwnProperty.call(seedSuggestionNotes,m.id))m.note=seedSuggestionNotes[m.id]});
 const movies=[...seedMovies,...savedMovies];
 const baseScores=Object.fromEntries(movies.map(m=>[m.id,m.id.startsWith("tmdb-")?0:(Number(m.score)||0)]));
 let stateVotesPlaceholder={};try{stateVotesPlaceholder=JSON.parse(localStorage.getItem('watchlist-votes')||'{}')}catch(error){stateVotesPlaceholder={}}
