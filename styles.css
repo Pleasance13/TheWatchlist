@@ -1593,3 +1593,25 @@ button,input{font:inherit}button{color:inherit}.topbar{height:72px;padding:0 32p
   transform-origin:center!important;
   box-sizing:content-box!important;
 }
+
+
+/* Nested User(s) pickers must paint above their Interest/Seen parent menus.
+   Keep the parent dropdowns and menu overflow visible so checkmarks aren't clipped. */
+.filter-panel .filter-control,
+.filter-panel .filter-dropdown{overflow:visible!important}
+.filter-panel details[data-filter-id="interest"],
+.filter-panel details[data-filter-id="seen"]{position:relative;z-index:20}
+.filter-panel details[data-filter-id="interest"][open],
+.filter-panel details[data-filter-id="seen"][open]{z-index:40}
+.filter-panel details.filter-nested{position:relative;z-index:60}
+.filter-panel details.filter-nested[open]{z-index:100}
+.filter-panel details.filter-nested[open]>.filter-options,
+.filter-panel details.filter-nested[open]>.filter-menu{
+  position:relative;z-index:101;overflow:visible!important
+}
+.filter-panel details.filter-nested .filter-choice input[type="checkbox"]{
+  z-index:2!important;isolation:isolate
+}
+.filter-panel details.filter-nested .filter-choice input[type="checkbox"]:checked::after{
+  z-index:3!important
+}
