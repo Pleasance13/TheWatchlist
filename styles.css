@@ -1361,3 +1361,7 @@ button,input{font:inherit}button{color:inherit}.topbar{height:72px;padding:0 32p
 
 /* Watched attendance uses its own periwinkle ring; vote-status rings stay unchanged. */
 .ring.watched{border-color:#7991c5!important}
+
+
+/* Match the Must Watch avatar ring to the selected Must Watch button. */
+.ring.must{border-color:#8a6bb8!important}
