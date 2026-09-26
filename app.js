@@ -446,7 +446,7 @@ window.setAssetDraft=(field,value)=>{
 window.setNav=x=>{state.nav=x;state.detail=null;render()};window.setView=x=>{state.view=x;render()};window.toggleFilters=()=>{state.showFilters=!state.showFilters;render()};window.setFilter=x=>{state.filter=x;render()};window.setPosterSize=x=>{state.posterSize=Math.max(1,Math.min(4,Math.round(Number(x)||1)));const cols=[12,8,6,5][state.posterSize-1];document.querySelectorAll(".grid").forEach(e=>e.style.setProperty("--grid-cols",cols));document.querySelectorAll(".range").forEach(e=>e.value=state.posterSize);requestAnimationFrame(()=>bindVhsTilt())};window.toggleSetting=k=>{state[k]=!state[k];render()};window.openMovie=id=>{const movie=movies.find(x=>x.id===id);if(!movie)return;state.detail=movie.id;state.nav="detail";render();window.scrollTo({top:0,behavior:"smooth"})};window.togglePerson=p=>{
 const card=document.querySelector('[data-person="'+p+'"]');if(!card)return;const old=card.querySelector(".person-details");if(old){old.remove();return}
 const notSeen=movies.filter(m=>!m.seen.includes(p));
-const interests=notSeen.filter(m=>{const v=personVote(m,p);return Boolean(v)&&v!=="red"});
+const interests=notSeen.filter(m=>{const v=personVote(m,p);return Boolean(v)&&v!=="no"});
 const watched=movies.filter(m=>(m.watchedBy||[]).includes(p));
 const together=p===currentUser?[]:movies.filter(m=>(m.watchedBy||[]).includes(p)&&(m.watchedBy||[]).includes(currentUser));
 const reviewed=movies.filter(m=>(movieReviews[m.id]||{})[p]);
