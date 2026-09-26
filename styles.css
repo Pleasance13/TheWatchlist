@@ -1546,3 +1546,50 @@ button,input{font:inherit}button{color:inherit}.topbar{height:72px;padding:0 32p
 }
 
 
+
+
+/* Draw a reliable visible checkmark for the nested Interest/Seen user pickers.
+   Genre(s) keeps its existing native checkbox styling. */
+.filter-options .filter-user-choice{
+  display:flex!important;
+  align-items:center!important;
+  gap:9px!important;
+  cursor:pointer;
+}
+.filter-options .filter-user-choice input[type="checkbox"]{
+  appearance:none!important;
+  -webkit-appearance:none!important;
+  display:grid!important;
+  place-content:center!important;
+  flex:0 0 16px!important;
+  width:16px!important;
+  height:16px!important;
+  min-width:16px!important;
+  margin:0!important;
+  padding:0!important;
+  border:1px solid #9a9da4!important;
+  border-radius:3px!important;
+  background:#24272c!important;
+  accent-color:initial!important;
+  cursor:pointer;
+}
+.filter-options .filter-user-choice input[type="checkbox"]::before{
+  content:""!important;
+  width:8px!important;
+  height:5px!important;
+  border-left:2px solid #17191c!important;
+  border-bottom:2px solid #17191c!important;
+  transform:rotate(-45deg) scale(0)!important;
+  transform-origin:center!important;
+}
+.filter-options .filter-user-choice input[type="checkbox"]:checked{
+  background:#d7d2c7!important;
+  border-color:#d7d2c7!important;
+}
+.filter-options .filter-user-choice input[type="checkbox"]:checked::before{
+  transform:rotate(-45deg) scale(1)!important;
+}
+.filter-options .filter-user-choice input[type="checkbox"]:focus-visible{
+  outline:2px solid #aeb4be!important;
+  outline-offset:2px!important;
+}
