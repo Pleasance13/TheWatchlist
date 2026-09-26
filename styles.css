@@ -1365,3 +1365,22 @@ button,input{font:inherit}button{color:inherit}.topbar{height:72px;padding:0 32p
 
 /* Match the Must Watch avatar ring to the selected Must Watch button. */
 .ring.must{border-color:#8a6bb8!important}
+
+
+/* People review content hugs the right edge without reserving the maximum quote width. */
+.person-movie .people-review-content{
+  margin-left:auto!important;
+  width:max-content!important;
+  max-width:min(68%, 620px)!important;
+  justify-content:flex-end!important;
+  text-align:right!important;
+  flex:0 1 auto!important;
+}
+.person-movie .people-review-copy{
+  justify-content:flex-end!important;
+  text-align:right!important;
+  min-width:0!important;
+}
+.person-movie .people-review-quote-text{
+  text-align:right!important;
+}
