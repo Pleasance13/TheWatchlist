@@ -1357,3 +1357,7 @@ button,input{font:inherit}button{color:inherit}.topbar{height:72px;padding:0 32p
 .person-movie .people-review-stars .rating-star{margin:0!important}
 .person-movies .person-movie{align-items:center!important}
 .person-movie .people-review-content{line-height:15px!important}
+
+
+/* Watched attendance uses its own periwinkle ring; vote-status rings stay unchanged. */
+.ring.watched{border-color:#7991c5!important}
