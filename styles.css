@@ -1052,12 +1052,6 @@ button,input{font:inherit}button{color:inherit}.topbar{height:72px;padding:0 32p
 .detail-movie-actions .watched-together-button{padding:0 12px!important}
 
 
-/* Fine-tune only the User(s) checkmark position; leave Genre(s) untouched */
-.filter-panel input.filter-user-checkbox:checked::after{
-  transform:translateX(2px) rotate(-45deg) translate(1px,-1px)!important;
-}
-
-
 /* Header treatment: decoration is strictly an absolute background layer, never a flex item */
 .topbar{
   position:sticky!important;isolation:isolate!important;overflow:hidden!important;
@@ -1552,66 +1546,3 @@ button,input{font:inherit}button{color:inherit}.topbar{height:72px;padding:0 32p
 }
 
 
-/* Make Interest level and Seen by user checkboxes use the exact same checkmark
-   treatment as Genre(s), overriding their older nested-picker rules. */
-.filter-panel .filter-options .filter-choice input[type="checkbox"],
-.filter-panel details[data-filter-id="interest-users"] .filter-choice input[type="checkbox"],
-.filter-panel details[data-filter-id="seen-users"] .filter-choice input[type="checkbox"]{
-  appearance:none!important;
-  -webkit-appearance:none!important;
-  display:inline-grid!important;
-  place-content:center!important;
-  position:relative!important;
-  flex:0 0 13px!important;
-  width:13px!important;height:13px!important;
-  min-width:13px!important;max-width:13px!important;
-  margin:0!important;padding:0!important;
-  border:1px solid #747b86!important;
-  border-radius:2px!important;
-  background:#17191d!important;
-  box-sizing:border-box!important;
-}
-.filter-panel .filter-options .filter-choice input[type="checkbox"]:checked,
-.filter-panel details[data-filter-id="interest-users"] .filter-choice input[type="checkbox"]:checked,
-.filter-panel details[data-filter-id="seen-users"] .filter-choice input[type="checkbox"]:checked{
-  background:#a5adba!important;
-  background-color:#a5adba!important;
-  border-color:#a5adba!important;
-}
-.filter-panel .filter-options .filter-choice input[type="checkbox"]:checked::after,
-.filter-panel details[data-filter-id="interest-users"] .filter-choice input[type="checkbox"]:checked::after,
-.filter-panel details[data-filter-id="seen-users"] .filter-choice input[type="checkbox"]:checked::after{
-  content:""!important;
-  display:block!important;
-  position:absolute!important;
-  left:50%!important;top:50%!important;
-  width:6px!important;height:3px!important;
-  margin:0!important;padding:0!important;
-  border-left:1.5px solid #15171a!important;
-  border-bottom:1.5px solid #15171a!important;
-  transform:translate(-50%,-65%) rotate(-45deg)!important;
-  transform-origin:center!important;
-  box-sizing:content-box!important;
-}
-
-
-/* Nested User(s) pickers must paint above their Interest/Seen parent menus.
-   Keep the parent dropdowns and menu overflow visible so checkmarks aren't clipped. */
-.filter-panel .filter-control,
-.filter-panel .filter-dropdown{overflow:visible!important}
-.filter-panel details[data-filter-id="interest"],
-.filter-panel details[data-filter-id="seen"]{position:relative;z-index:20}
-.filter-panel details[data-filter-id="interest"][open],
-.filter-panel details[data-filter-id="seen"][open]{z-index:40}
-.filter-panel details.filter-nested{position:relative;z-index:60}
-.filter-panel details.filter-nested[open]{z-index:100}
-.filter-panel details.filter-nested[open]>.filter-options,
-.filter-panel details.filter-nested[open]>.filter-menu{
-  position:relative;z-index:101;overflow:visible!important
-}
-.filter-panel details.filter-nested .filter-choice input[type="checkbox"]{
-  z-index:2!important;isolation:isolate
-}
-.filter-panel details.filter-nested .filter-choice input[type="checkbox"]:checked::after{
-  z-index:3!important
-}
