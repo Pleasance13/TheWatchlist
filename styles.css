@@ -1604,7 +1604,7 @@ button,input{font:inherit}button{color:inherit}.topbar{height:72px;padding:0 32p
 
 
 /* External IMDb and Rotten Tomatoes ratings in movie details. */
-.external-ratings{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:12px 0 0}
+.external-ratings{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:12px 0 16px}
 .external-rating{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border:1px solid #383d46;border-radius:999px;background:#202329;color:#e8e9ec;font-size:12px;line-height:1.2}
 .external-rating strong{font-weight:750}
 .imdb-rating strong{color:#f5c518}
