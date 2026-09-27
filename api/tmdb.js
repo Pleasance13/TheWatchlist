@@ -124,14 +124,22 @@ export default async function handler(req, res) {
       const id = Number(req.query.id);
       if (!Number.isInteger(id)) return send(res, 400, { error: "A valid TMDB movie id is required." });
 
-      const [movie, images, credits, videos, providers, externalIds] = await Promise.all([
+      const [movie, images, credits, videos, providers, externalIds, releaseDates] = await Promise.all([
         tmdbFetch(`/movie/${id}`),
         tmdbFetch(`/movie/${id}/images`, { include_image_language: "en,null" }),
         tmdbFetch(`/movie/${id}/credits`),
         tmdbFetch(`/movie/${id}/videos`, { language: "en-US" }).catch(() => ({ results: [] })),
         tmdbFetch(`/movie/${id}/watch/providers`).catch(() => ({ results: {} })),
-        tmdbFetch(`/movie/${id}/external_ids`).catch(() => ({}))
+        tmdbFetch(`/movie/${id}/external_ids`).catch(() => ({})),
+        tmdbFetch(`/movie/${id}/release_dates`).catch(() => ({ results: [] }))
       ]);
+
+      const usReleases = (releaseDates.results || []).find(country => country.iso_3166_1 === "US");
+      const usCertifications = (usReleases?.release_dates || []).filter(release => release.certification).sort((a, b) => {
+        const preferred = date => date.type === 3 ? 0 : date.type === 2 ? 1 : 2;
+        return preferred(a) - preferred(b);
+      });
+      const certification = usCertifications[0]?.certification || (releaseDates.results || []).flatMap(country => country.release_dates || []).find(release => release.certification)?.certification || null;
 
       const cast = (credits.cast || []).slice(0, 12).map(person => ({
         id: person.id,
@@ -191,7 +199,7 @@ export default async function handler(req, res) {
         genre: (movie.genres || []).map(g => g.name),
         director: directors,
         runtime: movie.runtime || null,
-        rating: movie.certification || null,
+        rating: certification,
         synopsis: movie.overview || "",
         cast,
         trailer: trailer ? { name: trailer.name, key: trailer.key, site: trailer.site } : null,
