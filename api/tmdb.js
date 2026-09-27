@@ -43,7 +43,7 @@ function classifyWarnings(keywordRecords = []) {
   const names = keywordRecords.map(item => String(item.name || "").toLowerCase().replace(/[^a-z0-9 -]/g, " "));
   const warnings = new Set();
   for (const [category, terms] of WARNING_KEYWORDS) {
-    if (names.some(name => terms.some(term => name.includes(term)))) warnings.add(category);
+    if (names.some(name => terms.some(term => (" " + name + " ").includes(" " + term + " ")))) warnings.add(category);
   }
   return [...warnings];
 }
