@@ -1611,3 +1611,6 @@ button,input{font:inherit}button{color:inherit}.topbar{height:72px;padding:0 32p
 .rt-rating strong{color:#fa6b6b}
 .external-rating small{margin-left:-5px;color:#a8adb6;font-size:10px}
 .external-ratings-loading,.external-ratings-unavailable{color:#9298a1;font-size:12px}
+
+/* Make all copy on VHS backs bold for legibility at case scale. */
+.vhs-back-scroll,.vhs-back-scroll p,.vhs-back-scroll .meta,.vhs-back-scroll .pill,.vhs-back-scroll .note,.vhs-back-scroll .back-warnings{font-weight:700}
