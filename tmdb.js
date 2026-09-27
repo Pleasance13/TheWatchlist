@@ -9,6 +9,22 @@
  *   /api/tmdb?action=details&id=348
  */
 
+function normalizeWarningLabel(value) {
+  return String(value || "").trim().toLowerCase().replace(/\s+/g, " ")
+    .split(" ").map(word => word.split(/([/-])/)
+      .map(part => part === "/" || part === "-" ? part : part ? part[0].toUpperCase() + part.slice(1) : "")
+      .join("")).join(" ");
+}
+function dedupeWarnings(values) {
+  const unique = new Map();
+  (Array.isArray(values) ? values : []).forEach(value => {
+    const label = normalizeWarningLabel(value);
+    const key = label.toLowerCase();
+    if (label && !unique.has(key)) unique.set(key, label);
+  });
+  return [...unique.values()];
+}
+
 const TMDB = {
   endpoint: window.WATCHLIST_TMDB_ENDPOINT || (location.hostname.endsWith("github.io") ? "https://the-watchlist-two.vercel.app/api/tmdb" : "/api/tmdb"),
   imageBase: "https://image.tmdb.org/t/p/",
@@ -61,7 +77,7 @@ const TMDB = {
     if (data.runtime) movie.runtime = formatRuntime(data.runtime);
     movie.rating = data.rating || "";
     if (data.synopsis) movie.synopsis = data.synopsis;
-    if (Array.isArray(data.warnings)) movie.warnings = [...new Set([...(Array.isArray(movie.warnings) ? movie.warnings : []), ...data.warnings])];
+    if (Array.isArray(data.warnings)) movie.warnings = dedupeWarnings([...(Array.isArray(movie.warnings) ? movie.warnings : []), ...data.warnings]);
     if (movie.id && String(movie.id).startsWith("tmdb-")) {
       try {
         const stored = JSON.parse(localStorage.getItem("watchlist-added-movies") || "[]");
