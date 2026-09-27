@@ -13,7 +13,7 @@ let savedMovies=[];
 try{savedMovies=JSON.parse(localStorage.getItem("watchlist-added-movies")||"[]");}catch(error){savedMovies=[];}
 seedMovies.forEach(m=>{m.suggestedBy="Josh";m.addedBy="Josh";});
 let seedSuggestionNotes={};try{seedSuggestionNotes=JSON.parse(localStorage.getItem("watchlist-suggestion-notes")||"{}")}catch(error){seedSuggestionNotes={}}seedMovies.forEach(m=>{if(Object.prototype.hasOwnProperty.call(seedSuggestionNotes,m.id))m.note=seedSuggestionNotes[m.id]});
-const movies=[...seedMovies,...savedMovies];
+const movies=[...seedMovies,...savedMovies];movies.forEach(movie=>{movie.rating="";});
 let savedSeenStatus={};try{savedSeenStatus=JSON.parse(localStorage.getItem("watchlist-seen-status")||"{}")}catch(error){savedSeenStatus={}}
 movies.forEach(m=>{if(Array.isArray(savedSeenStatus[m.id]))m.seen=[...savedSeenStatus[m.id]]});
 const baseScores=Object.fromEntries(movies.map(m=>[m.id,m.id.startsWith("tmdb-")?0:(Number(m.score)||0)]));
@@ -128,11 +128,11 @@ function caseFaces(m, backHtml, extraClass=""){
   </div>`;
 }
 function externalRatings(m){
-  const rt=m.rottenTomatoesScore??m.rtScore??m.rottenTomatoes;
-  const imdb=m.imdbScore??m.imdbRating;
+  const rt=m.rottenTomatoesRating??m.rottenTomatoesScore??m.rtScore??m.rottenTomatoes;
+  const imdb=m.imdbRating??m.imdbScore;
   const parts=[];
-  if(rt!==undefined&&rt!==null&&rt!=="")parts.push(`RT ${rt}%`);
-  if(imdb!==undefined&&imdb!==null&&imdb!=="")parts.push(`IMDb ${imdb}`);
+  if(rt!==undefined&&rt!==null&&rt!==""&&rt!=="N/A")parts.push(`<strong>Rotten Tomatoes</strong> ${String(rt).endsWith("%")?"":""}${rt}${String(rt).endsWith("%")?"":"%"}`);
+  if(imdb!==undefined&&imdb!==null&&imdb!==""&&imdb!=="N/A")parts.push(`<strong>IMDb</strong> ${imdb}/10`);
   return parts.length?`<div class="external-ratings">${parts.map(x=>`<span class="pill">${x}</span>`).join("")}</div>`:"";
 }
 function backContent(m){
@@ -518,6 +518,7 @@ async function hydrateTmdbArtwork(){
       if(!exact?.tmdbId)continue;
       const details=await TMDB.details(exact.tmdbId);
       TMDB.apply(movie,details);
+      if(state.showRatings)loadExternalRatings(movie);
     }catch(error){
       console.warn("TMDB hydration skipped for "+movie.title,error.message);
     }
