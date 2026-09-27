@@ -7,6 +7,47 @@ function send(res, status, body) {
   res.status(status).json(body);
 }
 
+const WARNING_KEYWORDS = [
+  ["Violence", ["violence", "violent", "fight", "fighting", "assault", "murder", "massacre", "serial killer", "shooting", "gun violence", "stabbing", "battle"]],
+  ["Gore", ["gore", "graphic violence", "blood", "bloodshed", "splatter", "splatter film", "graphic death"]],
+  ["Blood", ["blood", "bloodshed", "bleeding", "bloodbath"]],
+  ["Torture", ["torture", "torture scene", "tortured"]],
+  ["Body horror", ["body horror", "body transformation", "body mutation", "mutant", "mutation"]],
+  ["Dismemberment", ["dismemberment", "decapitation", "severed head", "severed limb", "amputation"]],
+  ["Weapons", ["guns", "firearms", "knife", "knives", "sword", "weapon"]],
+  ["War", ["war", "war violence", "world war", "war crime"]],
+  ["Animal death", ["animal death", "death of an animal", "dog dies", "dog death", "horse death", "cat death", "pet death"]],
+  ["Animal cruelty", ["animal cruelty", "animal abuse", "cruelty to animals"]],
+  ["Animal injury", ["animal injury", "injured animal"]],
+  ["Harm to animals", ["harm to animals", "animal violence", "animal sacrifice"]],
+  ["Sexual content", ["sexual content", "sex scene", "sexuality", "sexual relationship", "sexual themes"]],
+  ["Nudity", ["nudity", "nude", "naked", "topless"]],
+  ["Sexual assault", ["sexual assault", "sexual violence", "sexual abuse", "molestation"]],
+  ["Rape", ["rape", "gang rape", "rape and revenge"]],
+  ["Sexual exploitation", ["sexual exploitation", "sex trafficking", "human trafficking", "prostitution"]],
+  ["Death", ["death", "dying", "terminal illness", "funeral", "murder", "execution"]],
+  ["Child death", ["child death", "death of a child", "dead child", "dead children", "infanticide"]],
+  ["Suicide", ["suicide", "suicidal", "suicide attempt"]],
+  ["Self-harm", ["self harm", "self-harm", "cutting", "self mutilation"]],
+  ["Suicide/self-harm", ["suicide", "self harm", "self-harm", "suicide attempt"]],
+  ["Drug use", ["drug use", "drug addiction", "drug abuse", "cocaine", "heroin", "methamphetamine", "drug dealing", "marijuana", "substance abuse"]],
+  ["Drug overdose", ["overdose", "drug overdose", "overdosing"]],
+  ["Child abuse", ["child abuse", "child neglect", "pedophilia", "child molestation"]],
+  ["Disturbing imagery", ["disturbing", "nightmare", "nightmares", "psychological horror", "hallucination", "hallucinations", "nightmarish imagery"]],
+  ["Medical trauma", ["medical horror", "medical trauma", "surgery", "medical procedure", "disease", "cancer"]],
+  ["Abduction/kidnapping", ["kidnapping", "abduction", "hostage", "captivity"]],
+  ["Psychological distress", ["psychological trauma", "psychological abuse", "mental breakdown", "panic attack", "psychological thriller"]]
+];
+
+function classifyWarnings(keywordRecords = []) {
+  const names = keywordRecords.map(item => String(item.name || "").toLowerCase().replace(/[^a-z0-9 -]/g, " "));
+  const warnings = new Set();
+  for (const [category, terms] of WARNING_KEYWORDS) {
+    if (names.some(name => terms.some(term => name.includes(term)))) warnings.add(category);
+  }
+  return [...warnings];
+}
+
 function getToken() {
   return process.env.TMDB_READ_ACCESS_TOKEN || process.env.TMDB_API_KEY || "";
 }
@@ -124,14 +165,15 @@ export default async function handler(req, res) {
       const id = Number(req.query.id);
       if (!Number.isInteger(id)) return send(res, 400, { error: "A valid TMDB movie id is required." });
 
-      const [movie, images, credits, videos, providers, externalIds, releaseDates] = await Promise.all([
+      const [movie, images, credits, videos, providers, externalIds, releaseDates, keywordData] = await Promise.all([
         tmdbFetch(`/movie/${id}`),
         tmdbFetch(`/movie/${id}/images`, { include_image_language: "en,null" }),
         tmdbFetch(`/movie/${id}/credits`),
         tmdbFetch(`/movie/${id}/videos`, { language: "en-US" }).catch(() => ({ results: [] })),
         tmdbFetch(`/movie/${id}/watch/providers`).catch(() => ({ results: {} })),
         tmdbFetch(`/movie/${id}/external_ids`).catch(() => ({})),
-        tmdbFetch(`/movie/${id}/release_dates`).catch(() => ({ results: [] }))
+        tmdbFetch(`/movie/${id}/release_dates`).catch(() => ({ results: [] })),
+        tmdbFetch(`/movie/${id}/keywords`).catch(() => ({ keywords: [] }))
       ]);
 
       const usReleases = (releaseDates.results || []).find(country => country.iso_3166_1 === "US");
@@ -201,6 +243,7 @@ export default async function handler(req, res) {
         runtime: movie.runtime || null,
         rating: certification,
         synopsis: movie.overview || "",
+        warnings: classifyWarnings(keywordData.keywords || keywordData.results || []),
         cast,
         trailer: trailer ? { name: trailer.name, key: trailer.key, site: trailer.site } : null,
         streaming,
