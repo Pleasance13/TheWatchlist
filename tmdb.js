@@ -59,7 +59,7 @@ const TMDB = {
     if (data.genre?.length) movie.genre = data.genre.join(" · ");
     if (data.director?.length) movie.director = data.director.join(", ");
     if (data.runtime) movie.runtime = formatRuntime(data.runtime);
-    if (data.rating) movie.rating = data.rating;
+    movie.rating = data.rating || "";
     if (data.synopsis) movie.synopsis = data.synopsis;
 
     return movie;
