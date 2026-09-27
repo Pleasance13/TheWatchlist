@@ -39,7 +39,12 @@ async function getDddWarnings(title, year) {
     return yes > 0 && yes > no;
   }).map(item => {
     const topic = item.topic || {};
-    return topic.smmwDescription || topic.doesName || "";
+    const label = topic.smmwDescription || topic.doesName || "";
+    // DDD's nudity topics often use longer question-style descriptions.
+    if (/\b(nudity|nude|naked|topless|bare breasts?|full frontal|partial nudity)\b/i.test(label)) return "Nudity";
+    if (/\bsexual assault|rape|molestation|non-consensual\b/i.test(label)) return "Sexual assault";
+    if (/\bsexual content|sex scene|sexual activity\b/i.test(label)) return "Sexual content";
+    return label;
   }).filter(Boolean);
   return { warnings: [...new Set(warnings)], matched: true };
 }
