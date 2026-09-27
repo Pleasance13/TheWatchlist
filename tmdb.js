@@ -30,8 +30,8 @@ const TMDB = {
     return this.request({ action: "search", query, page });
   },
 
-  details(id) {
-    return this.request({ action: "details", id });
+  details(id, region = "US") {
+    return this.request({ action: "details", id, region });
   },
 
   apply(movie, data) {
@@ -42,6 +42,12 @@ const TMDB = {
     movie.textlessPosterPath = data.textlessPosterPath || movie.textlessPosterPath || null;
     movie.backdropPath = data.backdropPath || movie.backdropPath || null;
     movie.logoPath = data.logoPath || movie.logoPath || null;
+    movie.tmdbCast = Array.isArray(data.cast) ? data.cast : movie.tmdbCast || [];
+    movie.tmdbTrailer = data.trailer || movie.tmdbTrailer || null;
+    movie.tmdbStreaming = Array.isArray(data.streaming) ? data.streaming : movie.tmdbStreaming || [];
+    movie.tmdbStreamingLink = data.streamingLink || movie.tmdbStreamingLink || null;
+    movie.tmdbStreamingRegion = data.streamingRegion || movie.tmdbStreamingRegion || "US";
+    movie.imdbId = data.imdbId || movie.imdbId || null;
     movie.tmdbAssets = {
       logos: data.logos || movie.tmdbAssets?.logos || [],
       posters: data.posters || movie.tmdbAssets?.posters || [],
