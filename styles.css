@@ -327,6 +327,21 @@ button,input{font:inherit}button{color:inherit}.topbar{height:72px;padding:0 32p
 .person-movies{display:grid;gap:5px}
 .person-movie{display:flex;align-items:center;justify-content:space-between;gap:15px;padding:8px 10px;border:1px solid #282c31;border-radius:6px;background:rgba(255,255,255,.018);font-size:11px}
 .person-interest,.person-seen{font-size:9px;font-weight:650;white-space:nowrap}
+/* People review ratings reuse the detail-page half-star component inline. */
+.person-movie .review-stars-inline{display:inline-flex;vertical-align:middle;gap:0;flex:0 0 auto;white-space:nowrap}
+.person-movie .review-stars-inline .rating-star{transform:scale(.72);transform-origin:center;margin:0 -3px}
+/* Compact People ratings use the same layered grey base + gold fill stars
+   as the movie detail reviews, including true half-star widths. */
+.person-movie .people-review-stars{display:inline-flex;gap:0;align-items:center;vertical-align:middle;flex:0 0 auto;position:relative;top:-4px}
+.person-movie .people-review-stars .rating-star{width:16px;height:18px;font-size:17px;line-height:18px;position:relative;display:inline-block;margin:0 -1px}
+.person-movie .people-review-stars .star-base,.person-movie .people-review-stars .star-fill{width:16px;height:18px;font-size:17px;line-height:18px;overflow:hidden}
+.person-movie .people-review-stars .star-base{color:#444950}
+.person-movie .people-review-stars .star-fill{color:#d7c46d;position:absolute;left:0;top:0;white-space:nowrap}
+.person-movie .person-seen .people-review-content{display:inline-flex;align-items:center;gap:6px;vertical-align:middle;line-height:18px}
+.person-movie .person-seen .people-review-score{display:inline-flex;align-items:center;flex:0 0 auto;height:18px}
+.person-movie .person-seen .people-review-copy{display:inline-flex;align-items:center;line-height:1.35}
+
+.person-movie .review-stars-inline .rating-star:last-child{margin-right:0}
 .person-interest.green{color:#9fd3aa}.person-interest.yellow{color:#d9c878}.person-interest.red{color:#cf8989}.person-seen{color:#9298a1}
 .person-empty{font-size:11px;color:#626871;padding:2px 0}
 @media(max-width:760px){.person-summary{padding:13px 14px}.person-details{padding:13px 14px 15px}.person-movie{align-items:flex-start}}
@@ -754,7 +769,7 @@ button,input{font:inherit}button{color:inherit}.topbar{height:72px;padding:0 32p
 .detail-board-rating{margin-top:7px;margin-bottom:14px;font-size:12px;color:var(--muted)}
 
 /* Rank sticker decals */
-.rank-sticker{
+.rank-sticker{ 
   position:absolute;
   top:2%;
   left:6%;
@@ -764,15 +779,15 @@ button,input{font:inherit}button{color:inherit}.topbar{height:72px;padding:0 32p
   height:auto;
   z-index:30;
   display:block;
-  background-image:url("stickers.png");
+  background-image:url("stickers-v2.png");
   background-repeat:no-repeat;
   background-size:auto 100%;
   background-position:0 0;
   pointer-events:none;
   filter:drop-shadow(1px 2px 1px rgba(0,0,0,.42));
   overflow:hidden;
-  -webkit-mask-image:url("stickers.png");
-  mask-image:url("stickers.png");
+  -webkit-mask-image:url("stickers-v2.png");
+  mask-image:url("stickers-v2.png");
   -webkit-mask-repeat:no-repeat;
   mask-repeat:no-repeat;
   -webkit-mask-size:auto 100%;
@@ -780,6 +795,7 @@ button,input{font:inherit}button{color:inherit}.topbar{height:72px;padding:0 32p
   -webkit-mask-position:0 0;
   mask-position:0 0
 }
+.rank-sticker-number{display:none!important}
 .rank-sticker-number{
   position:absolute;
   inset:0;
@@ -811,8 +827,13 @@ button,input{font:inherit}button{color:inherit}.topbar{height:72px;padding:0 32p
     rgba(255,255,255,0) 100%
   );
   mix-blend-mode:overlay;
-  transform:translateX(var(--sticker-shine,0%));
-  transition:transform .08s linear;
+  /* Oversized gradient field lets pointer tilt shift the colors beneath the
+     stationary element and its fixed diffusion map. */
+  background-size:300% 100%;
+  background-repeat:repeat-x;
+  background-position:calc(50% + var(--sticker-shine,0%)) center;
+  transform:none;
+  transition:background-position .08s linear;
   pointer-events:none
 }
 .list .rank{display:flex;align-items:center;justify-content:center}
@@ -827,34 +848,17 @@ button,input{font:inherit}button{color:inherit}.topbar{height:72px;padding:0 32p
   flex:0 0 45px
 }
 .list-rank-sticker .rank-sticker-number{font-size:14px}
+
+/* List uses the exact same shine element size, gradient, and diffusion scale
+   as grid/detail. Only animate the inherited gradient position here. */
 .list-rank-sticker .rank-sticker-shine{
-  display:block;
-  width:600%;
-  left:-250%;
-  right:auto;
-  top:-80%;
-  bottom:-80%;
-  background:linear-gradient(
-    90deg,
-    rgba(255,255,255,0) 0%,
-    rgba(0,0,0,0) 12%,
-    rgba(0,0,0,.8) 22%,
-    rgba(255,255,255,.8) 34%,
-    rgba(0,0,0,.8) 46%,
-    rgba(255,255,255,.8) 58%,
-    rgba(0,0,0,.8) 70%,
-    rgba(255,255,255,0) 88%,
-    rgba(255,255,255,0) 100%
-  );
-  background-size:33.333333% 100%;
-  background-repeat:repeat-x;
   animation:rank-sticker-list-shine 5.8s linear infinite;
-  transform:rotate(28deg) translateX(0);
-  transform-origin:center
 }
 @keyframes rank-sticker-list-shine{
-  0%{transform:rotate(28deg) translateX(0)}
-  100%{transform:rotate(28deg) translateX(-33.333333%)}
+  0%{background-position:0% center}
+  /* With the shared 300%-wide background tile, 150% shifts it by exactly
+     one full tile width, so the repeated pattern meets itself at the loop. */
+  100%{background-position:150% center}
 }
 .asset-preview .rank-sticker,.artwork-preview .rank-sticker,.artwork-preview-case .rank-sticker{display:none}
 @media (max-width:700px){
@@ -1022,10 +1026,23 @@ button,input{font:inherit}button{color:inherit}.topbar{height:72px;padding:0 32p
 .brand{display:flex!important;align-items:center!important;gap:0!important}
 .brand-logo{display:block!important;width:178px!important;max-width:38vw!important;height:auto!important;max-height:38px!important;object-fit:contain!important;object-position:left center!important}
 .brand-mark{display:none!important}
+/* Shared custom checkbox styling for Genre(s), Interest-level users, and Seen-by users. */
 .filter-panel .filter-options .filter-choice{display:flex!important;align-items:center!important;justify-content:flex-start!important;gap:7px!important;width:100%!important;min-height:18px!important;margin:0!important;padding:1px 2px!important;text-align:left!important;box-sizing:border-box!important}
-.filter-panel .filter-options .filter-choice input[type=checkbox]{appearance:none!important;-webkit-appearance:none!important;display:inline-grid!important;place-content:center!important;flex:0 0 13px!important;width:13px!important;height:13px!important;min-width:13px!important;max-width:13px!important;margin:0!important;padding:0!important;border:1px solid #747b86!important;border-radius:2px!important;background:#17191d!important;box-sizing:border-box!important;cursor:pointer!important}
-.filter-panel .filter-options .filter-choice input[type=checkbox]:checked{background:#a5adba!important;border-color:#a5adba!important}
-.filter-panel .filter-options .filter-choice input[type=checkbox]:checked:after{content:"";width:6px;height:3px;border-left:1.5px solid #15171a;border-bottom:1.5px solid #15171a;transform:rotate(-45deg) translate(1px,-1px)}
+.filter-panel .filter-options .filter-choice input[type="checkbox"]{
+  appearance:none!important;-webkit-appearance:none!important;display:inline-block!important;
+  position:relative!important;flex:0 0 16px!important;width:16px!important;height:16px!important;
+  min-width:16px!important;max-width:16px!important;margin:0!important;padding:0!important;
+  border:1px solid #9a9da4!important;border-radius:3px!important;background:#24272c!important;
+  background-image:none!important;box-sizing:border-box!important;vertical-align:middle!important;cursor:pointer!important;
+}
+.filter-panel .filter-options .filter-choice input[type="checkbox"]::before,
+.filter-panel .filter-options .filter-choice input[type="checkbox"]::after{content:none!important;display:none!important}
+.filter-panel .filter-options .filter-choice input[type="checkbox"]:checked{
+  border-color:#d7d2c7!important;background-color:#d7d2c7!important;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2 6.2 4.6 8.7 10 3.3' fill='none' stroke='%2317191c' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")!important;
+  background-repeat:no-repeat!important;background-position:center!important;background-size:11px 11px!important;
+}
+.filter-panel .filter-options .filter-choice input[type="checkbox"]:focus-visible{outline:2px solid #aeb4be!important;outline-offset:2px!important}
 .filter-panel .filter-options .filter-choice span{flex:0 1 auto!important;width:auto!important;text-align:left!important;white-space:normal!important}
 .filter-panel .rewatch-select{width:100%!important;min-width:130px!important}
 .filter-panel .year-range-menu .dual-range:before{background:var(--range-fill)!important;background-image:var(--range-fill)!important}
@@ -1046,12 +1063,6 @@ button,input{font:inherit}button{color:inherit}.topbar{height:72px;padding:0 32p
 .detail-movie-actions>button{box-sizing:border-box!important;display:inline-flex!important;align-items:center!important;justify-content:center!important;align-self:center!important;min-height:42px!important;height:42px!important;line-height:1!important;margin:0!important;vertical-align:middle!important}
 .detail-movie-actions .remove-movie-button{padding:0 12px!important;font-size:12px!important;font-weight:500!important}
 .detail-movie-actions .watched-together-button{padding:0 12px!important}
-
-
-/* Fine-tune only the User(s) checkmark position; leave Genre(s) untouched */
-.filter-panel input.filter-user-checkbox:checked::after{
-  transform:translateX(2px) rotate(-45deg) translate(1px,-1px)!important;
-}
 
 
 /* Header treatment: decoration is strictly an absolute background layer, never a flex item */
@@ -1099,30 +1110,6 @@ button,input{font:inherit}button{color:inherit}.topbar{height:72px;padding:0 32p
 .topbar .nav button>span{position:relative!important;z-index:2!important}
 .topbar .nav button:hover:not(.active){color:var(--text)!important;border-color:#25282d!important}
 @media(prefers-reduced-motion:reduce){.header-prism{animation:none!important;width:55%!important}}
-/* Fix only the two nested User(s) checklists. Genre(s) styling remains untouched. */
-.filter-panel details[data-filter-id="interest-users"] .filter-choice input[type="checkbox"],
-.filter-panel details[data-filter-id="seen-users"] .filter-choice input[type="checkbox"]{
-  appearance:none!important;-webkit-appearance:none!important;
-  display:inline-grid!important;place-content:center!important;
-  position:relative!important;flex:0 0 13px!important;
-  width:13px!important;height:13px!important;min-width:13px!important;max-width:13px!important;
-  margin:0!important;padding:0!important;border:1px solid #747b86!important;
-  border-radius:2px!important;background:#17191d!important;box-sizing:border-box!important;
-}
-.filter-panel details[data-filter-id="interest-users"] .filter-choice input[type="checkbox"]:checked,
-.filter-panel details[data-filter-id="seen-users"] .filter-choice input[type="checkbox"]:checked{
-  background-color:#a5adba!important;border-color:#a5adba!important;
-}
-.filter-panel details[data-filter-id="interest-users"] .filter-choice input[type="checkbox"]:checked::after,
-.filter-panel details[data-filter-id="seen-users"] .filter-choice input[type="checkbox"]:checked::after{
-  content:""!important;display:block!important;position:absolute!important;
-  left:50%!important;top:50%!important;width:6px!important;height:3px!important;
-  margin:0!important;padding:0!important;border-left:1.5px solid #15171a!important;
-  border-bottom:1.5px solid #15171a!important;
-  transform:translate(-50%,-65%) rotate(-45deg)!important;transform-origin:center!important;
-  box-sizing:content-box!important;
-}
-
 /* Final precision pass: match the logo's 178:36 rendered proportions and use a robust gradient border */
 .header-prism{height:36px!important}
 .topbar .nav button.active{
@@ -1232,3 +1219,321 @@ button,input{font:inherit}button{color:inherit}.topbar{height:72px;padding:0 32p
   object-fit:fill!important;
   transform:none!important;animation:none!important;
 }
+
+
+/* Detail response hover labels and spacing for the seen toggle */
+.detail-title-row{gap:16px!important}
+.detail-title-row .seen-button{margin-left:8px!important}
+.stack .ring{position:relative}
+.stack .response-tooltip{position:absolute;left:50%;bottom:calc(100% + 9px);transform:translate(-50%,4px);z-index:30;white-space:nowrap;padding:6px 9px;border:1px solid var(--line2);border-radius:6px;background:#111316;color:var(--text);font-size:11px;font-weight:600;line-height:1.2;box-shadow:0 5px 18px rgba(0,0,0,.4);opacity:0;visibility:hidden;pointer-events:none;transition:opacity .12s ease,transform .12s ease}
+.stack .ring:hover .response-tooltip,.stack .ring:focus-within .response-tooltip{opacity:1;visibility:visible;transform:translate(-50%,0)}
+@media(max-width:520px){.detail-title-row{gap:10px!important}.detail-title-row .seen-button{margin-left:4px!important}}
+
+
+/* Hard-anchor prism's outer box to the logo's measured viewport top and height. */
+.topbar .header-prism{position:fixed!important;transform:none!important;top:0;bottom:auto;overflow:hidden!important;box-sizing:border-box!important;}
+.topbar .header-prism img{display:block!important;width:100%!important;height:100%!important;max-height:none!important;min-height:0!important;object-fit:fill!important;}
+
+
+/* Sticker lettering and List toolbar icon refresh */
+.toolbar .list-icon-svg{fill:currentColor;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+.toolbar .list-icon-svg path{fill:none}
+.rank-sticker-number{font-family:"Permanent Marker",cursive;font-weight:400;letter-spacing:0;transform:translateY(-2%) rotate(-5deg)}
+.list-rank-sticker .rank-sticker-number{font-size:17px}
+/* Fixed diffusion texture over the moving #1 holographic gradient. */
+.rank-sticker-1:after{content:"";position:absolute;inset:0;pointer-events:none;opacity:.23;background-image:url("data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%27120%27 height=%27120%27%3E%3Cfilter id=%27d%27 x=%27-20%25%27 y=%27-20%25%27 width=%27140%25%27 height=%27140%25%27%3E%3CfeTurbulence type=%27fractalNoise%27 baseFrequency=%27.72%27 numOctaves=%273%27 seed=%2717%27 stitchTiles=%27stitch%27/%3E%3C/filter%3E%3Crect width=%27100%25%27 height=%27100%25%27 filter=%27url(%23d)%27 opacity=%27.7%27/%3E%3C/svg%3E");background-size:70px 70px;background-position:center;mix-blend-mode:soft-light}
+
+
+/* Repo-local rank sticker font and fixed holographic diffusion. */
+@font-face{font-family:"Permanent Marker";src:url("./PermanentMarker-Regular.ttf") format("truetype");font-style:normal;font-weight:400;font-display:swap}
+/* Diffuse only the holographic gradient layer. The shine element itself stays
+   stationary; its background moves beneath a fixed displacement field. */
+.rank-sticker-1{filter:drop-shadow(1px 2px 1px rgba(0,0,0,.42))}
+.rank-sticker-1 .rank-sticker-shine{
+  filter:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180' viewBox='0 0 180 180'%3E%3Cfilter id='gradientDiffusion' x='-15%25' y='-15%25' width='130%25' height='130%25' color-interpolation-filters='sRGB'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.19 .24' numOctaves='2' seed='23' stitchTiles='stitch' result='noise'/%3E%3CfeDisplacementMap in='SourceGraphic' in2='noise' scale='9' xChannelSelector='R' yChannelSelector='G'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23gradientDiffusion)'/%3E%3C/svg%3E#gradientDiffusion");
+}
+/* Soft specular bloom follows the exact holographic bands beneath it.
+   Inheriting the shine's gradient and background-position keeps the glow
+   synchronized with both pointer tilt and the list's looping animation. */
+.rank-sticker-1 .rank-sticker-shine:before{
+  content:"";
+  position:absolute;
+  inset:0;
+  background-image:inherit;
+  background-size:inherit;
+  background-repeat:inherit;
+  background-position:inherit;
+  filter:blur(7px);
+  opacity:.48;
+  mix-blend-mode:screen;
+  pointer-events:none;
+}
+/* Keep a subtle, fixed grain pass clipped to the sticker's existing alpha. */
+.rank-sticker-1:after{content:"";position:absolute;inset:0;pointer-events:none;opacity:.18;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='90' height='90'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.78' numOctaves='2' seed='19' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");background-size:46px 46px;background-position:center;mix-blend-mode:soft-light}
+
+
+/* People reviews stay within their row: ellipsis the review body while
+   reserving space for the closing quote at the end. */
+.person-movie:has(.people-review-content)>span:first-child{flex:0 0 auto;max-width:28%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.person-movie:has(.people-review-content)>span:last-child{flex:1 1 auto;min-width:0;text-align:right}
+.person-movie .people-review-content{display:flex!important;align-items:center;justify-content:flex-end;gap:6px;min-width:0;width:100%;line-height:18px}
+.person-movie .people-review-score{flex:0 0 auto}
+.person-movie .people-review-copy{display:flex!important;align-items:center;justify-content:flex-end;gap:0;min-width:0;max-width:100%;overflow:hidden;white-space:nowrap}
+.person-movie .people-review-quote{display:inline-flex;align-items:center;min-width:0;max-width:100%;overflow:hidden;white-space:nowrap}
+.person-movie .people-review-open,.person-movie .people-review-close{flex:0 0 auto}
+.person-movie .people-review-quote-text{display:inline-block;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* On initial page paint, grow the prism beam outward from the logo edge. */
+.topbar .header-prism.beam-intro img{transform:scaleX(0)!important;transform-origin:left center!important;transition:none!important}
+.topbar .header-prism.beam-intro.beam-intro-ready img{transform:scaleX(1)!important;transform-origin:left center!important;transition:transform .52s cubic-bezier(.18,.72,.25,1)!important}
+@media(prefers-reduced-motion:reduce){.topbar .header-prism.beam-intro img,.topbar .header-prism.beam-intro.beam-intro-ready img{transform:none!important;transition:none!important}}
+
+
+/* Definitive review-row sizing restored from 653d7bb: the title and review
+   label share the row, and the review text gets only the space left after stars. */
+.person-movies .person-movie:has(.people-review-content){display:flex!important;align-items:center!important;justify-content:space-between!important;gap:12px!important;min-width:0}
+.person-movies .person-movie:has(.people-review-content)>span:first-child{flex:0 1 30%!important;width:30%!important;min-width:0!important;max-width:30%!important;overflow:hidden!important;text-overflow:ellipsis!important;white-space:nowrap!important}
+.person-movies .person-movie:has(.people-review-content)>span:last-child{display:flex!important;flex:1 1 70%!important;width:70%!important;min-width:0!important;max-width:70%!important;overflow:hidden!important}
+.person-movies .person-movie .people-review-content{display:flex!important;flex:1 1 100%!important;width:100%!important;min-width:0!important;max-width:100%!important;overflow:hidden!important;align-items:center!important;justify-content:flex-end!important;gap:5px!important;white-space:nowrap!important}
+.person-movies .person-movie .people-review-score{display:inline-flex!important;flex:0 0 auto!important;align-items:center!important}
+.person-movies .person-movie .people-review-copy{display:flex!important;flex:1 1 0%!important;width:0!important;min-width:0!important;max-width:100%!important;overflow:hidden!important;align-items:center!important;justify-content:flex-end!important;white-space:nowrap!important}
+.person-movies .person-movie .people-review-copy em{display:inline-flex!important;flex:1 1 0%!important;width:0!important;min-width:0!important;max-width:100%!important;overflow:hidden!important;white-space:nowrap!important}
+.person-movies .person-movie .people-review-quote{display:inline-flex!important;flex:1 1 0%!important;width:0!important;min-width:0!important;max-width:100%!important;overflow:hidden!important;white-space:nowrap!important}
+.person-movies .person-movie .people-review-quote-text{display:block!important;flex:1 1 0%!important;width:0!important;min-width:0!important;max-width:100%!important;overflow:hidden!important;text-overflow:ellipsis!important;white-space:nowrap!important}
+.person-movies .person-movie .people-review-open,.person-movies .person-movie .people-review-close{display:inline-block!important;flex:0 0 auto!important}
+
+
+/* Rainbow experiment: stack the rainbow above the original moving holographic
+   gradient, then let the parent shine's diffusion filter soften both layers. */
+.rank-sticker-1 .rank-sticker-shine:after{
+  content:"";
+  position:absolute;
+  inset:0;
+  background:repeating-linear-gradient(90deg,
+    #ff0000 0%,#ff8000 7.14%,#ffff00 14.28%,#00a000 21.42%,
+    #0000ff 28.56%,#4b0082 35.7%,#8b00ff 42.84%,#ff0000 50%,
+    #8b00ff 57.14%,#4b0082 64.28%,#0000ff 71.42%,#00a000 78.56%,
+    #ffff00 85.7%,#ff8000 92.84%,#ff0000 100%);
+  background-size:300% 100%;
+  background-position:calc(50% + var(--sticker-shine,0%)) center;
+  background-repeat:repeat-x;
+  opacity:.4;
+  mix-blend-mode:soft-light;
+  pointer-events:none;
+}
+.list-rank-sticker .rank-sticker-shine:after{
+  animation:rank-sticker-rainbow-travel 5.8s linear infinite;
+}
+@keyframes rank-sticker-rainbow-travel{
+  0%{background-position:0% center}
+  100%{background-position:150% center}
+}
+
+
+/* People page polish: smaller inline review stars and native title tooltips. */
+.person-movie .people-review-stars{top:0!important;gap:0!important}
+.person-movie .people-review-stars .rating-star,
+.person-movie .people-review-stars .star-base,
+.person-movie .people-review-stars .star-fill{
+  width:12px!important;height:13px!important;font-size:12px!important;line-height:13px!important;
+}
+.person-movie .people-review-stars .rating-star{margin:0!important}
+.person-movies .person-movie{align-items:center!important}
+.person-movie .people-review-content{line-height:15px!important}
+
+
+/* Watched attendance uses its own periwinkle ring; vote-status rings stay unchanged. */
+.ring.watched{border-color:#7991c5!important}
+
+
+/* Match the Must Watch avatar ring to the selected Must Watch button. */
+.ring.must{border-color:#8a6bb8!important}
+
+
+/* People review content hugs the right edge without reserving the maximum quote width. */
+.person-movie .people-review-content{
+  margin-left:auto!important;
+  width:max-content!important;
+  max-width:min(68%, 620px)!important;
+  justify-content:flex-end!important;
+  text-align:right!important;
+  flex:0 1 auto!important;
+}
+.person-movie .people-review-copy{
+  justify-content:flex-end!important;
+  text-align:right!important;
+  min-width:0!important;
+}
+.person-movie .people-review-quote-text{
+  text-align:right!important;
+}
+
+
+/* People reviews: let the title take the available space; review group sizes to its content. */
+.person-movies .person-movie:has(.people-review-content){
+  display:flex!important;
+  justify-content:flex-start!important;
+  gap:12px!important;
+  min-width:0!important;
+}
+.person-movies .person-movie:has(.people-review-content)>span:first-child{
+  flex:1 1 auto!important;
+  width:auto!important;
+  min-width:0!important;
+  max-width:none!important;
+}
+.person-movies .person-movie:has(.people-review-content)>span:last-child{
+  display:inline-flex!important;
+  flex:0 1 auto!important;
+  width:auto!important;
+  min-width:0!important;
+  max-width:70%!important;
+  margin-left:auto!important;
+  overflow:hidden!important;
+}
+.person-movies .person-movie .people-review-content{
+  display:inline-flex!important;
+  flex:0 1 auto!important;
+  width:auto!important;
+  min-width:0!important;
+  max-width:100%!important;
+  margin-left:0!important;
+  justify-content:flex-end!important;
+  overflow:hidden!important;
+  white-space:nowrap!important;
+}
+.person-movies .person-movie .people-review-score{
+  flex:0 0 auto!important;
+  width:auto!important;
+}
+.person-movies .person-movie .people-review-copy{
+  display:inline-flex!important;
+  flex:0 1 auto!important;
+  width:auto!important;
+  min-width:0!important;
+  max-width:100%!important;
+  justify-content:flex-end!important;
+  overflow:hidden!important;
+}
+.person-movies .person-movie .people-review-copy em,
+.person-movies .person-movie .people-review-quote{
+  display:inline-flex!important;
+  flex:0 1 auto!important;
+  width:auto!important;
+  min-width:0!important;
+  max-width:100%!important;
+  overflow:hidden!important;
+}
+.person-movies .person-movie .people-review-quote-text{
+  display:inline-block!important;
+  flex:0 1 auto!important;
+  width:auto!important;
+  min-width:0!important;
+  max-width:100%!important;
+  overflow:hidden!important;
+  text-overflow:ellipsis!important;
+  white-space:nowrap!important;
+}
+
+
+/* Final People review layout: preserve full-size stars and let the complete
+   stars + quote group take only its intrinsic width, aligned at the right. */
+.person-movie .people-review-stars{
+  display:inline-flex!important;
+  flex:0 0 auto!important;
+  width:max-content!important;
+  gap:0!important;
+  margin:0!important;
+  position:static!important;
+  top:auto!important;
+  white-space:nowrap!important;
+}
+.person-movie .people-review-stars .rating-star{
+  position:relative!important;
+  display:inline-block!important;
+  flex:0 0 16px!important;
+  width:16px!important;
+  min-width:16px!important;
+  height:18px!important;
+  margin:0 -1px!important;
+  font-size:17px!important;
+  line-height:18px!important;
+}
+.person-movie .people-review-stars .star-base{
+  position:absolute!important;left:0!important;top:0!important;
+  display:block!important;width:16px!important;height:18px!important;
+  overflow:hidden!important;white-space:nowrap!important;
+  color:#444950!important;font-size:17px!important;line-height:18px!important;
+}
+.person-movie .people-review-stars .star-fill{
+  position:absolute!important;left:0!important;top:0!important;
+  display:block!important;width:var(--people-star-fill)!important;
+  height:18px!important;overflow:hidden!important;white-space:nowrap!important;
+  color:#d7c46d!important;font-size:17px!important;line-height:18px!important;
+}
+.person-movies .person-movie:has(.people-review-content){
+  display:flex!important;justify-content:space-between!important;gap:12px!important;
+}
+.person-movies .person-movie:has(.people-review-content)>span:first-child{
+  flex:1 1 auto!important;min-width:0!important;width:auto!important;
+}
+.person-movies .person-movie:has(.people-review-content)>span:last-child{
+  display:inline-flex!important;flex:0 1 auto!important;flex-shrink:1!important;
+  width:auto!important;min-width:0!important;max-width:70%!important;
+  margin-left:auto!important;overflow:hidden!important;
+}
+.person-movies .person-movie .people-review-content{
+  display:inline-flex!important;flex:0 1 auto!important;
+  width:max-content!important;min-width:0!important;max-width:100%!important;
+  margin:0!important;padding:0!important;gap:5px!important;
+  align-items:center!important;justify-content:flex-end!important;
+  overflow:hidden!important;white-space:nowrap!important;
+}
+.person-movies .person-movie .people-review-score{
+  display:inline-flex!important;flex:0 0 auto!important;width:max-content!important;
+  align-items:center!important;
+}
+.person-movies .person-movie .people-review-copy{
+  display:inline-flex!important;flex:0 1 auto!important;width:auto!important;
+  min-width:0!important;max-width:100%!important;
+  justify-content:flex-end!important;overflow:hidden!important;white-space:nowrap!important;
+}
+.person-movies .person-movie .people-review-copy em,
+.person-movies .person-movie .people-review-quote{
+  display:inline-flex!important;flex:0 1 auto!important;width:auto!important;
+  min-width:0!important;max-width:100%!important;overflow:hidden!important;
+  white-space:nowrap!important;
+}
+.person-movies .person-movie .people-review-quote-text{
+  display:inline-block!important;flex:0 1 auto!important;width:auto!important;
+  min-width:0!important;max-width:100%!important;overflow:hidden!important;
+  text-overflow:ellipsis!important;white-space:nowrap!important;
+}
+
+
+/* Suggested-by card actions: subtle, right aligned, and balanced when the note is blank. */
+.detail-note{position:relative}
+.detail-note-actions{display:flex;justify-content:flex-end;margin-top:9px}
+.detail-note-empty{min-height:48px;box-sizing:border-box;padding-bottom:10px!important}
+.detail-note-empty .detail-note-label{margin-bottom:0}
+.detail-note-empty .detail-note-actions{position:absolute;right:12px;bottom:9px;margin:0}
+.edit-suggestion-note{
+  appearance:none;border:1px solid #454a53;background:rgba(255,255,255,.035);
+  color:#c2c6cd;border-radius:6px;padding:5px 9px;font:inherit;font-size:10px;
+  font-weight:600;cursor:pointer;line-height:1.3
+}
+.edit-suggestion-note:hover{background:rgba(255,255,255,.075);border-color:#626873;color:#e3e5e9}
+.note-editor-modal .add-label{margin-top:14px}
+.note-editor-modal .review-text{margin-top:7px;min-height:96px}
+.note-editor-modal .add-form-actions{margin-top:14px}
+
+/* Ensure People-page star fills honor each half/full rating width, independent
+   of the generic review-star gradient rules. */
+.person-movie .people-review-stars .star-fill{
+  width:var(--people-star-fill)!important;
+  max-width:100%!important;
+}
+
+
+
+
