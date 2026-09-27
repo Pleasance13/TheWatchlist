@@ -136,12 +136,25 @@ function externalRatings(m){
   return parts.length?`<div class="external-ratings">${parts.map(x=>`<span class="pill">${x}</span>`).join("")}</div>`:"";
 }
 function backContent(m){
- return `
- <div class="meta">${m.year} · ${m.genre}</div><div class="meta">${m.director} · ${m.runtime}</div>
- ${state.showSynopsis?`<p>${m.synopsis}</p>`:""}
- ${m.rating?`<span class="pill">Rating ${m.rating}</span>`:""}
- ${state.showRatings?externalRatings(m):""}
- <div class="back-warnings">${m.warnings.map(w=>`<span class="pill">⚠ ${w}</span>`).join("")}</div>`;
+  const genres=Array.isArray(m.genre)?m.genre.filter(Boolean):String(m.genre||"").split(/\\s*[·,]\\s*/).filter(Boolean);
+  const directors=Array.isArray(m.director)?m.director.filter(Boolean):String(m.director||"").split(/\\s*,\\s*/).filter(Boolean);
+  const yearRated=[m.year,m.rating?`Rated ${escapeHtml(m.rating)}`:""].filter(Boolean).join(" · ");
+  const directorRuntime=[directors.join(", "),m.runtime].filter(Boolean).join(" · ");
+  const rt=m.rottenTomatoesRating??m.rottenTomatoesScore??m.rtScore??m.rottenTomatoes;
+  const imdb=m.imdbRating??m.imdbScore;
+  const scores=state.showRatings?`
+    ${rt&&rt!=="N/A"?`<div class="back-score"><strong>RT</strong> ${escapeHtml(String(rt).endsWith("%")?rt:rt+"%")}</div>`:""}
+    ${imdb&&imdb!=="N/A"?`<div class="back-score"><strong>IMDb</strong> ${escapeHtml(imdb)}/10</div>`:""}
+  `:"";
+  const warnings=(m.warnings||[]).map(w=>`<span class="pill">⚠ ${escapeHtml(w)}</span>`).join("");
+  return `
+    ${yearRated?`<div class="meta back-year-rated">${yearRated}</div>`:""}
+    ${genres.length?`<div class="meta back-genres">${genres.map(escapeHtml).join(" · ")}</div>`:""}
+    ${directorRuntime?`<div class="meta back-director-runtime">${escapeHtml(directorRuntime)}</div>`:""}
+    ${state.showSynopsis&&m.synopsis?`<p class="back-synopsis">${escapeHtml(m.synopsis)}</p>`:""}
+    ${scores}
+    ${warnings?`<div class="back-warnings">${warnings}</div>`:""}
+  `;
 }
 function caseArticle(m,extra=""){const notInterested=currentVote(m.id)==="no";return `<article class="vhs ${extra} ${notInterested?"not-interested-card":""}" data-vhs="${m.id}" data-movie-id="${m.id}"><div class="vhs-stage" onclick="toggleCase(event,this.parentElement)">${caseFaces(m,backContent(m))}</div><div class="grid-title" data-open-movie="${m.id}" onclick="event.stopPropagation();openMovie(this.dataset.openMovie)">${m.title}</div><div class="grid-meta" data-open-movie="${m.id}" onclick="event.stopPropagation();openMovie(this.dataset.openMovie)">${m.year} · ${m.genre}</div>${responseButtons(m,true)}</article>`}
 function gridView(items,historyMode=false){return `<div class="grid" style="--grid-cols:${[12,8,6,5][state.posterSize-1]||8}">${items.map(m=>caseArticle(m,historyMode?"history-movie":"")).join("")}</div>`}
@@ -216,7 +229,7 @@ function detail(){
  <section class="detail ${m.watched?"history-detail":""}">
    <div class="detail-cover-column"><div class="detail-vhs" data-vhs="${m.id}" onclick="toggleCase(event,this)" title="Click the VHS case to flip it"><div class="vhs-stage">${caseFaces(m,backContent(m))}</div></div>${canEditCaseAssets()&&m.tmdbId?`<button class="watched-together-button artwork-button" onclick="openAssetEditor('${m.id}')">✎ Customize case artwork</button>`:""}</div>
    <div>
-    <div class="eyebrow" style="${m.watched?"display:none":""}">CURRENT RANK #${rankOf(m)}</div><div class="detail-title-row"><h2>${detailLogoPath(m)&&window.TMDB?'<img class="detail-logo" src="'+TMDB.image(detailLogoPath(m),"w300")+'" alt="'+m.title+'">':'<span>'+m.title+'</span>'}</h2><button class="seen-button ${m.seen.includes("Josh")?"on":"off"}" data-movie-id="${m.id}" onclick="toggleSeen(this.dataset.movieId)" aria-label="${m.seen.includes("Josh")?"Mark as not seen":"Mark as seen"}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.2 12s3.4-6 9.8-6 9.8 6 9.8 6-3.4 6-9.8 6-9.8-6-9.8-6Z"/><circle cx="12" cy="12" r="2.8"/></svg><span class="seen-slash"></span><span>${m.seen.includes("Josh")?"I have seen this":"I have not seen this"}</span></button></div><div class="meta">${m.year} · ${m.genre} · ${m.director} · ${m.runtime}</div>${m.rating?`<div class="detail-board-rating">Rating ${m.rating}</div>`:""}${state.showRatings?`<div class="external-ratings" aria-label="External movie ratings">${m.imdbRating?`<span class="external-rating imdb-rating"><strong>IMDb</strong> ${escapeHtml(m.imdbRating)}<small>/10</small></span>`:""}${m.rottenTomatoesRating?`<span class="external-rating rt-rating"><strong>Rotten Tomatoes</strong> ${escapeHtml(m.rottenTomatoesRating)}</span>`:""}${m.ratingsLoading?`<span class="external-ratings-loading">Loading IMDb / Rotten Tomatoes…</span>`:""}${m.ratingsError&&!m.ratingsLoading?`<span class="external-ratings-unavailable">External ratings unavailable</span>`:""}</div>`:""}
+    <div class="eyebrow" style="${m.watched?"display:none":""}">CURRENT RANK #${rankOf(m)}</div><div class="detail-title-row"><h2>${detailLogoPath(m)&&window.TMDB?'<img class="detail-logo" src="'+TMDB.image(detailLogoPath(m),"w300")+'" alt="'+m.title+'">':'<span>'+m.title+'</span>'}</h2><button class="seen-button ${m.seen.includes("Josh")?"on":"off"}" data-movie-id="${m.id}" onclick="toggleSeen(this.dataset.movieId)" aria-label="${m.seen.includes("Josh")?"Mark as not seen":"Mark as seen"}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.2 12s3.4-6 9.8-6 9.8 6 9.8 6-3.4 6-9.8 6-9.8-6-9.8-6Z"/><circle cx="12" cy="12" r="2.8"/></svg><span class="seen-slash"></span><span>${m.seen.includes("Josh")?"I have seen this":"I have not seen this"}</span></button></div><div class="meta">${m.year} · ${m.genre} · ${m.director} · ${m.runtime}</div>${m.rating?`<div class="detail-board-rating">Rated ${m.rating}</div>`:""}${state.showRatings?`<div class="external-ratings" aria-label="External movie ratings">${m.imdbRating?`<span class="external-rating imdb-rating"><strong>IMDb</strong> ${escapeHtml(m.imdbRating)}<small>/10</small></span>`:""}${m.rottenTomatoesRating?`<span class="external-rating rt-rating"><strong>Rotten Tomatoes</strong> ${escapeHtml(m.rottenTomatoesRating)}</span>`:""}${m.ratingsLoading?`<span class="external-ratings-loading">Loading IMDb / Rotten Tomatoes…</span>`:""}${m.ratingsError&&!m.ratingsLoading?`<span class="external-ratings-unavailable">External ratings unavailable</span>`:""}</div>`:""}
     <div class="people-strip"><div class="people-strip-label">${m.watched?"WHO WATCHED":"RESPONSES"}</div>${m.watched?stack((m.watchedBy||[]).map(n=>[n,"watched","Watched"])):stack(voterEntries(m).map(([n,color])=>{const mine=n==="Josh"?currentVote(m.id):null;return [n,color,mine?responseLabel(mine):({green:"Interested",yellow:"I’d Watch",red:"Not Interested",must:"Must Watch"})[color]||"No response"]}))}</div>
     <div class="vote-box"><div class="vote-label">Your response</div><div class="votes">${[["must","Must Watch"],["interested","Interested"],["watch","I'd Watch"],["no","Not Interested"]].map(([k,l])=>`<button class="vote vote-${k} ${selected===k?"selected":""}" onclick="vote('${m.id}','${k}')">${l}</button>`).join("")}</div></div>
     ${state.showSynopsis?`<section class="detail-synopsis-section"><h3>Synopsis</h3><p class="detail-synopsis">${m.synopsis}</p></section>`:""}
