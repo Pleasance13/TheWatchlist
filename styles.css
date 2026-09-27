@@ -1537,3 +1537,24 @@ button,input{font:inherit}button{color:inherit}.topbar{height:72px;padding:0 32p
 
 
 
+
+
+/* TMDB-powered movie detail sections */
+.tmdb-detail-section{margin:24px 0 0;padding:18px 0 0;border-top:1px solid #30343b;min-width:0}
+.tmdb-detail-section h3{margin:0 0 13px;font-size:16px;font-weight:700;color:#e8e9ec}
+.tmdb-detail-section h3 small{margin-left:8px;color:#8e949e;font-size:10px;font-weight:600;letter-spacing:.08em}
+.tmdb-cast-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:12px}
+.tmdb-cast-card{display:flex;flex-direction:column;gap:5px;min-width:0;color:#e3e5e9;font-size:12px}
+.tmdb-cast-card img,.tmdb-cast-no-image{width:100%;aspect-ratio:2/3;object-fit:cover;border-radius:6px;background:#202329}
+.tmdb-cast-no-image{display:flex;align-items:center;justify-content:center;color:#777e89;font-size:10px;text-align:center}
+.tmdb-cast-card strong{font-weight:650;line-height:1.3}
+.tmdb-cast-card span{color:#969ca6;font-size:11px;line-height:1.3}
+.tmdb-provider-list{display:flex;flex-wrap:wrap;gap:10px}
+.tmdb-provider{display:grid;grid-template-columns:34px auto;grid-template-rows:auto auto;align-items:center;column-gap:9px;min-width:140px;padding:9px 11px;border:1px solid #343941;border-radius:8px;background:#1b1e23}
+.tmdb-provider img{grid-row:1/3;width:34px;height:34px;border-radius:7px;object-fit:cover}
+.tmdb-provider span{font-size:12px;font-weight:650;color:#e2e4e8}
+.tmdb-provider small{font-size:10px;color:#969ca6}
+.tmdb-provider-link{display:inline-block;margin-top:12px;color:#c8cbd1;font-size:12px;text-decoration:underline;text-underline-offset:3px}
+.tmdb-trailer{position:relative;width:100%;aspect-ratio:16/9;overflow:hidden;border-radius:9px;background:#101114}
+.tmdb-trailer iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+@media(max-width:620px){.tmdb-cast-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.tmdb-provider{min-width:calc(50% - 5px);box-sizing:border-box}}
