@@ -1686,3 +1686,10 @@ button,input{font:inherit}button{color:inherit}.topbar{height:72px;padding:0 32p
 .warning-picker-chevron svg{display:block!important;position:absolute;inset:0;margin:auto!important;width:14px!important;height:14px!important;flex:none!important;overflow:visible}
 .warning-picker-chevron svg path{vector-effect:none}
 .warning-category-picker>summary .warning-picker-chevron{margin-left:0!important}
+
+
+/* Keep warning content snug against the preceding VHS back-cover line. */
+.vhs-back-scroll .back-warnings{margin-top:calc(var(--box-height) * .006)}
+.warning-group-actions{display:flex;gap:8px;padding:7px 0 9px;border-bottom:1px solid #34373c;margin-bottom:4px}
+.warning-group-actions button{appearance:none;border:1px solid #484d56;background:#30333a;color:#e8e9ec;border-radius:6px;padding:5px 9px;font:inherit;font-size:11px;cursor:pointer}
+.warning-group-actions button:hover{background:#3b3f48;border-color:#666d79}
