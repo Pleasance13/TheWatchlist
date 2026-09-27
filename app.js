@@ -136,8 +136,8 @@ function externalRatings(m){
   return parts.length?`<div class="external-ratings">${parts.map(x=>`<span class="pill">${x}</span>`).join("")}</div>`:"";
 }
 function backContent(m){
-  const genres=Array.isArray(m.genre)?m.genre.filter(Boolean):String(m.genre||"").split(/\\s*[·,]\\s*/).filter(Boolean);
-  const directors=Array.isArray(m.director)?m.director.filter(Boolean):String(m.director||"").split(/\\s*,\\s*/).filter(Boolean);
+  const genres=Array.isArray(m.genre)?m.genre.filter(Boolean):String(m.genre||"").split(/\\s*[·,]\s*/).filter(Boolean);
+  const directors=Array.isArray(m.director)?m.director.filter(Boolean):String(m.director||"").split(/\\s*,\s*/).filter(Boolean);
   const yearRated=[m.year,m.rating?`Rated ${escapeHtml(m.rating)}`:""].filter(Boolean).join(" · ");
   const directorRuntime=[directors.join(", "),m.runtime].filter(Boolean).join(" · ");
   const rt=m.rottenTomatoesRating??m.rottenTomatoesScore??m.rtScore??m.rottenTomatoes;
@@ -226,8 +226,8 @@ function detail(){
  if(!m)return '<div class="hero"><div><div class="eyebrow">MOVIE</div><h1>Details</h1></div><button class="ghost" onclick="setNav(\'watchlist\')">← Back</button></div><section class="detail"><p class="muted">Movie not found.</p></section>';
  let selected=currentVote(m.id);
  const detailWarnings=(m.warnings||[]).filter(w=>savedWarningCategories.includes(String(w).toLowerCase()));
- const detailGenres=(Array.isArray(m.genre)?m.genre:String(m.genre||"").split(/\\s*[·,/]\\s*/)).map(x=>String(x).trim()).filter(Boolean);
- const detailDirectors=Array.isArray(m.director)?m.director.filter(Boolean):String(m.director||"").split(/\\s*,\\s*/).filter(Boolean);
+ const detailGenres=(Array.isArray(m.genre)?m.genre:String(m.genre||"").split(/\\s*[·,/]\s*/)).map(x=>String(x).trim()).filter(Boolean);
+ const detailDirectors=Array.isArray(m.director)?m.director.filter(Boolean):String(m.director||"").split(/\\s*,\s*/).filter(Boolean);
  return `<div class="hero"><div><div class="eyebrow">MOVIE</div><h1>Details</h1></div><button class="ghost" onclick="setNav('watchlist')">← Back</button></div>
  <section class="detail ${m.watched?"history-detail":""}">
    <div class="detail-cover-column"><div class="detail-vhs" data-vhs="${m.id}" onclick="toggleCase(event,this)" title="Click the VHS case to flip it"><div class="vhs-stage">${caseFaces(m,backContent(m))}</div></div>${canEditCaseAssets()&&m.tmdbId?`<button class="watched-together-button artwork-button" onclick="openAssetEditor('${m.id}')">✎ Customize case artwork</button>`:""}</div>
