@@ -20,7 +20,7 @@ export default async function handler(req, res) {
   if (!apiKey) return send(res, 503, { error: "OMDb is not configured on the server." });
 
   const imdbID = String(req.query.imdbID || "").trim();
-  if (!/^tt\\d{7,10}$/.test(imdbID)) {
+  if (!/^tt\d{7,10}$/.test(imdbID)) {
     return send(res, 400, { error: "A valid IMDb ID is required." });
   }
 
