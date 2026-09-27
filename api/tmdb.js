@@ -1,5 +1,58 @@
 const TMDB_BASE = "https://api.themoviedb.org/3";
 
+const DDD_BASE = "https://www.doesthedogdie.com";
+
+async function dddFetch(path) {
+  const key = process.env.DDD_API_KEY;
+  if (!key) throw new Error("DDD_API_KEY is not configured on the server.");
+  const response = await fetch(`${DDD_BASE}${path}`, {
+    headers: { "Accept": "application/json", "X-API-KEY": key }
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    const error = new Error(`DoesTheDogDie request failed (${response.status}).`);
+    error.status = response.status;
+    throw error;
+  }
+  return data;
+}
+
+function normalizeTitle(value = "") {
+  return String(value).toLowerCase().normalize("NFKD")
+    .replace(/[^a-z0-9]+/g, " ").trim();
+}
+
+async function getDddWarnings(title, year) {
+  const query = new URLSearchParams({ q: title });
+  const search = await dddFetch(`/search?${query.toString()}`);
+  const items = Array.isArray(search.items) ? search.items : [];
+  if (!items.length) return { warnings: [], matched: false };
+
+  const normalized = normalizeTitle(title);
+  const match = items.find(item => {
+    const itemTitle = normalizeTitle(item.name || item.title || item.mediaName || "");
+    const itemYear = Number(item.releaseYear || item.year || item.release_year || 0);
+    return itemTitle === normalized && (!year || !itemYear || itemYear === Number(year));
+  }) || items.find(item => {
+    const itemTitle = normalizeTitle(item.name || item.title || item.mediaName || "");
+    return itemTitle === normalized;
+  }) || items[0];
+
+  if (!match?.id) return { warnings: [], matched: false };
+  const detail = await dddFetch(`/media/${encodeURIComponent(match.id)}`);
+  const stats = Array.isArray(detail.topicItemStats) ? detail.topicItemStats : [];
+  const warnings = stats.filter(item => {
+    const yes = Number(item.yesSum || 0);
+    const no = Number(item.noSum || 0);
+    return yes > 0 && yes > no;
+  }).map(item => {
+    const topic = item.topic || {};
+    return topic.smmwDescription || topic.doesName || "";
+  }).filter(Boolean);
+  return { warnings: [...new Set(warnings)], matched: true };
+}
+
+
 function send(res, status, body) {
   res.setHeader("Access-Control-Allow-Origin", "https://pleasance13.github.io");
   res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
@@ -165,16 +218,16 @@ export default async function handler(req, res) {
       const id = Number(req.query.id);
       if (!Number.isInteger(id)) return send(res, 400, { error: "A valid TMDB movie id is required." });
 
-      const [movie, images, credits, videos, providers, externalIds, releaseDates, keywordData] = await Promise.all([
+      const [movie, images, credits, videos, providers, externalIds, releaseDates] = await Promise.all([
         tmdbFetch(`/movie/${id}`),
         tmdbFetch(`/movie/${id}/images`, { include_image_language: "en,null" }),
         tmdbFetch(`/movie/${id}/credits`),
         tmdbFetch(`/movie/${id}/videos`, { language: "en-US" }).catch(() => ({ results: [] })),
         tmdbFetch(`/movie/${id}/watch/providers`).catch(() => ({ results: {} })),
         tmdbFetch(`/movie/${id}/external_ids`).catch(() => ({})),
-        tmdbFetch(`/movie/${id}/release_dates`).catch(() => ({ results: [] })),
-        tmdbFetch(`/movie/${id}/keywords`).catch(() => ({ keywords: [] }))
+        tmdbFetch(`/movie/${id}/release_dates`).catch(() => ({ results: [] }))
       ]);
+      const ddd = await getDddWarnings(movie.title, movie.release_date ? Number(movie.release_date.slice(0, 4)) : null);
 
       const usReleases = (releaseDates.results || []).find(country => country.iso_3166_1 === "US");
       const usCertifications = (usReleases?.release_dates || []).filter(release => release.certification).sort((a, b) => {
@@ -243,7 +296,7 @@ export default async function handler(req, res) {
         runtime: movie.runtime || null,
         rating: certification,
         synopsis: movie.overview || "",
-        warnings: classifyWarnings(keywordData.keywords || keywordData.results || []),
+        warnings: ddd.warnings,\n        warningSource: ddd.matched ? "DoesTheDogDie" : "DoesTheDogDie (no matching title found)",
         cast,
         trailer: trailer ? { name: trailer.name, key: trailer.key, site: trailer.site } : null,
         streaming,
