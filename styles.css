@@ -1721,3 +1721,12 @@ button,input{font:inherit}button{color:inherit}.topbar{height:72px;padding:0 32p
 .setting.warning-settings>.warning-category-controls{grid-column:1/-1;grid-row:2;width:100%;min-width:0;display:block}
 .setting.warning-settings .warning-category-picker{width:100%;max-width:none;box-sizing:border-box}
 @media(max-width:760px){.setting.warning-settings{column-gap:14px;row-gap:12px}}
+
+
+/* Correct the actual header structure: its toggle is nested inside the header. */
+.setting.warning-settings{display:flex;flex-direction:column;align-items:stretch;justify-content:flex-start;gap:12px}
+.setting.warning-settings>.warning-settings-header{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;justify-content:initial;gap:16px;width:100%}
+.setting.warning-settings>.warning-settings-header>div{grid-column:1;grid-row:1;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:5px;width:100%;min-width:0}
+.setting.warning-settings>.warning-settings-header>button.toggle{grid-column:2;grid-row:1;justify-self:end;align-self:center;margin:0}
+.setting.warning-settings>.warning-category-controls{width:100%;flex:0 0 100%;align-self:stretch}
+.setting.warning-settings .warning-category-picker{width:100%;max-width:none;box-sizing:border-box}
