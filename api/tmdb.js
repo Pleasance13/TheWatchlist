@@ -124,11 +124,41 @@ export default async function handler(req, res) {
       const id = Number(req.query.id);
       if (!Number.isInteger(id)) return send(res, 400, { error: "A valid TMDB movie id is required." });
 
-      const [movie, images, credits] = await Promise.all([
+      const [movie, images, credits, videos, providers, externalIds] = await Promise.all([
         tmdbFetch(`/movie/${id}`),
         tmdbFetch(`/movie/${id}/images`, { include_image_language: "en,null" }),
-        tmdbFetch(`/movie/${id}/credits`)
+        tmdbFetch(`/movie/${id}/credits`),
+        tmdbFetch(`/movie/${id}/videos`, { language: "en-US" }).catch(() => ({ results: [] })),
+        tmdbFetch(`/movie/${id}/watch/providers`).catch(() => ({ results: {} })),
+        tmdbFetch(`/movie/${id}/external_ids`).catch(() => ({}))
       ]);
+
+      const cast = (credits.cast || []).slice(0, 12).map(person => ({
+        id: person.id,
+        name: person.name,
+        character: person.character || "",
+        profilePath: person.profile_path || null
+      }));
+      const trailer = (videos.results || []).find(video =>
+        video.site === "YouTube" && video.type === "Trailer" && video.official
+      ) || (videos.results || []).find(video =>
+        video.site === "YouTube" && video.type === "Trailer"
+      ) || (videos.results || []).find(video =>
+        video.site === "YouTube" && video.type === "Teaser"
+      );
+      const providerResults = providers.results || {};
+      const region = String(req.query.region || "US").toUpperCase();
+      const regionProviders = providerResults[region] || {};
+      const streaming = ["flatrate", "free", "ads", "rent", "buy"].flatMap(kind =>
+        (regionProviders[kind] || []).map(provider => ({
+          id: provider.provider_id,
+          name: provider.provider_name,
+          logoPath: provider.logo_path || null,
+          type: kind
+        }))
+      ).filter((provider, index, all) =>
+        all.findIndex(other => other.id === provider.id && other.type === provider.type) === index
+      );
 
       const directors = (credits.crew || [])
         .filter(person => person.job === "Director")
@@ -163,6 +193,12 @@ export default async function handler(req, res) {
         runtime: movie.runtime || null,
         rating: movie.certification || null,
         synopsis: movie.overview || "",
+        cast,
+        trailer: trailer ? { name: trailer.name, key: trailer.key, site: trailer.site } : null,
+        streaming,
+        streamingLink: regionProviders.link || null,
+        streamingRegion: region,
+        imdbId: externalIds.imdb_id || null,
         posterPath: movie.poster_path || null,
         textlessPosterPath: textlessPoster ? textlessPoster.file_path : null,
         backdropPath: movie.backdrop_path || null,
