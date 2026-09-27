@@ -9,6 +9,22 @@
  *   /api/tmdb?action=details&id=348
  */
 
+function normalizeWarningLabel(value) {
+  return String(value || "").trim().toLowerCase().replace(/\s+/g, " ")
+    .split(" ").map(word => word.split(/([/-])/)
+      .map(part => part === "/" || part === "-" ? part : part ? part[0].toUpperCase() + part.slice(1) : "")
+      .join("")).join(" ");
+}
+function dedupeWarnings(values) {
+  const unique = new Map();
+  (Array.isArray(values) ? values : []).forEach(value => {
+    const label = normalizeWarningLabel(value);
+    const key = label.toLowerCase();
+    if (label && !unique.has(key)) unique.set(key, label);
+  });
+  return [...unique.values()];
+}
+
 const TMDB = {
   endpoint: window.WATCHLIST_TMDB_ENDPOINT || (location.hostname.endsWith("github.io") ? "https://the-watchlist-two.vercel.app/api/tmdb" : "/api/tmdb"),
   imageBase: "https://image.tmdb.org/t/p/",
@@ -30,8 +46,8 @@ const TMDB = {
     return this.request({ action: "search", query, page });
   },
 
-  details(id) {
-    return this.request({ action: "details", id });
+  details(id, region = "US") {
+    return this.request({ action: "details", id, region });
   },
 
   apply(movie, data) {
@@ -42,6 +58,12 @@ const TMDB = {
     movie.textlessPosterPath = data.textlessPosterPath || movie.textlessPosterPath || null;
     movie.backdropPath = data.backdropPath || movie.backdropPath || null;
     movie.logoPath = data.logoPath || movie.logoPath || null;
+    movie.tmdbCast = Array.isArray(data.cast) ? data.cast : movie.tmdbCast || [];
+    movie.tmdbTrailer = data.trailer || movie.tmdbTrailer || null;
+    movie.tmdbStreaming = Array.isArray(data.streaming) ? data.streaming : movie.tmdbStreaming || [];
+    movie.tmdbStreamingLink = data.streamingLink || movie.tmdbStreamingLink || null;
+    movie.tmdbStreamingRegion = data.streamingRegion || movie.tmdbStreamingRegion || "US";
+    movie.imdbId = data.imdbId || movie.imdbId || null;
     movie.tmdbAssets = {
       logos: data.logos || movie.tmdbAssets?.logos || [],
       posters: data.posters || movie.tmdbAssets?.posters || [],
@@ -53,8 +75,18 @@ const TMDB = {
     if (data.genre?.length) movie.genre = data.genre.join(" · ");
     if (data.director?.length) movie.director = data.director.join(", ");
     if (data.runtime) movie.runtime = formatRuntime(data.runtime);
-    if (data.rating) movie.rating = data.rating;
+    movie.rating = data.rating || "";
     if (data.synopsis) movie.synopsis = data.synopsis;
+    if (Array.isArray(data.warnings)) movie.warnings = dedupeWarnings([...(Array.isArray(movie.warnings) ? movie.warnings : []), ...data.warnings]);
+    if (movie.id && String(movie.id).startsWith("tmdb-")) {
+      try {
+        const stored = JSON.parse(localStorage.getItem("watchlist-added-movies") || "[]");
+        const index = stored.findIndex(item => item.id === movie.id);
+        if (index >= 0) stored[index] = { ...stored[index], warnings: movie.warnings || [] };
+        else stored.push({ ...movie, score: 0 });
+        localStorage.setItem("watchlist-added-movies", JSON.stringify(stored));
+      } catch (error) { /* Local persistence is optional. */ }
+    }
 
     return movie;
   }

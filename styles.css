@@ -74,12 +74,16 @@ button,input{font:inherit}button{color:inherit}.topbar{height:72px;padding:0 32p
 }
 
 /* Movie detail layout and controls */
-.detail{display:grid;grid-template-columns:275px minmax(0,1fr);align-items:start;gap:48px;padding:26px 0 0}
+.detail{display:grid!important;width:100%!important;max-width:100%!important;min-width:0!important;grid-template-columns:275px minmax(0,1fr)!important;align-items:start;gap:48px;padding:26px 0 0;box-sizing:border-box}
 .detail-vhs{grid-column:1;grid-row:1;width:275px;aspect-ratio:.565;padding:26px 72px 26px 22px;position:relative;cursor:default}
 .detail-vhs .vhs-stage{cursor:default}
 .detail-vhs .vhs-inner{transform:rotateY(0deg)}
 .detail-vhs .detail-flip-hint{display:none}
 .detail .detail-vhs + div{grid-column:2;grid-row:1}
+/* Keep the VHS cover and detail content in the same two-column row. */
+.detail-cover-column{grid-column:1;grid-row:1;min-width:0;width:100%;max-width:100%}
+.detail>div:nth-child(2){grid-column:2;grid-row:1;min-width:0;width:100%;max-width:100%}
+
 .seen-control{display:flex;align-items:center;justify-content:space-between;gap:14px;margin:18px 0;padding:11px 14px;border:1px solid var(--line);border-radius:9px;background:rgba(255,255,255,.025)}
 .seen-label{font-size:12px;color:var(--muted);font-weight:650}
 .seen-button{position:relative;width:32px;height:28px;padding:0;border:0;background:none;color:#666b73;cursor:pointer;display:grid;place-items:center}
@@ -98,7 +102,7 @@ button,input{font:inherit}button{color:inherit}.topbar{height:72px;padding:0 32p
 .vote-watch.selected{border-color:#6e653d;color:#d9c878}
 .vote-no.selected{border-color:#704747;color:#cf8989}
 @media(max-width:760px){
- .detail{grid-template-columns:170px minmax(0,1fr);gap:20px;padding:18px}
+ .detail{grid-template-columns:170px minmax(0,1fr)!important;width:100%!important;gap:20px;padding:18px}
  .detail-vhs{width:170px;padding:16px 29px 16px 10px}
 }
 
@@ -1537,3 +1541,192 @@ button,input{font:inherit}button{color:inherit}.topbar{height:72px;padding:0 32p
 
 
 
+
+
+/* TMDB-powered movie detail sections */
+.tmdb-detail-section{margin:24px 0 0;padding:18px 0 0;border-top:1px solid #30343b;min-width:0}
+.tmdb-detail-section h3{margin:0 0 13px;font-size:16px;font-weight:700;color:#e8e9ec}
+.tmdb-detail-section h3 small{margin-left:8px;color:#8e949e;font-size:10px;font-weight:600;letter-spacing:.08em}
+.tmdb-cast-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:12px}
+.tmdb-cast-card{display:flex;flex-direction:column;gap:5px;min-width:0;color:#e3e5e9;font-size:12px}
+.tmdb-cast-card img,.tmdb-cast-no-image{width:100%;aspect-ratio:2/3;object-fit:cover;border-radius:6px;background:#202329}
+.tmdb-cast-no-image{display:flex;align-items:center;justify-content:center;color:#777e89;font-size:10px;text-align:center}
+.tmdb-cast-card strong{font-weight:650;line-height:1.3}
+.tmdb-cast-card span{color:#969ca6;font-size:11px;line-height:1.3}
+.tmdb-provider-list{display:flex;flex-wrap:wrap;gap:10px}
+.tmdb-provider{display:grid;grid-template-columns:34px auto;grid-template-rows:auto auto;align-items:center;column-gap:9px;min-width:140px;padding:9px 11px;border:1px solid #343941;border-radius:8px;background:#1b1e23}
+.tmdb-provider img{grid-row:1/3;width:34px;height:34px;border-radius:7px;object-fit:cover}
+.tmdb-provider span{font-size:12px;font-weight:650;color:#e2e4e8}
+.tmdb-provider small{font-size:10px;color:#969ca6}
+.tmdb-provider-link{display:inline-block;margin-top:12px;color:#c8cbd1;font-size:12px;text-decoration:underline;text-underline-offset:3px}
+.tmdb-trailer{position:relative;width:100%;aspect-ratio:16/9;overflow:hidden;border-radius:9px;background:#101114}
+.tmdb-trailer iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+@media(max-width:620px){.tmdb-cast-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.tmdb-provider{min-width:calc(50% - 5px);box-sizing:border-box}}
+
+
+/* Collapsible TMDB detail sections and provider action cards */
+.tmdb-section-toggle{display:flex;width:100%;align-items:center;justify-content:space-between;gap:12px;padding:0;border:0;background:none;color:#e8e9ec;font:inherit;font-size:16px;font-weight:700;text-align:left;cursor:pointer}
+.tmdb-section-toggle small{margin-left:9px;color:#8e949e;font-size:10px;font-weight:600;letter-spacing:.04em}
+.tmdb-section-chevron{display:grid;place-items:center;width:25px;height:25px;border:1px solid #414650;border-radius:50%;color:#b9bec7;font-size:17px;font-weight:400;flex:0 0 auto}
+.tmdb-section-body{padding-top:15px}
+.tmdb-provider-list{display:flex;flex-wrap:wrap;gap:10px}
+.tmdb-provider{display:flex;align-items:center;justify-content:space-between;gap:12px;min-width:170px;padding:9px 11px;border:1px solid #343941;border-radius:8px;background:#1b1e23;text-decoration:none;color:inherit;transition:border-color .15s,background .15s}
+.tmdb-provider:hover{border-color:#6c7480;background:#242830}
+.tmdb-provider-identity{display:flex;align-items:center;gap:9px;min-width:0}
+.tmdb-provider img{width:34px;height:34px;border-radius:7px;object-fit:cover;flex:0 0 auto}
+.tmdb-provider-identity span{font-size:12px;font-weight:650;color:#e2e4e8}
+.tmdb-provider small{font-size:10px;color:#a7adb7;white-space:nowrap}
+.tmdb-cast-card img{filter:grayscale(1)}
+.tmdb-cast-card img:hover{filter:grayscale(.35);transition:filter .2s}
+
+
+/* The full cast & crew destination occupies the final portrait-sized cast-grid slot. */
+.tmdb-cast-full-link{text-decoration:none;transition:border-color .18s,background .18s}
+.tmdb-cast-full-link-art{display:flex;align-items:center;justify-content:center;width:100%;aspect-ratio:2/3;box-sizing:border-box;border:1px solid #3b414b;border-radius:6px;background:linear-gradient(145deg,#252a32,#171a1f);color:#b8bec8}
+.tmdb-cast-full-link-art>span{display:grid;place-items:center;width:42px;height:42px;border:1px solid #555d69;border-radius:50%;font-size:27px;font-weight:300;line-height:1}
+.tmdb-cast-full-link strong{color:#e3e5e9;font-size:12px;line-height:1.3}
+.tmdb-cast-full-link>span:last-child{color:#969ca6;font-size:11px;line-height:1.3}
+.tmdb-cast-full-link:hover .tmdb-cast-full-link-art{border-color:#737e8e;background:linear-gradient(145deg,#303744,#1c2027);color:#fff}
+.tmdb-cast-full-link:hover .tmdb-cast-full-link-art>span{border-color:#9ca6b5}
+
+
+/* Detail-page consistency: synopsis heading, section separators, and centered SVG chevrons. */
+.detail-synopsis-section{margin:24px 0 0;padding:18px 0 0;border-top:1px solid #30343b}
+.detail-synopsis-section h3{margin:0 0 10px;font-size:16px;font-weight:700;color:#e8e9ec}
+.detail-synopsis-section .detail-synopsis{margin:0}
+.tmdb-detail-section:has(.tmdb-provider-list){padding-bottom:18px;border-bottom:1px solid #30343b;margin-bottom:0}
+.tmdb-section-chevron{display:flex;align-items:center;justify-content:center;box-sizing:border-box;padding:0;line-height:0}
+.tmdb-section-chevron svg{display:block;width:14px;height:14px;overflow:visible}
+.tmdb-section-chevron svg path{fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.tmdb-cast-full-link-art{padding:12px;text-align:center}
+.tmdb-cast-full-link-art>span{display:block;width:auto;height:auto;border:0;border-radius:0;font-size:14px;font-weight:700;line-height:1.25}
+.tmdb-cast-full-link:hover .tmdb-cast-full-link-art>span{border:0}
+
+
+/* External IMDb and Rotten Tomatoes ratings in movie details. */
+.external-ratings{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:12px 0 16px}
+.external-rating{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border:1px solid #383d46;border-radius:999px;background:#202329;color:#e8e9ec;font-size:12px;line-height:1.2}
+.external-rating strong{font-weight:750}
+.imdb-rating strong{color:#f5c518}
+.rt-rating strong{color:#fa6b6b}
+.external-rating small{margin-left:-5px;color:#a8adb6;font-size:10px}
+.external-ratings-loading,.external-ratings-unavailable{color:#9298a1;font-size:12px}
+
+/* Make all copy on VHS backs bold for legibility at case scale. */
+.vhs-back-scroll,.vhs-back-scroll p,.vhs-back-scroll .meta,.vhs-back-scroll .pill,.vhs-back-scroll .note,.vhs-back-scroll .back-warnings{font-weight:700}
+
+/* VHS back information hierarchy and warning color. */
+.vhs-back-scroll .back-score{font-size:calc(var(--box-height) * .036);font-weight:800;line-height:1.35;margin-top:calc(var(--box-height) * .009);color:#f1eee5}
+.vhs-back-scroll .back-score strong{font-weight:900}
+.vhs-back-scroll .back-warnings{margin-top:calc(var(--box-height) * .014);color:#e35c53}
+.vhs-back-scroll .back-warnings .pill{color:#e35c53;border-color:rgba(227,92,83,.55);background:rgba(227,92,83,.10)}
+.vhs-back-scroll .back-synopsis{margin:calc(var(--box-height) * .02) 0}
+
+
+/* Content-warning settings and detail metadata hierarchy. */
+.warning-settings>div{width:100%;display:flex;flex-direction:column;align-items:flex-start;gap:10px}
+.warning-category-picker{width:100%;max-width:420px;border:1px solid #383d46;border-radius:8px;background:#1b1e23;color:#e8e9ec}
+.warning-category-picker>summary{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 13px;cursor:pointer;list-style:none;font-size:12px;font-weight:650}
+.warning-category-picker>summary::-webkit-details-marker{display:none}
+.warning-picker-count{color:#a7adb7;font-size:11px;font-weight:500}
+.warning-category-options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 12px;padding:4px 13px 12px;border-top:1px solid #30343b}
+.warning-category-option{display:flex;align-items:center;gap:9px;min-width:0;padding:9px 0;color:#cbd0d8;font-size:12px;cursor:pointer}
+.warning-category-option input{accent-color:#e35c53;flex:0 0 auto}
+.detail-info-primary,.detail-info-genres,.detail-info-credits{margin-top:7px;color:#b7bdc6;font-size:13px;line-height:1.6}
+.detail-info-primary{display:flex;align-items:center;flex-wrap:wrap;gap:6px}
+.detail-info-genres{color:#e2e4e8;font-weight:650}
+.detail-info-credits{color:#a7adb7}
+.detail-warning-label{color:#e35c53;font-weight:800}
+.detail-warning-badge{display:inline-flex;align-items:center;padding:3px 8px;border:1px solid rgba(227,92,83,.55);border-radius:999px;background:rgba(227,92,83,.10);color:#e35c53;font-size:11px;font-weight:800;line-height:1.4}
+@media(max-width:620px){.warning-category-options{grid-template-columns:1fr}}
+
+
+/* Nested content-warning preference accordions, matching the proposed layout. */
+.warning-settings>div{width:100%;display:flex;flex-direction:column;align-items:stretch;gap:10px}
+.warning-category-picker{width:100%;max-width:520px;border:1px solid #383d46;border-radius:8px;background:#1b1e23;color:#e8e9ec;overflow:hidden}
+.warning-category-picker>summary,.warning-category-group>summary{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 13px;cursor:pointer;list-style:none;font-size:13px;font-weight:650}
+.warning-category-picker>summary::-webkit-details-marker,.warning-category-group>summary::-webkit-details-marker{display:none}
+.warning-category-picker>summary:after,.warning-category-group>summary:after{content:"⌄";color:#aeb4be;font-size:17px;font-weight:400;line-height:1;transition:transform .15s}
+.warning-category-picker[open]>summary:after,.warning-category-group[open]>summary:after{transform:rotate(180deg)}
+.warning-picker-count{color:#a7adb7;font-size:11px;font-weight:500;margin-left:auto}
+.warning-category-groups{padding:0 10px 10px;border-top:1px solid #30343b}
+.warning-category-group{margin-top:8px;border-radius:7px;background:#25272b;overflow:hidden}
+.warning-category-group>summary{padding:11px 12px;font-size:13px;font-weight:500}
+.warning-category-options{display:flex;flex-direction:column;gap:0;max-height:190px;overflow-y:auto;overscroll-behavior:contain;padding:4px 12px 10px;border-top:1px solid #34373c;scrollbar-width:thin;scrollbar-color:#555b65 transparent}
+.warning-category-option{display:flex;align-items:center;gap:10px;min-width:0;padding:9px 0;color:#cbd0d8;font-size:12px;cursor:pointer}
+.warning-category-option input{appearance:none;width:17px;height:17px;flex:0 0 17px;margin:0;border:1px solid #656b75;border-radius:4px;background:#191b1f;display:grid;place-items:center;cursor:pointer}
+.warning-category-option input:checked{border-color:#e35c53;background:#e35c53}
+.warning-category-option input:checked:after{content:"✓";color:#fff;font-size:12px;font-weight:800;line-height:1}
+.warning-picker-help{margin:9px 2px 0;color:#a7adb7;font-size:11px;line-height:1.45}
+.detail-info-primary{display:flex;align-items:center;flex-wrap:wrap;gap:6px}
+.detail-warning-label{display:none!important}
+@media(max-width:620px){.warning-category-picker{max-width:none}}
+
+
+/* Match warning disclosure controls to the circular plus/minus controls used in Details. */
+.warning-category-picker>summary:after,.warning-category-group>summary:after{content:none!important;display:none!important}
+.warning-picker-chevron{margin-left:auto;width:25px;height:25px;border:1px solid #414650;border-radius:50%;color:#b9bec7;flex:0 0 25px}
+.warning-picker-chevron svg{display:block;width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.warning-category-picker>summary,.warning-category-group>summary{gap:12px}
+.warning-picker-count{margin-left:auto}
+.warning-category-picker>summary .warning-picker-chevron{margin-left:0}
+.warning-category-picker[open]>summary .warning-chevron-vertical,.warning-category-group[open]>summary .warning-chevron-vertical{opacity:0}
+.warning-chevron-vertical{transition:opacity .12s ease}
+
+
+/* Pixel-match the Details section disclosure icon, including its centering. */
+.warning-picker-chevron{display:flex;align-items:center;justify-content:center;box-sizing:border-box;padding:0;line-height:0}
+.warning-picker-chevron svg{display:block;width:14px;height:14px;overflow:visible;margin:0;flex:0 0 14px}
+.warning-picker-chevron svg path{fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.warning-category-picker>summary,.warning-category-group>summary{align-items:center}
+
+
+/* Keep the plus/minus glyph mathematically centered inside its circular button. */
+.warning-picker-chevron{display:grid!important;place-items:center!important;align-self:center!important;position:relative;box-sizing:border-box;width:25px;height:25px;min-width:25px;min-height:25px;padding:0!important;margin:0!important;line-height:0!important;flex:0 0 25px}
+.warning-picker-chevron svg{display:block!important;position:absolute;inset:0;margin:auto!important;width:14px!important;height:14px!important;flex:none!important;overflow:visible}
+.warning-picker-chevron svg path{vector-effect:none}
+.warning-category-picker>summary .warning-picker-chevron{margin-left:0!important}
+
+
+/* Keep warning content snug against the preceding VHS back-cover line. */
+.vhs-back-scroll .back-warnings{margin-top:calc(var(--box-height) * .006)}
+.warning-group-actions{display:flex;gap:8px;padding:7px 0 9px;border-bottom:1px solid #34373c;margin-bottom:4px}
+.warning-group-actions button{appearance:none;border:1px solid #484d56;background:#30333a;color:#e8e9ec;border-radius:6px;padding:5px 9px;font:inherit;font-size:11px;cursor:pointer}
+.warning-group-actions button:hover{background:#3b3f48;border-color:#666d79}
+
+
+/* Keep VHS content-warning labels on a consistent, compact vertical rhythm. */
+.vhs-back-scroll .back-warnings{display:flex;flex-wrap:wrap;align-items:flex-start;column-gap:calc(var(--box-width) * .018);row-gap:calc(var(--box-height) * .004);line-height:1.15}
+.vhs-back-scroll .back-warnings .pill{display:inline-block;flex:0 0 auto;margin:0;line-height:1.15;vertical-align:top}
+
+
+/* Keep the master content-warning toggle beside its heading, with the picker below. */
+.warning-settings{display:flex;flex-direction:column;align-items:stretch;gap:12px}
+.warning-settings .warning-settings-header{display:flex;align-items:center;justify-content:space-between;gap:16px;width:100%}
+.warning-settings .warning-settings-header>div{display:flex;flex-direction:column;align-items:flex-start;gap:5px;min-width:0}
+.warning-settings .warning-category-controls{width:100%;display:block}
+.warning-settings .warning-category-picker{width:100%;max-width:520px}
+
+/* Use the same outlined, rounded warning badges on VHS backs and details. */
+.vhs-back-scroll .back-warnings{display:flex;flex-wrap:wrap;align-items:flex-start;column-gap:calc(var(--box-width) * .018);row-gap:calc(var(--box-height) * .006);line-height:1.2}
+.vhs-back-scroll .back-warnings .detail-warning-badge{display:inline-flex;align-items:center;flex:0 0 auto;padding:calc(var(--box-height) * .004) calc(var(--box-width) * .014);border:1px solid rgba(227,92,83,.55);border-radius:999px;background:rgba(227,92,83,.10);color:#e35c53;font-size:calc(var(--box-height) * .027);font-weight:800;line-height:1.3;white-space:nowrap}
+
+
+/* Content-warning setting: text left, master switch right, picker full-width below. */
+.setting.warning-settings{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;justify-content:initial;column-gap:24px;row-gap:12px}
+.setting.warning-settings>.warning-settings-header{grid-column:1;grid-row:1;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:5px;width:100%;min-width:0}
+.setting.warning-settings>.warning-settings-header>div{display:flex;flex-direction:column;align-items:flex-start;gap:5px;width:100%;min-width:0}
+.setting.warning-settings>.warning-settings-header strong,.setting.warning-settings>.warning-settings-header span{text-align:left;align-self:flex-start}
+.setting.warning-settings>button.toggle{grid-column:2;grid-row:1;justify-self:end;align-self:center}
+.setting.warning-settings>.warning-category-controls{grid-column:1/-1;grid-row:2;width:100%;min-width:0;display:block}
+.setting.warning-settings .warning-category-picker{width:100%;max-width:none;box-sizing:border-box}
+@media(max-width:760px){.setting.warning-settings{column-gap:14px;row-gap:12px}}
+
+
+/* Correct the actual header structure: its toggle is nested inside the header. */
+.setting.warning-settings{display:flex;flex-direction:column;align-items:stretch;justify-content:flex-start;gap:12px}
+.setting.warning-settings>.warning-settings-header{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;justify-content:initial;gap:16px;width:100%}
+.setting.warning-settings>.warning-settings-header>div{grid-column:1;grid-row:1;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:5px;width:100%;min-width:0}
+.setting.warning-settings>.warning-settings-header>button.toggle{grid-column:2;grid-row:1;justify-self:end;align-self:center;margin:0}
+.setting.warning-settings>.warning-category-controls{width:100%;flex:0 0 100%;align-self:stretch}
+.setting.warning-settings .warning-category-picker{width:100%;max-width:none;box-sizing:border-box}
