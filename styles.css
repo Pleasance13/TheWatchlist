@@ -1661,3 +1661,14 @@ button,input{font:inherit}button{color:inherit}.topbar{height:72px;padding:0 32p
 .detail-info-primary{display:flex;align-items:center;flex-wrap:wrap;gap:6px}
 .detail-warning-label{display:none!important}
 @media(max-width:620px){.warning-category-picker{max-width:none}}
+
+
+/* Match warning disclosure controls to the circular plus/minus controls used in Details. */
+.warning-category-picker>summary:after,.warning-category-group>summary:after{content:none!important;display:none!important}
+.warning-picker-chevron{margin-left:auto;width:25px;height:25px;border:1px solid #414650;border-radius:50%;color:#b9bec7;flex:0 0 25px}
+.warning-picker-chevron svg{display:block;width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.warning-category-picker>summary,.warning-category-group>summary{gap:12px}
+.warning-picker-count{margin-left:auto}
+.warning-category-picker>summary .warning-picker-chevron{margin-left:0}
+.warning-category-picker[open]>summary .warning-chevron-vertical,.warning-category-group[open]>summary .warning-chevron-vertical{opacity:0}
+.warning-chevron-vertical{transition:opacity .12s ease}
