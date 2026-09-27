@@ -61,7 +61,7 @@ const TMDB = {
     if (data.runtime) movie.runtime = formatRuntime(data.runtime);
     movie.rating = data.rating || "";
     if (data.synopsis) movie.synopsis = data.synopsis;
-    if (Array.isArray(data.warnings)) movie.warnings = data.warnings;
+    if (Array.isArray(data.warnings)) movie.warnings = [...new Set([...(Array.isArray(movie.warnings) ? movie.warnings : []), ...data.warnings])];
     if (movie.id && String(movie.id).startsWith("tmdb-")) {
       try {
         const stored = JSON.parse(localStorage.getItem("watchlist-added-movies") || "[]");
