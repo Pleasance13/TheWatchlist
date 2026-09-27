@@ -1614,3 +1614,10 @@ button,input{font:inherit}button{color:inherit}.topbar{height:72px;padding:0 32p
 
 /* Make all copy on VHS backs bold for legibility at case scale. */
 .vhs-back-scroll,.vhs-back-scroll p,.vhs-back-scroll .meta,.vhs-back-scroll .pill,.vhs-back-scroll .note,.vhs-back-scroll .back-warnings{font-weight:700}
+
+/* VHS back information hierarchy and warning color. */
+.vhs-back-scroll .back-score{font-size:calc(var(--box-height) * .036);font-weight:800;line-height:1.35;margin-top:calc(var(--box-height) * .009);color:#f1eee5}
+.vhs-back-scroll .back-score strong{font-weight:900}
+.vhs-back-scroll .back-warnings{margin-top:calc(var(--box-height) * .014);color:#e35c53}
+.vhs-back-scroll .back-warnings .pill{color:#e35c53;border-color:rgba(227,92,83,.55);background:rgba(227,92,83,.10)}
+.vhs-back-scroll .back-synopsis{margin:calc(var(--box-height) * .02) 0}
