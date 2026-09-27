@@ -1,3 +1,17 @@
+function normalizeWarningLabel(value){
+  return String(value||"").trim().toLowerCase().replace(/\s+/g," ")
+    .split(" ").map(word=>word.split(/([/-])/).map(part=>part==="/"||part==="-"?part:part?part[0].toUpperCase()+part.slice(1):"").join("")).join(" ");
+}
+function dedupeWarnings(values){
+  const unique=new Map();
+  (Array.isArray(values)?values:[]).forEach(value=>{
+    const label=normalizeWarningLabel(value);
+    const key=label.toLowerCase();
+    if(label&&!unique.has(key))unique.set(key,label);
+  });
+  return [...unique.values()];
+}
+
 const fallback=(t,y)=>`data:image/svg+xml;charset=UTF-8,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="500" height="750"><rect width="100%" height="100%" fill="#25282d"/><rect x="30" y="30" width="440" height="690" rx="12" fill="#17191c" stroke="#4a4f57"/><text x="250" y="350" fill="#e8e4da" font-family="Arial" font-size="38" font-weight="bold" text-anchor="middle">${t}</text><text x="250" y="400" fill="#9298a1" font-family="Arial" font-size="24" text-anchor="middle">${y}</text></svg>`)}`;
 
 const seedMovies=[
@@ -13,7 +27,7 @@ let savedMovies=[];
 try{savedMovies=JSON.parse(localStorage.getItem("watchlist-added-movies")||"[]");}catch(error){savedMovies=[];}
 seedMovies.forEach(m=>{m.suggestedBy="Josh";m.addedBy="Josh";});
 let seedSuggestionNotes={};try{seedSuggestionNotes=JSON.parse(localStorage.getItem("watchlist-suggestion-notes")||"{}")}catch(error){seedSuggestionNotes={}}seedMovies.forEach(m=>{if(Object.prototype.hasOwnProperty.call(seedSuggestionNotes,m.id))m.note=seedSuggestionNotes[m.id]});
-const movies=[...seedMovies,...savedMovies];movies.forEach(movie=>{movie.rating="";});
+const movies=[...seedMovies,...savedMovies];movies.forEach(movie=>{movie.rating="";movie.warnings=dedupeWarnings(movie.warnings);});
 let savedSeenStatus={};try{savedSeenStatus=JSON.parse(localStorage.getItem("watchlist-seen-status")||"{}")}catch(error){savedSeenStatus={}}
 movies.forEach(m=>{if(Array.isArray(savedSeenStatus[m.id]))m.seen=[...savedSeenStatus[m.id]]});
 const baseScores=Object.fromEntries(movies.map(m=>[m.id,m.id.startsWith("tmdb-")?0:(Number(m.score)||0)]));
@@ -146,7 +160,7 @@ function backContent(m){
     ${rt&&rt!=="N/A"?`<div class="back-score"><strong>RT</strong> ${escapeHtml(String(rt).endsWith("%")?rt:rt+"%")}</div>`:""}
     ${imdb&&imdb!=="N/A"?`<div class="back-score"><strong>IMDb</strong> ${escapeHtml(imdb)}/10</div>`:""}
   `:"";
-  const warnings=(m.warnings||[]).filter(w=>savedWarningCategories.includes(String(w).toLowerCase())).map(w=>`<span class="pill">⚠ ${escapeHtml(w)}</span>`).join("");
+  const warnings=dedupeWarnings(m.warnings).filter(w=>savedWarningCategories.includes(String(w).toLowerCase())).map(w=>`<span class="pill">⚠ ${escapeHtml(w)}</span>`).join("");
   return `
     ${yearRated?`<div class="meta back-year-rated">${yearRated}</div>`:""}
     ${genres.length?`<div class="meta back-genres">${genres.map(escapeHtml).join(" · ")}</div>`:""}
@@ -225,7 +239,7 @@ function detail(){
  let m=movies.find(x=>x.id===state.detail);
  if(!m)return '<div class="hero"><div><div class="eyebrow">MOVIE</div><h1>Details</h1></div><button class="ghost" onclick="setNav(\'watchlist\')">← Back</button></div><section class="detail"><p class="muted">Movie not found.</p></section>';
  let selected=currentVote(m.id);
- const detailWarnings=(m.warnings||[]).filter(w=>savedWarningCategories.includes(String(w).toLowerCase()));
+ const detailWarnings=dedupeWarnings(m.warnings).filter(w=>savedWarningCategories.includes(String(w).toLowerCase()));
  const detailGenres=(Array.isArray(m.genre)?m.genre:String(m.genre||"").split(/\\s*[·,/]\s*/)).map(x=>String(x).trim()).filter(Boolean);
  const detailDirectors=Array.isArray(m.director)?m.director.filter(Boolean):String(m.director||"").split(/\\s*,\s*/).filter(Boolean);
  return `<div class="hero"><div><div class="eyebrow">MOVIE</div><h1>Details</h1></div><button class="ghost" onclick="setNav('watchlist')">← Back</button></div>
@@ -527,18 +541,28 @@ let tmdbHydrated=false;
 async function hydrateTmdbArtwork(){
   if(tmdbHydrated||!window.TMDB)return;
   tmdbHydrated=true;
-  for(const movie of movies){
+  // Resolve all seeded titles concurrently, then fetch their detail/assets in parallel
+  // so a slow response for one title cannot hold up every other preloaded movie.
+  const seeded=movies.filter(movie=>!movie.tmdbId);
+  const matches=await Promise.all(seeded.map(async movie=>{
     try{
       const search=await TMDB.search(movie.title);
-      const exact=(search.results||[]).find(r=>r.year===movie.year)||search.results?.[0];
-      if(!exact?.tmdbId)continue;
-      const details=await TMDB.details(exact.tmdbId);
+      const results=search.results||[];
+      return {movie,match:results.find(r=>Number(r.year)===Number(movie.year))||results[0]||null};
+    }catch(error){
+      console.warn("TMDB search hydration skipped for "+movie.title,error.message);
+      return {movie,match:null};
+    }
+  }));
+  await Promise.all(matches.filter(x=>x.match?.tmdbId).map(async ({movie,match})=>{
+    try{
+      const details=await TMDB.details(match.tmdbId);
       TMDB.apply(movie,details);
       if(state.showRatings)loadExternalRatings(movie);
     }catch(error){
       console.warn("TMDB hydration skipped for "+movie.title,error.message);
     }
-  }
+  }));
   render();
 }
 window.toggleWarningCategory=(category,checked)=>{const key=String(category).toLowerCase();savedWarningCategories=checked?[...new Set([...savedWarningCategories,key])]:savedWarningCategories.filter(x=>x!==key);try{localStorage.setItem("watchlist-warning-categories",JSON.stringify(savedWarningCategories))}catch(error){}document.querySelectorAll(".warning-picker-count").forEach(el=>el.textContent=savedWarningCategories.length+" selected")};
