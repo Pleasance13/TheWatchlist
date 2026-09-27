@@ -1698,3 +1698,15 @@ button,input{font:inherit}button{color:inherit}.topbar{height:72px;padding:0 32p
 /* Keep VHS content-warning labels on a consistent, compact vertical rhythm. */
 .vhs-back-scroll .back-warnings{display:flex;flex-wrap:wrap;align-items:flex-start;column-gap:calc(var(--box-width) * .018);row-gap:calc(var(--box-height) * .004);line-height:1.15}
 .vhs-back-scroll .back-warnings .pill{display:inline-block;flex:0 0 auto;margin:0;line-height:1.15;vertical-align:top}
+
+
+/* Keep the master content-warning toggle beside its heading, with the picker below. */
+.warning-settings{display:flex;flex-direction:column;align-items:stretch;gap:12px}
+.warning-settings .warning-settings-header{display:flex;align-items:center;justify-content:space-between;gap:16px;width:100%}
+.warning-settings .warning-settings-header>div{display:flex;flex-direction:column;align-items:flex-start;gap:5px;min-width:0}
+.warning-settings .warning-category-controls{width:100%;display:block}
+.warning-settings .warning-category-picker{width:100%;max-width:520px}
+
+/* Use the same outlined, rounded warning badges on VHS backs and details. */
+.vhs-back-scroll .back-warnings{display:flex;flex-wrap:wrap;align-items:flex-start;column-gap:calc(var(--box-width) * .018);row-gap:calc(var(--box-height) * .006);line-height:1.2}
+.vhs-back-scroll .back-warnings .detail-warning-badge{display:inline-flex;align-items:center;flex:0 0 auto;padding:calc(var(--box-height) * .004) calc(var(--box-width) * .014);border:1px solid rgba(227,92,83,.55);border-radius:999px;background:rgba(227,92,83,.10);color:#e35c53;font-size:calc(var(--box-height) * .027);font-weight:800;line-height:1.3;white-space:nowrap}
