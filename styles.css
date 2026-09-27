@@ -1672,3 +1672,10 @@ button,input{font:inherit}button{color:inherit}.topbar{height:72px;padding:0 32p
 .warning-category-picker>summary .warning-picker-chevron{margin-left:0}
 .warning-category-picker[open]>summary .warning-chevron-vertical,.warning-category-group[open]>summary .warning-chevron-vertical{opacity:0}
 .warning-chevron-vertical{transition:opacity .12s ease}
+
+
+/* Pixel-match the Details section disclosure icon, including its centering. */
+.warning-picker-chevron{display:flex;align-items:center;justify-content:center;box-sizing:border-box;padding:0;line-height:0}
+.warning-picker-chevron svg{display:block;width:14px;height:14px;overflow:visible;margin:0;flex:0 0 14px}
+.warning-picker-chevron svg path{fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.warning-category-picker>summary,.warning-category-group>summary{align-items:center}
