@@ -132,7 +132,7 @@ function externalRatings(m){
   const parts=[];
   if(rt!==undefined&&rt!==null&&rt!=="")parts.push(`RT ${rt}%`);
   if(imdb!==undefined&&imdb!==null&&imdb!=="")parts.push(`IMDb ${imdb}`);
-  return parts.length?`<div class="external-ratings">${parts.map(x=>`<span class="pill">${x}</span>`).join("")}`:"";
+  return parts.length?`<div class="external-ratings">${parts.map(x=>`<span class="pill">${x}</span>`).join("")}</div>`:"";
 }
 function backContent(m){
  return `
