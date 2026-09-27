@@ -1584,3 +1584,16 @@ button,input{font:inherit}button{color:inherit}.topbar{height:72px;padding:0 32p
 .tmdb-cast-full-link>span:last-child{color:#969ca6;font-size:11px;line-height:1.3}
 .tmdb-cast-full-link:hover .tmdb-cast-full-link-art{border-color:#737e8e;background:linear-gradient(145deg,#303744,#1c2027);color:#fff}
 .tmdb-cast-full-link:hover .tmdb-cast-full-link-art>span{border-color:#9ca6b5}
+
+
+/* Detail-page consistency: synopsis heading, section separators, and centered SVG chevrons. */
+.detail-synopsis-section{margin:24px 0 0;padding:18px 0 0;border-top:1px solid #30343b}
+.detail-synopsis-section h3{margin:0 0 10px;font-size:16px;font-weight:700;color:#e8e9ec}
+.detail-synopsis-section .detail-synopsis{margin:0}
+.tmdb-detail-section:has(.tmdb-provider-list){padding-bottom:18px;border-bottom:1px solid #30343b;margin-bottom:0}
+.tmdb-section-chevron{display:flex;align-items:center;justify-content:center;box-sizing:border-box;padding:0;line-height:0}
+.tmdb-section-chevron svg{display:block;width:14px;height:14px;overflow:visible}
+.tmdb-section-chevron svg path{fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.tmdb-cast-full-link-art{padding:12px;text-align:center}
+.tmdb-cast-full-link-art>span{display:block;width:auto;height:auto;border:0;border-radius:0;font-size:14px;font-weight:700;line-height:1.25}
+.tmdb-cast-full-link:hover .tmdb-cast-full-link-art>span{border:0}
