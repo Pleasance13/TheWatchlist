@@ -61,6 +61,16 @@ const TMDB = {
     if (data.runtime) movie.runtime = formatRuntime(data.runtime);
     movie.rating = data.rating || "";
     if (data.synopsis) movie.synopsis = data.synopsis;
+    if (Array.isArray(data.warnings)) movie.warnings = data.warnings;
+    if (movie.id && String(movie.id).startsWith("tmdb-")) {
+      try {
+        const stored = JSON.parse(localStorage.getItem("watchlist-added-movies") || "[]");
+        const index = stored.findIndex(item => item.id === movie.id);
+        if (index >= 0) stored[index] = { ...stored[index], warnings: movie.warnings || [] };
+        else stored.push({ ...movie, score: 0 });
+        localStorage.setItem("watchlist-added-movies", JSON.stringify(stored));
+      } catch (error) { /* Local persistence is optional. */ }
+    }
 
     return movie;
   }
