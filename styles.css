@@ -1693,3 +1693,8 @@ button,input{font:inherit}button{color:inherit}.topbar{height:72px;padding:0 32p
 .warning-group-actions{display:flex;gap:8px;padding:7px 0 9px;border-bottom:1px solid #34373c;margin-bottom:4px}
 .warning-group-actions button{appearance:none;border:1px solid #484d56;background:#30333a;color:#e8e9ec;border-radius:6px;padding:5px 9px;font:inherit;font-size:11px;cursor:pointer}
 .warning-group-actions button:hover{background:#3b3f48;border-color:#666d79}
+
+
+/* Keep VHS content-warning labels on a consistent, compact vertical rhythm. */
+.vhs-back-scroll .back-warnings{display:flex;flex-wrap:wrap;align-items:flex-start;column-gap:calc(var(--box-width) * .018);row-gap:calc(var(--box-height) * .004);line-height:1.15}
+.vhs-back-scroll .back-warnings .pill{display:inline-block;flex:0 0 auto;margin:0;line-height:1.15;vertical-align:top}
