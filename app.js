@@ -37,9 +37,9 @@ try{movieReviews=JSON.parse(localStorage.getItem("watchlist-movie-reviews")||"{}
 try{watchedMovies=JSON.parse(localStorage.getItem("watchlist-watched-movies")||"[]");}catch(error){watchedMovies=[]}
 let watchedAttendance={};try{watchedAttendance=JSON.parse(localStorage.getItem("watchlist-watched-attendance")||"{}")}catch(error){watchedAttendance={}}
 watchedMovies.forEach(id=>{const m=movies.find(x=>x.id===id);if(m){m.watched=true;m.watchedBy=watchedAttendance[id]||m.watchedBy||[]}});
-let currentUser=window.WATCHLIST_CURRENT_USER||"Josh";
+let currentUser=window.WATCHLIST_CURRENT_USER||"Guest";
 window.watchlistAuthIdentityChanged=function(profile){
-  const nextName=profile?.name||"Josh";
+  const nextName=profile?.name||"Guest";
   currentUser=nextName;
   window.WATCHLIST_CURRENT_USER=nextName;
   window.WATCHLIST_AUTHENTICATED=!!profile;
@@ -54,7 +54,7 @@ const app=document.querySelector("#app");
 let savedCaseAssets={};
 try{savedCaseAssets=JSON.parse(localStorage.getItem("watchlist-case-assets")||"{}");}catch(error){savedCaseAssets={}}
 // Temporary UI gate: once Discord auth exists, replace this with the authenticated Josh/Discord user ID check.
-function canEditCaseAssets(){return !window.WATCHLIST_AUTHENTICATED&&currentUser==="Josh"}
+function canEditCaseAssets(){return !!window.WATCHLIST_AUTHENTICATED&&window.WATCHLIST_AUTH_PROFILE?.canEditArtwork===true}
 function caseAssets(m){return savedCaseAssets[m.id]||{}}
 function movieLogoPath(m,preferred){
   const a=caseAssets(m);
