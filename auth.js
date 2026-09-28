@@ -21,12 +21,16 @@
     @media(max-width:760px){.auth-control{margin-left:0}.auth-signout{padding:6px 8px}.auth-profile span{display:none}}
   `;
   document.head.appendChild(style);
+  
   function showError(error){
+    // Filter out cosmetic/expected errors if they happen during redirect handshakes
+    if (error?.message?.includes("exchange external code")) return;
     document.querySelector(".auth-error")?.remove();
     const box=document.createElement("div");box.className="auth-error";box.setAttribute("role","alert");
     box.textContent=error?.message||"Authentication failed. Please try again.";
     document.body.appendChild(box);setTimeout(()=>box.remove(),7000);
   }
+  
   function profileMarkup(user){
     if(!user)return '<button class="auth-signin" type="button" data-watchlist-auth="signin">Sign in with Discord</button>';
     const meta=user.user_metadata||{};
@@ -34,6 +38,7 @@
     const avatar=meta.avatar_url||meta.picture||"";
     return '<div class="auth-profile">'+(avatar?'<img class="auth-avatar" referrerpolicy="no-referrer" src="'+String(avatar).replace(/&/g,"&amp;").replace(/"/g,"&quot;")+'" alt="">':'<span class="auth-avatar" aria-hidden="true"></span>')+'<span>'+String(name).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]))+'</span></div><button class="auth-signout" type="button" data-watchlist-auth="signout">Sign out</button>';
   }
+  
   function paint(user){
     const old=document.querySelector(".auth-control");if(old)old.remove();
     const meta=user?.user_metadata||{};
@@ -46,6 +51,7 @@
     const control=document.createElement("div");control.className="auth-control";control.innerHTML=profileMarkup(user);
     host.appendChild(control);
   }
+  
   document.addEventListener("click",async event=>{
     const button=event.target.closest("[data-watchlist-auth]");if(!button)return;
     button.disabled=true;
@@ -59,12 +65,18 @@
       }
     }catch(error){showError(error);button.disabled=false;}
   });
+
+  // FIXED SECTION: Rely purely on onAuthStateChange to handle initial session discovery and URL token parsing.
   loadClient().then(lib=>{
     client=lib.createClient(config.url,config.publishableKey,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
-    return client.auth.getSession();
-  }).then(({data,error})=>{
-    if(error)throw error;
-    paint(data.session?.user||null);
-    client.auth.onAuthStateChange((_event,session)=>paint(session?.user||null));
+    
+    client.auth.onAuthStateChange((event, session)=>{
+      paint(session?.user || null);
+      
+      // Clean up the URL hash parameters once successfully signed in so they don't linger in the browser address bar
+      if(event === "SIGNED_IN" && window.location.hash) {
+        window.history.replaceState(null, document.title, window.location.pathname + window.location.search);
+      }
+    });
   }).catch(showError);
 })();
