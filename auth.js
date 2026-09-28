@@ -40,17 +40,17 @@
   }
   
   function paint(user){
-    const old=document.querySelector(".auth-control");if(old)old.remove();
     const meta=user?.user_metadata||{};
-    const profile=user?{name:meta.global_name||meta.full_name||meta.name||meta.user_name||meta.preferred_username||"Discord user",avatar:meta.avatar_url||meta.picture||""}:null;
+    const discordHandle=String(meta.user_name||meta.preferred_username||meta.username||"").toLowerCase();
+    const profile=user?{name:meta.global_name||meta.full_name||meta.name||meta.user_name||meta.preferred_username||"Discord user",avatar:meta.avatar_url||meta.picture||"",canEditArtwork:discordHandle===".pleasance"||discordHandle.endsWith("#.pleasance")}:null;
     window.WATCHLIST_AUTH_PROFILE=profile;
     window.WATCHLIST_AUTHENTICATED=!!user;
     if(typeof window.watchlistAuthIdentityChanged==="function")window.watchlistAuthIdentityChanged(profile);
-    const host=document.querySelector(".topbar");
-    if(!host)return;
-    const control=document.createElement("div");control.className="auth-control";control.innerHTML=profileMarkup(user);
-    host.appendChild(control);
   }
+  window.watchlistAuthControlMarkup=function(){
+    const user=window.WATCHLIST_AUTHENTICATED?{user_metadata:window.WATCHLIST_AUTH_PROFILE}:null;
+    return '<div class="auth-control">'+profileMarkup(user)+'</div>';
+  };
   
   document.addEventListener("click",async event=>{
     const button=event.target.closest("[data-watchlist-auth]");if(!button)return;
