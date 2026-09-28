@@ -35,7 +35,7 @@
     if(!user)return '<button class="auth-signin" type="button" data-watchlist-auth="signin">Sign in with Discord</button>';
     const meta=user.user_metadata||{};
     const name=meta.global_name||meta.full_name||meta.name||meta.user_name||meta.preferred_username||"Discord user";
-    const avatar=meta.avatar_url||meta.picture||"";
+    const avatar=meta.avatar_url||meta.picture||meta.avatar||"";
     return '<div class="auth-profile">'+(avatar?'<img class="auth-avatar" referrerpolicy="no-referrer" src="'+String(avatar).replace(/&/g,"&amp;").replace(/"/g,"&quot;")+'" alt="">':'<span class="auth-avatar" aria-hidden="true"></span>')+'<span>'+String(name).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]))+'</span></div><button class="auth-signout" type="button" data-watchlist-auth="signout">Sign out</button>';
   }
   
