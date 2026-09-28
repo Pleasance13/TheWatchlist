@@ -30,12 +30,17 @@
   function profileMarkup(user){
     if(!user)return '<button class="auth-signin" type="button" data-watchlist-auth="signin">Sign in with Discord</button>';
     const meta=user.user_metadata||{};
-    const name=meta.full_name||meta.name||meta.custom_claims?.global_name||meta.user_name||"Discord user";
+    const name=meta.global_name||meta.full_name||meta.name||meta.user_name||meta.preferred_username||"Discord user";
     const avatar=meta.avatar_url||meta.picture||"";
     return '<div class="auth-profile">'+(avatar?'<img class="auth-avatar" referrerpolicy="no-referrer" src="'+String(avatar).replace(/&/g,"&amp;").replace(/"/g,"&quot;")+'" alt="">':'<span class="auth-avatar" aria-hidden="true"></span>')+'<span>'+String(name).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]))+'</span></div><button class="auth-signout" type="button" data-watchlist-auth="signout">Sign out</button>';
   }
   function paint(user){
     const old=document.querySelector(".auth-control");if(old)old.remove();
+    const meta=user?.user_metadata||{};
+    const profile=user?{name:meta.global_name||meta.full_name||meta.name||meta.user_name||meta.preferred_username||"Discord user",avatar:meta.avatar_url||meta.picture||""}:null;
+    window.WATCHLIST_AUTH_PROFILE=profile;
+    window.WATCHLIST_AUTHENTICATED=!!user;
+    if(typeof window.watchlistAuthIdentityChanged==="function")window.watchlistAuthIdentityChanged(profile);
     const host=document.querySelector(".topbar");
     if(!host)return;
     const control=document.createElement("div");control.className="auth-control";control.innerHTML=profileMarkup(user);
