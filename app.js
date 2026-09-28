@@ -37,7 +37,14 @@ try{movieReviews=JSON.parse(localStorage.getItem("watchlist-movie-reviews")||"{}
 try{watchedMovies=JSON.parse(localStorage.getItem("watchlist-watched-movies")||"[]");}catch(error){watchedMovies=[]}
 let watchedAttendance={};try{watchedAttendance=JSON.parse(localStorage.getItem("watchlist-watched-attendance")||"{}")}catch(error){watchedAttendance={}}
 watchedMovies.forEach(id=>{const m=movies.find(x=>x.id===id);if(m){m.watched=true;m.watchedBy=watchedAttendance[id]||m.watchedBy||[]}});
-const currentUser="Josh";
+let currentUser=window.WATCHLIST_CURRENT_USER||"Josh";
+window.watchlistAuthIdentityChanged=function(profile){
+  const nextName=profile?.name||"Josh";
+  currentUser=nextName;
+  window.WATCHLIST_CURRENT_USER=nextName;
+  window.WATCHLIST_AUTHENTICATED=!!profile;
+  if(typeof render==="function")render();
+};
 let removedMovieIds=[];try{removedMovieIds=JSON.parse(localStorage.getItem("watchlist-removed-movies")||"[]")}catch(error){removedMovieIds=[]}for(let i=movies.length-1;i>=0;i--){if(removedMovieIds.includes(movies[i].id))movies.splice(i,1)}
 const serverUsers=["Josh","Sarah","Dan","Sam","Alex"];
 const displaySettingKeys=["showSynopsis","showRatings","showNote","showTrailer","showCast","showStreamingLinks"]; const warningGroups=[{name:"Violence & gore",categories:["Violence","Gore","Blood","Torture","Body horror","Dismemberment","Weapons","War"]},{name:"Animals",categories:["Animal death","Animal cruelty","Animal injury","Harm to animals"]},{name:"Sexual content",categories:["Sexual content","Nudity","Sexual assault","Rape","Sexual exploitation"]},{name:"Death & self-harm",categories:["Death","Child death","Suicide","Self-harm","Suicide/self-harm"]},{name:"Other disturbing content",categories:["Drug use","Drug overdose","Child abuse","Disturbing imagery","Medical trauma","Abduction/kidnapping","Psychological distress"]}]; const warningCategories=warningGroups.flatMap(group=>group.categories); let savedWarningCategories=[]; try{savedWarningCategories=JSON.parse(localStorage.getItem("watchlist-warning-categories")||"[]")}catch(error){savedWarningCategories=[]}let contentWarningsEnabled=true;try{const savedContentWarnings=localStorage.getItem("watchlist-content-warnings-enabled");if(savedContentWarnings!==null)contentWarningsEnabled=savedContentWarnings==="true"}catch(error){}let savedDisplaySettings={};try{const parsedDisplaySettings=JSON.parse(localStorage.getItem("watchlist-display-settings")||"{}");displaySettingKeys.forEach(key=>{if(typeof parsedDisplaySettings[key]==="boolean")savedDisplaySettings[key]=parsedDisplaySettings[key]})}catch(error){savedDisplaySettings={}}
@@ -47,7 +54,7 @@ const app=document.querySelector("#app");
 let savedCaseAssets={};
 try{savedCaseAssets=JSON.parse(localStorage.getItem("watchlist-case-assets")||"{}");}catch(error){savedCaseAssets={}}
 // Temporary UI gate: once Discord auth exists, replace this with the authenticated Josh/Discord user ID check.
-function canEditCaseAssets(){return currentUser==="Josh"}
+function canEditCaseAssets(){return !window.WATCHLIST_AUTHENTICATED&&currentUser==="Josh"}
 function caseAssets(m){return savedCaseAssets[m.id]||{}}
 function movieLogoPath(m,preferred){
   const a=caseAssets(m);
@@ -90,7 +97,7 @@ function escapeHtml(value){return String(value??"").replace(/[&<>"']/g,ch=>({"&"
 function responseLabel(k){return ({must:"Must Watch",interested:"Interested",watch:"I'd Watch",no:"Not Interested"})[k]||"No response"}
 function rankOf(m){const ranked=movies.filter(x=>!x.watched).slice().sort((a,b)=>b.score-a.score);const n=ranked.findIndex(x=>x.id===m.id);return n>=0?n+1:"—"}
 function rankSticker(rank,extraClass=""){if(!Number.isFinite(Number(rank))||Number(rank)<1||Number(rank)>5)return "";const n=Number(rank);return `<span class="rank-sticker rank-sticker-${n} ${extraClass}" aria-label="Rank #${n}" style="--sticker-index:${n-1}"><span class="rank-sticker-number">#${n}</span>${n===1?'<span class="rank-sticker-shine" aria-hidden="true"></span>':""}</span>`}
-function header(){return `<header class="topbar"><div class="header-prism" aria-hidden="true"><img src="thewatchlist-prism.svg" alt=""></div><button class="brand" onclick="setNav('watchlist');setView('list')" aria-label="Go to Watchlist"><img class="brand-logo" src="thewatchlist-logo.svg" alt="The Watchlist"></button><nav class="nav">${["watchlist","history","people","settings"].map(x=>`<button class="${state.nav===x?"active":""}" onclick="setNav('${x}')"><span>${x[0].toUpperCase()+x.slice(1)}</span></button>`).join("")}</nav><div class="user"><div class="avatar">J</div><span>Josh</span></div></header>`}
+function header(){return `<header class="topbar"><div class="header-prism" aria-hidden="true"><img src="thewatchlist-prism.svg" alt=""></div><button class="brand" onclick="setNav('watchlist');setView('list')" aria-label="Go to Watchlist"><img class="brand-logo" src="thewatchlist-logo.svg" alt="The Watchlist"></button><nav class="nav">${["watchlist","history","people","settings"].map(x=>`<button class="${state.nav===x?"active":""}" onclick="setNav('${x}')"><span>${x[0].toUpperCase()+x.slice(1)}</span></button>`).join("")}</nav><div class="user"><div class="avatar">${window.WATCHLIST_AUTH_PROFILE?.avatar?`<img src="${escapeHtml(window.WATCHLIST_AUTH_PROFILE.avatar)}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`:escapeHtml((currentUser||"U").slice(0,1).toUpperCase())}</div><span>${escapeHtml(currentUser)}</span></div></header>`}
 function genreList(){return [...new Set(movies.flatMap(m=>(m.genre||"").split(/\s*[·,/&]\s*/).map(x=>x.trim()).filter(Boolean)))].sort()}
 function filterActive(key){const v=state[key];return Array.isArray(v)?v.length>0:Boolean(v)}
 function filterChip(label,key){return filterActive(key)?`<button class="filter-clear" title="Clear ${label}" aria-label="Clear ${label}" onclick="clearOneFilter('${key}')">×</button>`:""}
