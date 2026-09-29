@@ -27,8 +27,6 @@ let votesByUser={};
 let userProfiles={};
 try{localStorage.removeItem("watchlist-added-movies");localStorage.removeItem("watchlist-removed-movies");localStorage.removeItem("watchlist-seen-status");localStorage.removeItem("watchlist-votes");localStorage.removeItem("watchlist-votes-by-user");localStorage.removeItem("watchlist-reviews");localStorage.removeItem("watchlist-watched-movies");localStorage.removeItem("watchlist-watched-attendance");localStorage.removeItem("watchlist-suggestion-notes")}catch(error){}
 
-let votesByUser={};
-let userProfiles={};try{userProfiles=JSON.parse(localStorage.getItem("watchlist-user-profiles")||"{}")}catch(error){userProfiles={}}
 function userKey(name){return String(name||"Guest").trim().toLowerCase()}
 function currentAvatar(){return currentProfile?.avatar||""}
 function avatarFor(name){return userProfiles[userKey(name)]?.avatar||((name===currentUser)?currentAvatar():"")}
