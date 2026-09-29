@@ -118,10 +118,10 @@ async function persistGlobalSeen(){
   try{localStorage.setItem("watchlist-global-seen",JSON.stringify(globalSeenByUser))}catch(error){}
 }
 
-function migrateCurrentUserIdentity(){
+async function migrateCurrentUserIdentity(){
   if(currentUser==="Guest"||!currentProfile?.id)return false;
   const newKey=userKey(currentUser);
-  const oldKeys=Object.keys(userProfiles).filter(key=>key!==newKey&&userProfiles[key]?.id===currentProfile.id);
+  const currentAvatarUrl=currentProfile?.avatar||userProfiles[newKey]?.avatar||"";const oldKeys=Object.keys(userProfiles).filter(key=>key!==newKey&&(userProfiles[key]?.id===currentProfile.id||(currentAvatarUrl&&userProfiles[key]?.avatar===currentAvatarUrl)));
   if(!oldKeys.length){
     userProfiles[newKey]={...(userProfiles[newKey]||{}),id:currentProfile.id,name:currentUser,avatar:currentProfile.avatar||userProfiles[newKey]?.avatar||""};
     return false;
@@ -152,6 +152,7 @@ function migrateCurrentUserIdentity(){
     if(Array.isArray(watchedAttendance[id]))watchedAttendance[id]=[...new Set(watchedAttendance[id].map(name=>oldKeys.includes(userKey(name))?currentUser:name))];
   });
   serverUsers=[...new Set(serverUsers.map(name=>oldKeys.includes(userKey(name))?currentUser:name))];
+  try{const client=window.WATCHLIST_SUPABASE_CLIENT;if(client){await client.from("watchlist_server_memberships").update({display_name:currentUser,avatar_url:currentAvatarUrl,updated_at:new Date().toISOString()}).eq("user_id",currentProfile.id);}}catch(error){console.warn("Could not update renamed server membership:",error.message||error)}
   oldKeys.forEach(key=>delete userProfiles[key]);
   userProfiles[newKey]={...(userProfiles[newKey]||{}),id:currentProfile.id,name:currentUser,avatar:currentProfile.avatar||""};
   state.votes=mergeVotes;
@@ -171,7 +172,7 @@ async function loadServerContext(){
         try{localStorage.setItem("watchlist-active-server",JSON.stringify(activeServer))}catch(error){}
       }
     }
-    if(activeServer){await loadServerMembers();await loadSharedWatchlist();await loadGlobalSeen();if(migrateCurrentUserIdentity()){await persistSharedWatchlist();await persistGlobalSeen();}}
+    if(activeServer){await loadServerMembers();await loadSharedWatchlist();await loadGlobalSeen();if(await migrateCurrentUserIdentity()){await persistSharedWatchlist();await persistGlobalSeen();}}
     render();
   }catch(error){console.warn("Could not load server context:",error.message||error);render()}
 }
