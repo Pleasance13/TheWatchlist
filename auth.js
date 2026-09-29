@@ -31,21 +31,30 @@
     document.body.appendChild(box);setTimeout(()=>box.remove(),7000);
   }
   
+  function discordProfileData(user){
+    const meta=user?.user_metadata||{};
+    const identityData=(user?.identities||[]).find(identity=>identity.provider==="discord")?.identity_data||{};
+    return {...identityData,...meta};
+  }
+  function discordDisplayName(user){
+    const data=discordProfileData(user);
+    return data.global_name||data.display_name||data.full_name||data.name||data.preferred_username||data.user_name||data.username||"Discord user";
+  }
   function profileMarkup(user){
     if(!user)return '<button class="auth-signin" type="button" data-watchlist-auth="signin">Sign in with Discord</button>';
-    const meta=user.user_metadata||{};
-    const name=meta.global_name||meta.full_name||meta.name||meta.preferred_username||meta.user_name||"Discord user";
+    const meta=discordProfileData(user);
+    const name=discordDisplayName(user);
     const avatar=meta.avatar_url||meta.picture||meta.avatar||"";
     return '<div class="auth-profile">'+(avatar?'<img class="auth-avatar" referrerpolicy="no-referrer" src="'+String(avatar).replace(/&/g,"&amp;").replace(/"/g,"&quot;")+'" alt="">':'<span class="auth-avatar" aria-hidden="true"></span>')+'<span>'+String(name).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]))+'</span></div><button class="auth-signout" type="button" data-watchlist-auth="signout">Sign out</button>';
   }
   
   function paint(user){
-    const meta=user?.user_metadata||{};
+    const meta=discordProfileData(user);
     const identityValues=[meta.user_name,meta.preferred_username,meta.username,meta.global_name,meta.full_name,meta.name,user?.email].filter(value=>typeof value==="string").map(value=>value.trim().toLowerCase());
     // Discord/Supabase may expose the account handle under different metadata keys.
     // Accept the exact handle (or Discord's legacy discriminator form), not a substring.
     const canEditArtwork=identityValues.some(value=>value===".pleasance"||value==="@.pleasance"||value.endsWith("#.pleasance"));
-    const profile=user?{id:user.id,name:meta.global_name||meta.full_name||meta.name||meta.preferred_username||meta.user_name||"Discord user",avatar:meta.avatar_url||meta.picture||"",canEditArtwork}:null;
+    const profile=user?{id:user.id,name:discordDisplayName(user),avatar:meta.avatar_url||meta.picture||"",canEditArtwork}:null;
     window.WATCHLIST_AUTH_PROFILE=profile;
     window.WATCHLIST_SUPABASE_CLIENT=client;
     window.WATCHLIST_AUTHENTICATED=!!user;
