@@ -34,7 +34,9 @@
   function discordProfileData(user){
     const meta=user?.user_metadata||{};
     const identityData=(user?.identities||[]).find(identity=>identity.provider==="discord")?.identity_data||{};
-    return {...identityData,...meta};
+    const nestedMeta=meta.custom_claims||{};
+    const nestedIdentity=identityData.custom_claims||{};
+    return {...identityData,...nestedIdentity,...meta,...nestedMeta};
   }
   function discordDisplayName(user){
     const data=discordProfileData(user);
