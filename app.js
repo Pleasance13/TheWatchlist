@@ -212,39 +212,16 @@ async function loadGlobalSeen(){
   const rawSeen=data?.data&&typeof data.data==="object"?data.data:{};
   globalSeenByUser={};
   Object.entries(rawSeen).forEach(([key,value])=>{
+    if(!value||typeof value!=="object")return;
     const stable=stableIdentityKey(key);
-    if(!stable||!value||typeof value!=="object")return;
-    globalSeenByUser[stable]={...(globalSeenByUser[stable]||{}),...value};
+    const finalKey=stable||key;
+    globalSeenByUser[finalKey]={...(globalSeenByUser[finalKey]||{}),...value};
   });
   try{localStorage.setItem("watchlist-global-seen",JSON.stringify(globalSeenByUser))}catch(error){}
   movies.forEach(m=>{
-    m.seen=[];
-    Object.keys(globalSeenByUser).forEach(user=>{
-      if(globalSeenByUser[user]?.[m.id])m.seen.push(identityDisplayName(user,userProfiles,votesByUser));
-    });
+    m.seen=Object.keys(globalSeenByUser).filter(user=>globalSeenByUser[user]?.[m.id]).map(user=>identityDisplayName(user,userProfiles,votesByUser));
   });
 }
-
-async function persistGlobalSeen(){
-  const client=window.WATCHLIST_SUPABASE_CLIENT;
-  if(!client||currentUser==="Guest")return false;
-  const payload={};
-  Object.entries(globalSeenByUser||{}).forEach(([key,value])=>{
-    const stable=stableIdentityKey(key);
-    if(stable&&value&&typeof value==="object")payload[stable]=value;
-  });
-  const {error}=await client.from("watchlist_global_seen").upsert({
-    id:"seen",
-    data:payload,
-    updated_at:new Date().toISOString(),
-    updated_by:currentProfile?.id||null
-  });
-  if(error){console.warn("Could not save global seen state:",error.message||error);return false}
-  globalSeenByUser=payload;
-  try{localStorage.setItem("watchlist-global-seen",JSON.stringify(payload))}catch(error){}
-  return true;
-}
-
 async function migrateCurrentUserIdentity(){
   if(currentUser==="Guest"||!currentProfile?.id)return false;
   const newKey=userKey(currentUser), accountId=currentProfile.id, avatar=currentProfile.avatar||"";
@@ -931,34 +908,25 @@ window.clearAllFilters=()=>{state.genreFilters=[];state.yearFrom="";state.yearTo
 window.resetAdvancedFilters=window.clearAllFilters;
 window.vote=(id,k)=>{if(currentUser==="Guest")return;const old=state.votes[id];if(old===k)return;const before=new Map([...document.querySelectorAll("[data-movie-id]")].map(el=>[el.dataset.movieId,el.getBoundingClientRect()]));const weights={must:5,interested:3,watch:1,no:0};const m=movies.find(x=>x.id===id);if(!m)return;state.votes[id]=k;m.voterResponses={...(m.voterResponses||{}),[currentUser]:k};votesByUser[userKey(currentUser)]={id:currentProfile?.id||identityIdForName(currentUser)||null,name:currentUser,avatar:currentAvatar(),votes:{...state.votes}};m.score=(Number(baseScores[id])||0)+Object.values(m.voterResponses).reduce((sum,answer)=>sum+({must:5,interested:3,watch:1,no:0,green:3,yellow:1,red:0}[answer]||0),0);try{localStorage.setItem("watchlist-votes-by-user",JSON.stringify(votesByUser));localStorage.setItem("watchlist-votes",JSON.stringify(state.votes));localStorage.setItem("watchlist-added-movies",JSON.stringify(movies.filter(x=>x.id.startsWith("tmdb-")).map(x=>({...x,score:0}))))}catch(error){}persistSharedWatchlist();render();requestAnimationFrame(()=>{document.querySelectorAll("[data-movie-id]").forEach(el=>{const first=before.get(el.dataset.movieId);if(!first)return;const last=el.getBoundingClientRect();const dx=first.left-last.left,dy=first.top-last.top;if(Math.abs(dx)+Math.abs(dy)>1){el.animate([{transform:`translate(${dx}px,${dy}px)`},{transform:"translate(0,0)"}],{duration:420,easing:"cubic-bezier(.2,.75,.2,1)"})}})})};
 window.toggleSeen=async id=>{
-  if(currentUser==="Guest")return;
+  if(currentUser==="Guest"||!currentProfile?.id)return;
   const m=movies.find(x=>x.id===id);
   if(!m)return;
   const client=window.WATCHLIST_SUPABASE_CLIENT;
   if(!client)return;
-  const seenKey=stableIdentityKey(currentUser);
+  const userId=currentProfile.id;
   const {data:row,error:readError}=await client.from("watchlist_global_seen").select("data").eq("id","seen").maybeSingle();
   if(readError){console.warn("Could not read seen state:",readError.message||readError);return}
-  const remote=row?.data&&typeof row.data==="object"?row.data:{};
-  const next={...remote};
-  const mine={...(next[seenKey]&&typeof next[seenKey]==="object"?next[seenKey]:{})};
+  const next={...(row?.data&&typeof row.data==="object"?row.data:{})};
+  const mine={...(next[userId]&&typeof next[userId]==="object"?next[userId]:{})};
   const nextSeen=!Boolean(mine[id]);
   if(nextSeen)mine[id]=true;else delete mine[id];
-  if(Object.keys(mine).length)next[seenKey]=mine;else delete next[seenKey];
+  if(Object.keys(mine).length)next[userId]=mine;else delete next[userId];
   const {error}=await client.from("watchlist_global_seen").upsert({
-    id:"seen",data:next,updated_at:new Date().toISOString(),updated_by:currentProfile?.id||null
+    id:"seen",data:next,updated_at:new Date().toISOString(),updated_by:userId
   });
   if(error){console.warn("Could not save seen state:",error.message||error);return}
-  globalSeenByUser={};
-  Object.entries(next).forEach(([key,value])=>{
-    const stable=stableIdentityKey(key);
-    if(stable&&value&&typeof value==="object")globalSeenByUser[stable]=value;
-  });
-  try{localStorage.setItem("watchlist-global-seen",JSON.stringify(globalSeenByUser))}catch(error){}
-  movies.forEach(movie=>{
-    movie.seen=Object.keys(globalSeenByUser).filter(key=>globalSeenByUser[key]?.[movie.id]).map(key=>identityDisplayName(key,userProfiles,votesByUser));
-  });
-  savedSeenStatus[id]=[...m.seen];
+  await loadGlobalSeen();
+  savedSeenStatus[id]=[...(m.seen||[])];
   render();
 };
 window.markWatchedTogether=(id,undo)=>{if(undo)return;openAttendance(id)};
