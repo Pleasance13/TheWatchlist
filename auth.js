@@ -41,8 +41,11 @@
   
   function paint(user){
     const meta=user?.user_metadata||{};
-    const discordHandle=String(meta.user_name||meta.preferred_username||meta.username||"").toLowerCase();
-    const profile=user?{name:meta.global_name||meta.full_name||meta.name||meta.user_name||meta.preferred_username||"Discord user",avatar:meta.avatar_url||meta.picture||"",canEditArtwork:discordHandle===".pleasance"||discordHandle.endsWith("#.pleasance")}:null;
+    const identityValues=[meta.user_name,meta.preferred_username,meta.username,meta.global_name,meta.full_name,meta.name,user?.email].filter(value=>typeof value==="string").map(value=>value.trim().toLowerCase());
+    // Discord/Supabase may expose the account handle under different metadata keys.
+    // Accept the exact handle (or Discord's legacy discriminator form), not a substring.
+    const canEditArtwork=identityValues.some(value=>value===".pleasance"||value==="@.pleasance"||value.endsWith("#.pleasance"));
+    const profile=user?{name:meta.global_name||meta.full_name||meta.name||meta.user_name||meta.preferred_username||"Discord user",avatar:meta.avatar_url||meta.picture||"",canEditArtwork}:null;
     window.WATCHLIST_AUTH_PROFILE=profile;
     window.WATCHLIST_AUTHENTICATED=!!user;
     if(typeof window.watchlistAuthIdentityChanged==="function")window.watchlistAuthIdentityChanged(profile);
