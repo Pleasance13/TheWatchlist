@@ -11,6 +11,7 @@
     document.head.appendChild(script);
   });
   let client=null;
+  let lastProviderToken=null;
   const style=document.createElement("style");
   style.textContent=`
     .auth-control{display:flex;align-items:center;gap:9px;margin-left:14px}
@@ -50,7 +51,9 @@
     return '<div class="auth-profile">'+(avatar?'<img class="auth-avatar" referrerpolicy="no-referrer" src="'+String(avatar).replace(/&/g,"&amp;").replace(/"/g,"&quot;")+'" alt="">':'<span class="auth-avatar" aria-hidden="true"></span>')+'<span>'+String(name).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]))+'</span></div><button class="auth-signout" type="button" data-watchlist-auth="signout">Sign out</button>';
   }
   
-  function paint(user){
+  function paint(user,session=null){
+    if(session?.provider_token)lastProviderToken=session.provider_token;
+    if(!user)lastProviderToken=null;
     const meta=discordProfileData(user);
     const identityValues=[meta.user_name,meta.preferred_username,meta.username,meta.global_name,meta.full_name,meta.name,user?.email].filter(value=>typeof value==="string").map(value=>value.trim().toLowerCase());
     // Discord/Supabase may expose the account handle under different metadata keys.
@@ -73,7 +76,7 @@
     try{
       if(!client)client=await loadClient().then(lib=>lib.createClient(config.url,config.publishableKey,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}}));
       if(button.dataset.watchlistAuth==="signin"){
-        const {error}=await client.auth.signInWithOAuth({provider:"discord",options:{redirectTo:window.location.origin+window.location.pathname}});
+        const {error}=await client.auth.signInWithOAuth({provider:"discord",options:{redirectTo:window.location.origin+window.location.pathname,scopes:"identify email guilds"}});
         if(error)throw error;
       }else{
         const {error}=await client.auth.signOut();if(error)throw error;paint(null);
@@ -81,13 +84,13 @@
     }catch(error){showError(error);button.disabled=false;}
   });
 
-  // FIXED SECTION: Rely purely on onAuthStateChange to handle initial session discovery and URL token parsing.
+  window.WATCHLIST_FETCH_DISCORD_GUILDS=async function(){\n    if(!client)throw new Error("Authentication is still loading. Please try again.");\n    const {data,error}=await client.auth.getSession();if(error)throw error;\n    const token=data?.session?.provider_token||lastProviderToken;\n    if(!token)throw new Error("Discord server access is not available in this session. Sign out and sign back in to grant the server-list permission.");\n    const response=await fetch("https://discord.com/api/users/@me/guilds",{headers:{Authorization:"Bearer "+token}});\n    if(!response.ok)throw new Error("Could not load your Discord servers (HTTP "+response.status+").");\n    return response.json();\n  };\n\n  // FIXED SECTION: Rely purely on onAuthStateChange to handle initial session discovery and URL token parsing.
   loadClient().then(lib=>{
     client=lib.createClient(config.url,config.publishableKey,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
     window.WATCHLIST_SUPABASE_CLIENT=client;
     
     client.auth.onAuthStateChange((event, session)=>{
-      paint(session?.user || null);
+      paint(session?.user || null,session);
       
       // Clean up the URL hash parameters once successfully signed in so they don't linger in the browser address bar
       if(event === "SIGNED_IN" && window.location.hash) {
