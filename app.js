@@ -202,15 +202,21 @@ function sharedApply(data){
   removedMovieIds=Array.isArray(data.removedMovieIds)?[...data.removedMovieIds]:[];
   savedCaseAssets=data.caseAssets&&typeof data.caseAssets==="object"?data.caseAssets:{};
   userProfiles={...userProfiles,...(data.userProfiles&&typeof data.userProfiles==="object"?data.userProfiles:{})};
+  // Resolve every stored response to one canonical account name before rendering.
+  const canonicalByKey={};const canonicalById={};
+  Object.entries(userProfiles).forEach(([key,profile])=>{if(profile?.id){canonicalByKey[key]=profile.name||key;canonicalById[profile.id]=profile.name||key}});
+  Object.entries(votesByUser).forEach(([key,entry])=>{if(entry?.id){canonicalByKey[key]=canonicalById[entry.id]||entry.name||key;canonicalById[entry.id]=canonicalByKey[key]}});
   movies.forEach(m=>{
-    const responses=(m.voterResponses&&typeof m.voterResponses==="object")?m.voterResponses:{};
-    const normalizedResponses={};Object.entries(votesByUser).forEach(([key,entry])=>{const answer=entry?.votes?.[m.id];if(answer)normalizedResponses[entry.name||userProfiles[key]?.name||key]=answer});
-    m.voterResponses={...responses,...normalizedResponses};m.voters=Object.entries(m.voterResponses).map(([name,answer])=>[name,({must:"must",interested:"green",watch:"yellow",no:"red"})[answer]||answer]).filter(([name])=>name);m.score=(Number(baseScores[m.id])||0)+Object.values(m.voterResponses).reduce((sum,answer)=>sum+({must:5,interested:3,watch:1,no:0,green:3,yellow:1,red:0}[answer]||0),0);
+    const source=(m.voterResponses&&typeof m.voterResponses==="object")?m.voterResponses:{}, combined={};
+    Object.entries(source).forEach(([name,answer])=>{const key=userKey(name),profile=userProfiles[key],id=profile?.id||votesByUser[key]?.id;const canonical=id?(canonicalById[id]||profile?.name||votesByUser[key]?.name||name):(canonicalByKey[key]||name);if(answer&&(!combined[canonical]||canonical===currentUser))combined[canonical]=answer});
+    Object.entries(votesByUser).forEach(([key,entry])=>{const answer=entry?.votes?.[m.id];if(!answer)return;const id=entry?.id||userProfiles[key]?.id;const canonical=id?(canonicalById[id]||entry.name||userProfiles[key]?.name||key):(entry.name||userProfiles[key]?.name||key);combined[canonical]=answer});
+    m.voterResponses=combined;m.voters=Object.entries(combined).map(([name,answer])=>[name,({must:"must",interested:"green",watch:"yellow",no:"red"})[answer]||answer]);
+    m.score=(Number(baseScores[m.id])||0)+Object.values(combined).reduce((sum,answer)=>sum+({must:5,interested:3,watch:1,no:0,green:3,yellow:1,red:0}[answer]||0),0);
   });
   savedSeenStatus=Object.fromEntries(movies.map(m=>[m.id,Object.keys(globalSeenByUser).filter(name=>globalSeenByUser[name]?.[m.id])]));
   watchedMovies.forEach(id=>{const m=movies.find(x=>x.id===id);if(m){m.watched=true;m.watchedBy=watchedAttendance[id]||m.watchedBy||[]}});
   state.votes=currentUser==="Guest"?{}:(votesByUser[userKey(currentUser)]?.votes||{});
-  movies.forEach(m=>{m.score=(Number(baseScores[m.id])||0)+(voteWeights[state.votes[m.id]]||0)});
+  // Keep the group score derived from all canonical responses, not the active user's local vote.
   sharedSyncApplying=false;
   sharedSyncLoaded=true;
   try{
