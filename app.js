@@ -96,7 +96,7 @@ async function loadServerMembers(){
   if(error){console.warn("Could not load server members:",error.message||error);return}
   serverUsers=[...new Set((data||[]).map(row=>row.display_name).filter(Boolean))];
   if(currentUser!=="Guest"&&!serverUsers.includes(currentUser))serverUsers.unshift(currentUser);
-  (data||[]).forEach(row=>{userProfiles[userKey(row.display_name)]={name:row.display_name,avatar:row.avatar_url||""}});
+  (data||[]).forEach(row=>{userProfiles[userKey(row.display_name)]={id:row.user_id,name:row.display_name,avatar:row.avatar_url||""}});
 }
 
 async function loadGlobalSeen(){
@@ -118,6 +118,47 @@ async function persistGlobalSeen(){
   try{localStorage.setItem("watchlist-global-seen",JSON.stringify(globalSeenByUser))}catch(error){}
 }
 
+function migrateCurrentUserIdentity(){
+  if(currentUser==="Guest"||!currentProfile?.id)return false;
+  const newKey=userKey(currentUser);
+  const oldKeys=Object.keys(userProfiles).filter(key=>key!==newKey&&userProfiles[key]?.id===currentProfile.id);
+  if(!oldKeys.length){
+    userProfiles[newKey]={...(userProfiles[newKey]||{}),id:currentProfile.id,name:currentUser,avatar:currentProfile.avatar||userProfiles[newKey]?.avatar||""};
+    return false;
+  }
+  const mergeVotes={...(votesByUser[newKey]?.votes||{})};
+  oldKeys.forEach(key=>Object.assign(mergeVotes,votesByUser[key]?.votes||{}));
+  votesByUser[newKey]={...(votesByUser[newKey]||{}),id:currentProfile.id,name:currentUser,avatar:currentProfile.avatar||"",votes:mergeVotes};
+  oldKeys.forEach(key=>delete votesByUser[key]);
+  const mergedSeen={...(globalSeenByUser[newKey]||{})};
+  oldKeys.forEach(key=>Object.assign(mergedSeen,globalSeenByUser[key]||{}));
+  globalSeenByUser[newKey]=mergedSeen;oldKeys.forEach(key=>delete globalSeenByUser[key]);
+  movies.forEach(m=>{
+    if(m.suggestedBy&&oldKeys.includes(userKey(m.suggestedBy)))m.suggestedBy=currentUser;
+    if(m.addedBy&&oldKeys.includes(userKey(m.addedBy)))m.addedBy=currentUser;
+    if(m.voterResponses){
+      const merged=m.voterResponses[newKey];
+      oldKeys.forEach(key=>{if(m.voterResponses[key]&&!merged)m.voterResponses[newKey]=m.voterResponses[key];delete m.voterResponses[key]});
+    }
+    if(Array.isArray(m.voters))m.voters=m.voters.map(v=>Array.isArray(v)?[oldKeys.includes(userKey(v[0]))?currentUser:v[0],v[1]]:v);
+    if(Array.isArray(m.watchedBy))m.watchedBy=[...new Set(m.watchedBy.map(name=>oldKeys.includes(userKey(name))?currentUser:name))];
+  });
+  Object.keys(movieReviews).forEach(id=>{
+    const reviews=movieReviews[id];if(!reviews||typeof reviews!=="object")return;
+    const merged=reviews[newKey];
+    oldKeys.forEach(key=>{if(reviews[key]&&!merged)reviews[newKey]=reviews[key];delete reviews[key]});
+  });
+  Object.keys(watchedAttendance).forEach(id=>{
+    if(Array.isArray(watchedAttendance[id]))watchedAttendance[id]=[...new Set(watchedAttendance[id].map(name=>oldKeys.includes(userKey(name))?currentUser:name))];
+  });
+  serverUsers=[...new Set(serverUsers.map(name=>oldKeys.includes(userKey(name))?currentUser:name))];
+  oldKeys.forEach(key=>delete userProfiles[key]);
+  userProfiles[newKey]={...(userProfiles[newKey]||{}),id:currentProfile.id,name:currentUser,avatar:currentProfile.avatar||""};
+  state.votes=mergeVotes;
+  try{localStorage.setItem("watchlist-user-profiles",JSON.stringify(userProfiles));localStorage.setItem("watchlist-votes-by-user",JSON.stringify(votesByUser));}catch(error){}
+  return true;
+}
+
 async function loadServerContext(){
   if(currentUser==="Guest")return;
   const client=window.WATCHLIST_SUPABASE_CLIENT;
@@ -130,7 +171,7 @@ async function loadServerContext(){
         try{localStorage.setItem("watchlist-active-server",JSON.stringify(activeServer))}catch(error){}
       }
     }
-    if(activeServer){await loadServerMembers();await loadSharedWatchlist();await loadGlobalSeen();}
+    if(activeServer){await loadServerMembers();await loadSharedWatchlist();await loadGlobalSeen();if(migrateCurrentUserIdentity()){await persistSharedWatchlist();await persistGlobalSeen();}}
     render();
   }catch(error){console.warn("Could not load server context:",error.message||error);render()}
 }
