@@ -222,6 +222,20 @@ async function loadGlobalSeen(){
     m.seen=Object.keys(globalSeenByUser).filter(user=>globalSeenByUser[user]?.[m.id]).map(user=>identityDisplayName(user,userProfiles,votesByUser));
   });
 }
+async function persistGlobalSeen(){
+  // The row is shared by all users; never overwrite it with a stale client-side snapshot.
+  // Individual writes go through the row-locking RPC and are merged server-side.
+  await loadGlobalSeen();
+}
+async function setSeenForAccount(userId,movieId,seen){
+  const client=window.WATCHLIST_SUPABASE_CLIENT;
+  if(!client||!userId||!movieId)throw new Error("Missing authenticated client, user, or movie.");
+  const {data,error}=await client.rpc("watchlist_set_global_seen",{
+    p_movie_id:String(movieId),p_seen:Boolean(seen)
+  });
+  if(error)throw error;
+  return data;
+}
 async function migrateCurrentUserIdentity(){
   if(currentUser==="Guest"||!currentProfile?.id)return false;
   const newKey=userKey(currentUser), accountId=currentProfile.id, avatar=currentProfile.avatar||"";
@@ -911,23 +925,49 @@ window.toggleSeen=async id=>{
   if(currentUser==="Guest"||!currentProfile?.id)return;
   const m=movies.find(x=>x.id===id);
   if(!m)return;
-  const client=window.WATCHLIST_SUPABASE_CLIENT;
-  if(!client)return;
   const userId=currentProfile.id;
-  const {data:row,error:readError}=await client.from("watchlist_global_seen").select("data").eq("id","seen").maybeSingle();
-  if(readError){console.warn("Could not read seen state:",readError.message||readError);return}
-  const next={...(row?.data&&typeof row.data==="object"?row.data:{})};
-  const mine={...(next[userId]&&typeof next[userId]==="object"?next[userId]:{})};
-  const nextSeen=!Boolean(mine[id]);
-  if(nextSeen)mine[id]=true;else delete mine[id];
-  if(Object.keys(mine).length)next[userId]=mine;else delete next[userId];
-  const {error}=await client.from("watchlist_global_seen").upsert({
-    id:"seen",data:next,updated_at:new Date().toISOString(),updated_by:userId
-  });
-  if(error){console.warn("Could not save seen state:",error.message||error);return}
-  await loadGlobalSeen();
-  savedSeenStatus[id]=[...(m.seen||[])];
+  const wasSeen=Boolean(globalSeenByUser[userId]?.[id]);
+  try{
+    await setSeenForAccount(userId,id,!wasSeen);
+    await loadGlobalSeen();
+    savedSeenStatus[id]=Object.keys(globalSeenByUser).filter(uid=>globalSeenByUser[uid]?.[id]).map(uid=>identityDisplayName(uid,userProfiles,votesByUser));
+    render();
+  }catch(error){console.warn("Could not save seen state:",error.message||error);alert("Could not save Seen status. Please try again.")}
+};
+window.openAttendance=id=>{
+  const m=movies.find(x=>x.id===id);if(!m)return;
+  state.attendanceMovieId=id;
+  state.attendanceSelected=[...(watchedAttendance[id]||m.watchedBy||[])];
+  state.attendanceOpen=true;render();
+};
+window.closeAttendance=()=>{state.attendanceOpen=false;state.attendanceMovieId=null;state.attendanceSelected=[];render()};
+window.toggleAttendanceUser=(event,name)=>{
+  event?.preventDefault?.();
+  const selected=state.attendanceSelected;
+  const idx=selected.findIndex(value=>userKey(value)===userKey(name));
+  if(idx>=0)selected.splice(idx,1);else selected.push(name);
   render();
+};
+window.confirmAttendance=async()=>{
+  const id=state.attendanceMovieId,m=movies.find(x=>x.id===id);
+  if(!m||!currentProfile?.id)return;
+  const attendees=[...state.attendanceSelected];
+  const ids=[...new Set(attendees.map(name=>identityIdForName(name)).filter(Boolean))];
+  if(!ids.length){alert("Select at least one group member.");return}
+  try{
+    for(const userId of ids)await setSeenForAccount(userId,id,true);
+    watchedAttendance[id]=attendees;
+    if(!watchedMovies.includes(id))watchedMovies.push(id);
+    m.watched=true;m.watchedBy=attendees;m.setToRewatch=false;
+    state.attendanceOpen=false;state.attendanceMovieId=null;state.attendanceSelected=[];
+    await loadGlobalSeen();
+    await persistSharedWatchlist();
+    try{
+      localStorage.setItem("watchlist-watched-movies",JSON.stringify(watchedMovies));
+      localStorage.setItem("watchlist-watched-attendance",JSON.stringify(watchedAttendance));
+    }catch(error){}
+    render();
+  }catch(error){console.warn("Could not save group watch:",error.message||error);alert("Could not save the group watch. Please try again.")}
 };
 window.markWatchedTogether=(id,undo)=>{if(undo)return;openAttendance(id)};
 window.watchAgain=id=>{const m=movies.find(x=>x.id===id);if(!m)return;m.setToRewatch=true;m.watched=false;m.watchedBy=[];watchedMovies=watchedMovies.filter(x=>x!==id);try{localStorage.setItem("watchlist-watched-movies",JSON.stringify(watchedMovies));localStorage.setItem("watchlist-watched-attendance",JSON.stringify(Object.fromEntries(movies.filter(x=>x.watched).map(x=>[x.id,x.watchedBy||[]]))));}catch(error){}persistSharedWatchlist();state.nav="watchlist";state.detail=null;render()};
