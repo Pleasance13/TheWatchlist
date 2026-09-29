@@ -28,6 +28,113 @@ let userProfiles={};
 try{localStorage.removeItem("watchlist-added-movies");localStorage.removeItem("watchlist-removed-movies");localStorage.removeItem("watchlist-seen-status");localStorage.removeItem("watchlist-votes");localStorage.removeItem("watchlist-votes-by-user");localStorage.removeItem("watchlist-reviews");localStorage.removeItem("watchlist-watched-movies");localStorage.removeItem("watchlist-watched-attendance");localStorage.removeItem("watchlist-suggestion-notes")}catch(error){}
 
 function userKey(name){return String(name||"Guest").trim().toLowerCase()}
+function identityIdForName(name){
+  const target=String(name||"").trim();
+  if(!target)return null;
+  if(currentProfile?.id&&target.toLowerCase()===String(currentUser||"").trim().toLowerCase())return currentProfile.id;
+  for(const profile of Object.values(userProfiles||{})){
+    if(profile?.id&&String(profile.name||"").trim().toLowerCase()===target.toLowerCase())return profile.id;
+  }
+  for(const entry of Object.values(votesByUser||{})){
+    if(entry?.id&&String(entry.name||"").trim().toLowerCase()===target.toLowerCase())return entry.id;
+  }
+  return null;
+}
+function stableIdentityKey(name){return identityIdForName(name)||userKey(name)}
+function identityDisplayName(key,profiles={},votes={}){
+  const k=String(key||"");
+  const direct=profiles[k]||votes[k];
+  if(direct?.name)return direct.name;
+  for(const profile of Object.values(profiles||{})){if(profile?.id===k)return profile.name||k}
+  for(const entry of Object.values(votes||{})){if(entry?.id===k)return entry.name||k}
+  if(currentProfile?.id===k)return currentUser;
+  return k;
+}
+function decodeIdentityMap(map={}){
+  const out={};
+  Object.entries(map||{}).forEach(([key,value])=>{
+    const name=value?.name||identityDisplayName(key,map,{});
+    const stable=value?.id||key;
+    out[userKey(name)]={...value,id:value?.id||stable,name};
+  });
+  return out;
+}
+function serializeIdentityMap(map={}){
+  const out={};
+  Object.entries(map||{}).forEach(([key,value])=>{
+    const name=value?.name||key;
+    const stable=value?.id||stableIdentityKey(name);
+    if(!stable)return;
+    out[stable]={...value,id:value?.id||stable,name:value?.name||name};
+  });
+  return out;
+}
+function serializeMovieIdentities(movie){
+  const copy={...movie};
+  ["suggestedBy","addedBy"].forEach(field=>{
+    if(copy[field])copy[field]=stableIdentityKey(copy[field]);
+  });
+  if(copy.voterResponses&&typeof copy.voterResponses==="object"){
+    const responses={};
+    Object.entries(copy.voterResponses).forEach(([name,answer])=>{
+      const key=stableIdentityKey(name);
+      if(key)responses[key]=answer;
+    });
+    copy.voterResponses=responses;
+  }
+  if(Array.isArray(copy.voters))copy.voters=copy.voters.map(v=>Array.isArray(v)?[stableIdentityKey(v[0]),v[1]]:v);
+  if(Array.isArray(copy.watchedBy))copy.watchedBy=copy.watchedBy.map(name=>stableIdentityKey(name));
+  delete copy.seen;
+  return copy;
+}
+function deserializeMovieIdentities(movie,profiles={},votes={}){
+  const copy={...movie};
+  ["suggestedBy","addedBy"].forEach(field=>{
+    if(copy[field])copy[field]=identityDisplayName(copy[field],profiles,votes);
+  });
+  if(copy.voterResponses&&typeof copy.voterResponses==="object"){
+    const responses={};
+    Object.entries(copy.voterResponses).forEach(([key,answer])=>{
+      responses[identityDisplayName(key,profiles,votes)]=answer;
+    });
+    copy.voterResponses=responses;
+  }
+  if(Array.isArray(copy.voters))copy.voters=copy.voters.map(v=>Array.isArray(v)?[identityDisplayName(v[0],profiles,votes),v[1]]:v);
+  if(Array.isArray(copy.watchedBy))copy.watchedBy=copy.watchedBy.map(key=>identityDisplayName(key,profiles,votes));
+  return copy;
+}
+function serializeReviews(reviews={}){
+  const out={};
+  Object.entries(reviews||{}).forEach(([movieId,reviewers])=>{
+    if(!reviewers||typeof reviewers!=="object"){out[movieId]=reviewers;return}
+    out[movieId]={};
+    Object.entries(reviewers).forEach(([name,review])=>{out[movieId][stableIdentityKey(name)]=review});
+  });
+  return out;
+}
+function deserializeReviews(reviews={},profiles={},votes={}){
+  const out={};
+  Object.entries(reviews||{}).forEach(([movieId,reviewers])=>{
+    if(!reviewers||typeof reviewers!=="object"){out[movieId]=reviewers;return}
+    out[movieId]={};
+    Object.entries(reviewers).forEach(([key,review])=>{out[movieId][identityDisplayName(key,profiles,votes)]=review});
+  });
+  return out;
+}
+function serializeAttendance(attendance={}){
+  const out={};
+  Object.entries(attendance||{}).forEach(([movieId,names])=>{
+    out[movieId]=Array.isArray(names)?names.map(stableIdentityKey):names;
+  });
+  return out;
+}
+function deserializeAttendance(attendance={},profiles={},votes={}){
+  const out={};
+  Object.entries(attendance||{}).forEach(([movieId,names])=>{
+    out[movieId]=Array.isArray(names)?names.map(key=>identityDisplayName(key,profiles,votes)):names;
+  });
+  return out;
+}
 function currentAvatar(){return currentProfile?.avatar||""}
 function avatarFor(name){return userProfiles[userKey(name)]?.avatar||((name===currentUser)?currentAvatar():"")}
 function avatarMarkup(name,extra=""){const url=avatarFor(name);return url?'<img class="avatar '+extra+'" src="'+escapeHtml(url)+'" alt="" referrerpolicy="no-referrer">':'<span class="avatar '+extra+'" aria-hidden="true">'+escapeHtml(String(name||"?").slice(0,2).toUpperCase())+'</span>'}
@@ -39,7 +146,7 @@ window.watchlistAuthIdentityChanged=function(profile){
   if(!serverUsers.includes(currentUser)&&currentUser!=="Guest")serverUsers.push(currentUser);
   if(currentUser!=="Guest"){userProfiles[userKey(currentUser)]={name:currentUser,avatar:currentProfile?.avatar||""};try{localStorage.setItem("watchlist-user-profiles",JSON.stringify(userProfiles))}catch(error){}}
   if(currentUser!=="Guest"){activeServer=null;loadUserSettings().then(()=>loadServerContext()).catch(error=>console.warn("Could not load user settings:",error.message||error));}
-  state.votes=currentUser==="Guest"?{}:(votesByUser[userKey(currentUser)]?.votes||{});
+  state.votes=currentUser==="Guest"?{}:(votesByUser[stableIdentityKey(currentUser)]?.votes||votesByUser[userKey(currentUser)]?.votes||{});
   if(typeof render==="function")render();
 };
 let removedMovieIds=[];try{removedMovieIds=JSON.parse(localStorage.getItem("watchlist-removed-movies")||"[]")}catch(error){removedMovieIds=[]}for(let i=movies.length-1;i>=0;i--){if(removedMovieIds.includes(movies[i].id))movies.splice(i,1)}
@@ -102,7 +209,12 @@ async function loadGlobalSeen(){
   if(!client||currentUser==="Guest")return;
   const {data,error}=await client.from("watchlist_global_seen").select("data").eq("id","seen").maybeSingle();
   if(error){console.warn("Could not load global seen state:",error.message||error);return}
-  globalSeenByUser=data?.data&&typeof data.data==="object"?data.data:{};
+  const rawSeen=data?.data&&typeof data.data==="object"?data.data:{};
+  globalSeenByUser={};
+  Object.entries(rawSeen).forEach(([key,value])=>{
+    const display=identityDisplayName(key,userProfiles,votesByUser);
+    globalSeenByUser[userKey(display)]=value;
+  });
   try{localStorage.setItem("watchlist-global-seen",JSON.stringify(globalSeenByUser))}catch(error){}
   movies.forEach(m=>{m.seen=[];Object.keys(globalSeenByUser).forEach(user=>{if(globalSeenByUser[user]?.[m.id])m.seen.push(user)})});
 }
@@ -111,7 +223,9 @@ async function persistGlobalSeen(){
   if(currentUser==="Guest")return;
   const client=window.WATCHLIST_SUPABASE_CLIENT;
   if(!client)return;
-  const {error}=await client.from("watchlist_global_seen").upsert({id:"seen",data:globalSeenByUser,updated_at:new Date().toISOString(),updated_by:currentProfile?.id||null});
+  const stableSeen={};
+  Object.entries(globalSeenByUser||{}).forEach(([name,value])=>{stableSeen[stableIdentityKey(name)]=value});
+  const {error}=await client.from("watchlist_global_seen").upsert({id:"seen",data:stableSeen,updated_at:new Date().toISOString(),updated_by:currentProfile?.id||null});
   if(error)console.warn("Could not save global seen state:",error.message||error);
   try{localStorage.setItem("watchlist-global-seen",JSON.stringify(globalSeenByUser))}catch(error){}
 }
@@ -179,29 +293,36 @@ let sharedSyncTimer=null;
 
 function sharedSnapshot(){
   return {
-    serverId:activeServer?.guild_id||null,serverName:activeServer?.guild_name||"",movies: movies.map(m=>{const copy={...m};delete copy.seen;return copy;}),
-    votesByUser: {...votesByUser},
-    movieReviews: {...movieReviews},
+    serverId:activeServer?.guild_id||null,
+    serverName:activeServer?.guild_name||"",
+    movies: movies.map(serializeMovieIdentities),
+    votesByUser: serializeIdentityMap(votesByUser),
+    movieReviews: serializeReviews(movieReviews),
     watchedMovies: [...watchedMovies],
-    watchedAttendance: {...watchedAttendance},
+    watchedAttendance: serializeAttendance(watchedAttendance),
     removedMovieIds: [...removedMovieIds],
     caseAssets: {...savedCaseAssets},
-    userProfiles: {...userProfiles}
+    userProfiles: serializeIdentityMap(userProfiles)
   };
 }
 function sharedApply(data){
   if(!data||typeof data!=="object")return;
   sharedSyncApplying=true;
+  const incomingProfiles=data.userProfiles&&typeof data.userProfiles==="object"?data.userProfiles:{};
+  const incomingVotes=data.votesByUser&&typeof data.votesByUser==="object"?data.votesByUser:{};
+  userProfiles=decodeIdentityMap(incomingProfiles);
+  votesByUser=decodeIdentityMap(incomingVotes);
   if(Array.isArray(data.movies)){
-    movies.splice(0,movies.length,...data.movies.map(m=>({...m,seen:Object.keys(globalSeenByUser).filter(name=>globalSeenByUser[name]?.[m.id]),voters:Array.isArray(m.voters)?m.voters.map(v=>Array.isArray(v)?[...v]:v):[]})));
+    movies.splice(0,movies.length,...data.movies.map(m=>{
+      const decoded=deserializeMovieIdentities(m,incomingProfiles,incomingVotes);
+      return {...decoded,seen:Object.keys(globalSeenByUser).filter(name=>globalSeenByUser[name]?.[decoded.id]),voters:Array.isArray(decoded.voters)?decoded.voters.map(v=>Array.isArray(v)?[...v]:v):[]};
+    }));
   }
-  votesByUser=data.votesByUser&&typeof data.votesByUser==="object"?data.votesByUser:{};
-  movieReviews=data.movieReviews&&typeof data.movieReviews==="object"?data.movieReviews:{};
+  movieReviews=deserializeReviews(data.movieReviews&&typeof data.movieReviews==="object"?data.movieReviews:{},incomingProfiles,incomingVotes);
   watchedMovies=Array.isArray(data.watchedMovies)?[...data.watchedMovies]:[];
-  watchedAttendance=data.watchedAttendance&&typeof data.watchedAttendance==="object"?data.watchedAttendance:{};
+  watchedAttendance=deserializeAttendance(data.watchedAttendance&&typeof data.watchedAttendance==="object"?data.watchedAttendance:{},incomingProfiles,incomingVotes);
   removedMovieIds=Array.isArray(data.removedMovieIds)?[...data.removedMovieIds]:[];
   savedCaseAssets=data.caseAssets&&typeof data.caseAssets==="object"?data.caseAssets:{};
-  userProfiles={...userProfiles,...(data.userProfiles&&typeof data.userProfiles==="object"?data.userProfiles:{})};
   // Resolve every stored response to one canonical account name before rendering.
   const canonicalByKey={};const canonicalById={};
   Object.entries(userProfiles).forEach(([key,profile])=>{if(profile?.id){canonicalByKey[key]=profile.name||key;canonicalById[profile.id]=profile.name||key}});
@@ -417,7 +538,7 @@ function personVote(m,p){
   // Resolve each person's exact response first; legacy color-only voter entries
   // are normalized below so every person uses the same interest/seen rules.
   const local=p===currentUser?currentVote(m.id):null;
-  const recorded=(m.voterResponses||m.responses||{})[p]||(votesByUser[userKey(p)]?.votes?.[m.id])||null;
+  const recorded=(m.voterResponses||m.responses||{})[p]||(votesByUser[stableIdentityKey(p)]?.votes?.[m.id]||votesByUser[userKey(p)]?.votes?.[m.id])||null;
   const legacy=(m.voters||[]).find(([name])=>name===p)?.[1]||null;
   const raw=local||recorded||legacy;
   if(!raw)return null;
@@ -793,8 +914,8 @@ window.clearOneFilter=key=>{if(key==="yearFrom"||key==="yearTo"){state.yearFrom=
 window.closeFilterDropdowns=()=>document.querySelectorAll(".filter-dropdown[open]").forEach(el=>el.open=false);if(!window.__filterOutsideBound){document.addEventListener("click",e=>{if(!e.target.closest(".filter-dropdown"))window.closeFilterDropdowns()});window.__filterOutsideBound=true;}
 window.clearAllFilters=()=>{state.genreFilters=[];state.yearFrom="";state.yearTo="";state.interestUsers=[];state.interestLevel="";state.seenMode="seen";state.seenUsers=[];state.rewatchStatus="";state.suggestedBy="";state.filter="all";state.search="";render()};
 window.resetAdvancedFilters=window.clearAllFilters;
-window.vote=(id,k)=>{if(currentUser==="Guest")return;const old=state.votes[id];if(old===k)return;const before=new Map([...document.querySelectorAll("[data-movie-id]")].map(el=>[el.dataset.movieId,el.getBoundingClientRect()]));const weights={must:5,interested:3,watch:1,no:0};const m=movies.find(x=>x.id===id);if(!m)return;state.votes[id]=k;m.voterResponses={...(m.voterResponses||{}),[currentUser]:k};votesByUser[userKey(currentUser)]={name:currentUser,avatar:currentAvatar(),votes:{...state.votes}};m.score=(Number(baseScores[id])||0)+Object.values(m.voterResponses).reduce((sum,answer)=>sum+({must:5,interested:3,watch:1,no:0,green:3,yellow:1,red:0}[answer]||0),0);try{localStorage.setItem("watchlist-votes-by-user",JSON.stringify(votesByUser));localStorage.setItem("watchlist-votes",JSON.stringify(state.votes));localStorage.setItem("watchlist-added-movies",JSON.stringify(movies.filter(x=>x.id.startsWith("tmdb-")).map(x=>({...x,score:0}))))}catch(error){}persistSharedWatchlist();render();requestAnimationFrame(()=>{document.querySelectorAll("[data-movie-id]").forEach(el=>{const first=before.get(el.dataset.movieId);if(!first)return;const last=el.getBoundingClientRect();const dx=first.left-last.left,dy=first.top-last.top;if(Math.abs(dx)+Math.abs(dy)>1){el.animate([{transform:`translate(${dx}px,${dy}px)`},{transform:"translate(0,0)"}],{duration:420,easing:"cubic-bezier(.2,.75,.2,1)"})}})})};
-window.toggleSeen=id=>{if(currentUser==="Guest")return;const m=movies.find(x=>x.id===id);if(!m)return;const mine=globalSeenByUser[currentUser]||{};if(mine[id])delete mine[id];else mine[id]=true;globalSeenByUser[currentUser]=mine;m.seen=Object.keys(globalSeenByUser).filter(name=>globalSeenByUser[name]?.[id]);savedSeenStatus[id]=[...m.seen];persistGlobalSeen();render()};
+window.vote=(id,k)=>{if(currentUser==="Guest")return;const old=state.votes[id];if(old===k)return;const before=new Map([...document.querySelectorAll("[data-movie-id]")].map(el=>[el.dataset.movieId,el.getBoundingClientRect()]));const weights={must:5,interested:3,watch:1,no:0};const m=movies.find(x=>x.id===id);if(!m)return;state.votes[id]=k;m.voterResponses={...(m.voterResponses||{}),[currentUser]:k};votesByUser[userKey(currentUser)]={id:currentProfile?.id||identityIdForName(currentUser)||null,name:currentUser,avatar:currentAvatar(),votes:{...state.votes}};m.score=(Number(baseScores[id])||0)+Object.values(m.voterResponses).reduce((sum,answer)=>sum+({must:5,interested:3,watch:1,no:0,green:3,yellow:1,red:0}[answer]||0),0);try{localStorage.setItem("watchlist-votes-by-user",JSON.stringify(votesByUser));localStorage.setItem("watchlist-votes",JSON.stringify(state.votes));localStorage.setItem("watchlist-added-movies",JSON.stringify(movies.filter(x=>x.id.startsWith("tmdb-")).map(x=>({...x,score:0}))))}catch(error){}persistSharedWatchlist();render();requestAnimationFrame(()=>{document.querySelectorAll("[data-movie-id]").forEach(el=>{const first=before.get(el.dataset.movieId);if(!first)return;const last=el.getBoundingClientRect();const dx=first.left-last.left,dy=first.top-last.top;if(Math.abs(dx)+Math.abs(dy)>1){el.animate([{transform:`translate(${dx}px,${dy}px)`},{transform:"translate(0,0)"}],{duration:420,easing:"cubic-bezier(.2,.75,.2,1)"})}})})};
+window.toggleSeen=id=>{if(currentUser==="Guest")return;const m=movies.find(x=>x.id===id);if(!m)return;const mine=globalSeenByUser[userKey(currentUser)]||globalSeenByUser[currentUser]||{};if(mine[id])delete mine[id];else mine[id]=true;globalSeenByUser[userKey(currentUser)]=mine;m.seen=Object.keys(globalSeenByUser).filter(key=>globalSeenByUser[key]?.[id]).map(key=>identityDisplayName(key,userProfiles,votesByUser));savedSeenStatus[id]=[...m.seen];persistGlobalSeen();render()};
 function attendanceDefaults(m){const selected=new Set();(m.voters||[]).forEach(([name,color])=>{if(color==="green"||color==="yellow")selected.add(name)});const mine=currentVote(m.id);if(mine&&mine!=="no")selected.add(currentUser);return serverUsers.filter(name=>selected.has(name))}
 window.openAttendance=id=>{const m=movies.find(x=>x.id===id);if(!m)return;state.attendanceMovieId=id;state.attendanceSelected=(m.watchedBy&&m.watchedBy.length)?[...m.watchedBy]:attendanceDefaults(m);state.attendanceOpen=true;render()};
 window.closeAttendance=()=>{state.attendanceOpen=false;state.attendanceMovieId=null;state.attendanceSelected=[];render()};
