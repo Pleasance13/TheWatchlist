@@ -156,7 +156,7 @@ function sharedApply(data){
   removedMovieIds=Array.isArray(data.removedMovieIds)?[...data.removedMovieIds]:[];
   savedCaseAssets=data.caseAssets&&typeof data.caseAssets==="object"?data.caseAssets:{};
   userProfiles=data.userProfiles&&typeof data.userProfiles==="object"?data.userProfiles:{};
-  savedSeenStatus=Object.fromEntries(movies.map(m=>[m.id,Array.isArray(m.seen)?[...m.seen]:[]]));
+  savedSeenStatus=Object.fromEntries(movies.map(m=>[m.id,Object.keys(globalSeenByUser).filter(name=>globalSeenByUser[name]?.[m.id])]));
   watchedMovies.forEach(id=>{const m=movies.find(x=>x.id===id);if(m){m.watched=true;m.watchedBy=watchedAttendance[id]||m.watchedBy||[]}});
   state.votes=currentUser==="Guest"?{}:(votesByUser[userKey(currentUser)]?.votes||{});
   movies.forEach(m=>{m.score=(Number(baseScores[m.id])||0)+(voteWeights[state.votes[m.id]]||0)});
@@ -368,8 +368,8 @@ let discordGuildCachePromise=null;
 async function getDiscordGuildsCached(){
   if(discordGuildCache)return discordGuildCache;
   if(discordGuildCachePromise)return discordGuildCachePromise;
-  try{const cached=JSON.parse(sessionStorage.getItem("watchlist-discord-guilds-cache")||"null");if(cached&&Array.isArray(cached.guilds)&&Date.now()-cached.savedAt<5*60*1000){discordGuildCache=cached.guilds;return discordGuildCache}}catch(error){}
-  discordGuildCachePromise=window.WATCHLIST_FETCH_DISCORD_GUILDS().then(guilds=>{discordGuildCache=guilds||[];try{sessionStorage.setItem("watchlist-discord-guilds-cache",JSON.stringify({savedAt:Date.now(),guilds:discordGuildCache}))}catch(error){}return discordGuildCache}).finally(()=>{discordGuildCachePromise=null});
+  try{const cached=JSON.parse(sessionStorage.getItem("watchlist-discord-guilds-cache")||"null");if(cached&&Array.isArray(cached.guilds)&&Date.now()-cached.savedAt<30*60*1000){discordGuildCache=cached.guilds;return discordGuildCache}}catch(error){}
+  discordGuildCachePromise=window.WATCHLIST_FETCH_DISCORD_GUILDS().then(guilds=>{discordGuildCache=guilds||[];try{sessionStorage.setItem("watchlist-discord-guilds-cache",JSON.stringify({savedAt:Date.now(),guilds:discordGuildCache}))}catch(error){}return discordGuildCache}).catch(error=>{try{const cached=JSON.parse(sessionStorage.getItem("watchlist-discord-guilds-cache")||"null");if(cached&&Array.isArray(cached.guilds))return discordGuildCache=cached.guilds}catch(cacheError){}throw error}).finally(()=>{discordGuildCachePromise=null});
   return discordGuildCachePromise;
 }
 async function loadConnectedDiscordServer(){
