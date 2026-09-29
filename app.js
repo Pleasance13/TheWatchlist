@@ -94,9 +94,7 @@ async function loadServerMembers(){
   if(!client||!activeServer?.guild_id)return;
   const {data,error}=await client.from("watchlist_server_memberships").select("user_id,guild_id,display_name,avatar_url").eq("guild_id",activeServer.guild_id);
   if(error){console.warn("Could not load server members:",error.message||error);return}
-  serverUsers=[...new Set((data||[]).map(row=>row.display_name).filter(Boolean))];
-  if(currentUser!=="Guest"&&!serverUsers.includes(currentUser))serverUsers.unshift(currentUser);
-  (data||[]).forEach(row=>{userProfiles[userKey(row.display_name)]={id:row.user_id,name:row.display_name,avatar:row.avatar_url||""}});
+  const uniqueMembers=new Map();(data||[]).forEach(row=>{const prior=uniqueMembers.get(row.user_id);if(!prior||row.display_name===currentUser)uniqueMembers.set(row.user_id,row)});const members=[...uniqueMembers.values()];serverUsers=[...new Set(members.map(row=>row.display_name).filter(Boolean))];if(currentUser!=="Guest"&&!serverUsers.includes(currentUser))serverUsers.unshift(currentUser);members.forEach(row=>{userProfiles[userKey(row.display_name)]={id:row.user_id,name:row.display_name,avatar:row.avatar_url||""}});
 }
 
 async function loadGlobalSeen(){
@@ -209,8 +207,8 @@ function sharedApply(data){
   userProfiles={...userProfiles,...(data.userProfiles&&typeof data.userProfiles==="object"?data.userProfiles:{})};
   movies.forEach(m=>{
     const responses=(m.voterResponses&&typeof m.voterResponses==="object")?m.voterResponses:{};
-    Object.entries(votesByUser).forEach(([name,entry])=>{if(entry?.votes?.[m.id])responses[name]=entry.votes[m.id]});
-    m.voterResponses=responses;
+    const normalizedResponses={};Object.entries(votesByUser).forEach(([key,entry])=>{const answer=entry?.votes?.[m.id];if(answer)normalizedResponses[entry.name||userProfiles[key]?.name||key]=answer});
+    m.voterResponses={...responses,...normalizedResponses};m.voters=Object.entries(m.voterResponses).map(([name,answer])=>[name,({must:"must",interested:"green",watch:"yellow",no:"red"})[answer]||answer]).filter(([name])=>name);m.score=(Number(baseScores[m.id])||0)+Object.values(m.voterResponses).reduce((sum,answer)=>sum+({must:5,interested:3,watch:1,no:0,green:3,yellow:1,red:0}[answer]||0),0);
   });
   savedSeenStatus=Object.fromEntries(movies.map(m=>[m.id,Object.keys(globalSeenByUser).filter(name=>globalSeenByUser[name]?.[m.id])]));
   watchedMovies.forEach(id=>{const m=movies.find(x=>x.id===id);if(m){m.watched=true;m.watchedBy=watchedAttendance[id]||m.watchedBy||[]}});
@@ -294,17 +292,8 @@ function assetDraft(m){
 }
 
 function currentVote(id){return state.votes[id]||null}
-function voterEntries(m){
-  const entries=(m.voters||[]).map(([name,color])=>[name,color,({green:"Interested",yellow:"I'd Watch",red:"Not Interested"})[color]||"No response"]);
-  const mine=currentVote(m.id);
-  if(mine){
-    const color={must:"must",interested:"green",watch:"yellow",no:"red"}[mine];
-    const existing=entries.findIndex(entry=>entry[0]===currentUser);
-    if(existing>=0)entries.splice(existing,1);
-    entries.unshift([currentUser,color,responseLabel(mine)]);
-  }
-  return entries;
-}
+function voterEntries(m){const byName=new Map();Object.entries(m.voterResponses||{}).forEach(([name,answer])=>{const color=({must:"must",interested:"green",watch:"yellow",no:"red"})[answer]||answer;byName.set(name,[name,color,responseLabel(answer)])});(m.voters||[]).forEach(([name,color])=>{if(!byName.has(name))byName.set(name,[name,color,({green:"Interested",yellow:"I'd Watch",red:"Not Interested",must:"Must Watch"})[color]||"No response"])});const mine=currentVote(m.id);if(mine)byName.set(currentUser,[currentUser,({must:"must",interested:"green",watch:"yellow",no:"red"})[mine],responseLabel(mine)]);return [...byName.values()]}
+
 function escapeHtml(value){return String(value??"").replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]))}
 function responseLabel(k){return ({must:"Must Watch",interested:"Interested",watch:"I'd Watch",no:"Not Interested"})[k]||"No response"}
 function rankOf(m){const ranked=movies.filter(x=>!x.watched).slice().sort((a,b)=>b.score-a.score);const n=ranked.findIndex(x=>x.id===m.id);return n>=0?n+1:"—"}
@@ -318,7 +307,7 @@ function advancedFilterPanel(historyMode=false){
  if(!state.showFilters)return "";
  const genres=genreList(),years=movies.map(m=>Number(m.year)).filter(y=>Number.isFinite(y)&&y>0),minYear=years.length?Math.min(...years):1888,maxYear=years.length?Math.max(...years):new Date().getFullYear();
  const suggesters=[...new Set(movies.map(m=>m.suggestedBy||m.addedBy||(m.note?"Josh":"")).filter(Boolean))].sort();
- const seenUsers=[...new Set(movies.flatMap(m=>m.seen||[]).concat(serverUsers))].sort((a,b)=>a===currentUser?-1:b===currentUser?1:a.localeCompare(b));
+ const seenUsers=[...new Set([...movies.flatMap(m=>m.seen||[]),...serverUsers])].filter(name=>{const id=userProfiles[userKey(name)]?.id;if(!id)return true;return !serverUsers.some(other=>other!==name&&userProfiles[userKey(other)]?.id===id&&other.localeCompare(name)<0)}).sort((a,b)=>a===currentUser?-1:b===currentUser?1:a.localeCompare(b));
  const selected=state.genreFilters||[];
  const yearFromValue=Number(state.yearFrom)||minYear,yearToValue=Number(state.yearTo)||maxYear,yearFromPct=(yearFromValue-minYear)/(maxYear-minYear||1)*100,yearToPct=(yearToValue-minYear)/(maxYear-minYear||1)*100,yearTrack=`linear-gradient(to right,#555b65 0%,#555b65 ${yearFromPct}%,#aeb4be ${yearFromPct}%,#aeb4be ${yearToPct}%,#555b65 ${yearToPct}%,#555b65 100%)`;
  const interestOptions=[["any","Any interest"],["must","Must watch"],["interested","Interested"],["watch","I'd watch"],["no","Not interested"],["none","No answer"]];
@@ -398,9 +387,7 @@ function applyAdvancedFilters(items,historyMode=false){
  if(state.yearFrom)a=a.filter(m=>Number(m.year)>=Number(state.yearFrom));
  if(state.yearTo)a=a.filter(m=>Number(m.year)<=Number(state.yearTo));
  if(!historyMode&&state.interestUsers?.length&&state.interestLevel)a=a.filter(m=>state.interestUsers.every(p=>{
-   let answer=null;
-   if(p===currentUser)answer=currentVote(m.id);
-   else {const raw=(m.voters||[]).find(([n])=>n===p)?.[1];answer=raw==="green"?"interested":raw==="yellow"?"watch":raw==="red"?"no":null;}
+   const answer=personVote(m,p);
    if(state.interestLevel==="any")return ["must","interested","watch"].includes(answer);
    if(state.interestLevel==="none")return answer===null;
    return answer===state.interestLevel;
@@ -426,7 +413,7 @@ function personVote(m,p){
   // Resolve each person's exact response first; legacy color-only voter entries
   // are normalized below so every person uses the same interest/seen rules.
   const local=p===currentUser?currentVote(m.id):null;
-  const recorded=(m.voterResponses||m.responses||{})[p]||null;
+  const recorded=(m.voterResponses||m.responses||{})[p]||(votesByUser[userKey(p)]?.votes?.[m.id])||null;
   const legacy=(m.voters||[]).find(([name])=>name===p)?.[1]||null;
   const raw=local||recorded||legacy;
   if(!raw)return null;
