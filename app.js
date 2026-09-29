@@ -418,7 +418,7 @@ async function connectDiscordServer(guildId){
   await saveUserSettings();
   await loadServerContext();
 }
-async function chooseDiscordServer(){
+async async function chooseDiscordServer(){
   const picker=document.querySelector("#discord-server-picker");
   if(!picker)return;
   picker.disabled=true;picker.innerHTML='<option>Loading servers…</option>';
