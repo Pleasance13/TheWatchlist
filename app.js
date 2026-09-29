@@ -52,12 +52,12 @@ window.watchlistAuthIdentityChanged=function(profile){
   window.WATCHLIST_AUTHENTICATED=!!profile;
   if(!serverUsers.includes(currentUser)&&currentUser!=="Guest")serverUsers.push(currentUser);
   if(currentUser!=="Guest"){userProfiles[userKey(currentUser)]={name:currentUser,avatar:currentProfile?.avatar||""};try{localStorage.setItem("watchlist-user-profiles",JSON.stringify(userProfiles))}catch(error){}}
-  if(currentUser!=="Guest")loadSharedWatchlist();
+  if(currentUser!=="Guest")loadServerContext();
   state.votes=currentUser==="Guest"?{}:(votesByUser[userKey(currentUser)]?.votes||{});
   if(typeof render==="function")render();
 };
 let removedMovieIds=[];try{removedMovieIds=JSON.parse(localStorage.getItem("watchlist-removed-movies")||"[]")}catch(error){removedMovieIds=[]}for(let i=movies.length-1;i>=0;i--){if(removedMovieIds.includes(movies[i].id))movies.splice(i,1)}
-const serverUsers=["Josh","Sarah","Dan","Sam","Alex"];
+let serverUsers=[];
 const displaySettingKeys=["showSynopsis","showRatings","showNote","showTrailer","showCast","showStreamingLinks"]; const warningGroups=[{name:"Violence & gore",categories:["Violence","Gore","Blood","Torture","Body horror","Dismemberment","Weapons","War"]},{name:"Animals",categories:["Animal death","Animal cruelty","Animal injury","Harm to animals"]},{name:"Sexual content",categories:["Sexual content","Nudity","Sexual assault","Rape","Sexual exploitation"]},{name:"Death & self-harm",categories:["Death","Child death","Suicide","Self-harm","Suicide/self-harm"]},{name:"Other disturbing content",categories:["Drug use","Drug overdose","Child abuse","Disturbing imagery","Medical trauma","Abduction/kidnapping","Psychological distress"]}]; const warningCategories=warningGroups.flatMap(group=>group.categories); let savedWarningCategories=[]; try{savedWarningCategories=JSON.parse(localStorage.getItem("watchlist-warning-categories")||"[]")}catch(error){savedWarningCategories=[]}let contentWarningsEnabled=true;try{const savedContentWarnings=localStorage.getItem("watchlist-content-warnings-enabled");if(savedContentWarnings!==null)contentWarningsEnabled=savedContentWarnings==="true"}catch(error){}let savedDisplaySettings={};try{const parsedDisplaySettings=JSON.parse(localStorage.getItem("watchlist-display-settings")||"{}");displaySettingKeys.forEach(key=>{if(typeof parsedDisplaySettings[key]==="boolean")savedDisplaySettings[key]=parsedDisplaySettings[key]})}catch(error){savedDisplaySettings={}}
 const state={nav:"watchlist",view:"list",search:"",filter:"all",posterSize:2,showSynopsis:true,showRatings:false,showNote:true,showTrailer:false,showCast:true,showStreamingLinks:true,...savedDisplaySettings,detail:null,detailSections:{cast:true,streaming:true,trailer:true},showFilters:false,genreFilters:[],yearFrom:"",yearTo:"",interestUsers:[],interestLevel:"",seenMode:"seen",seenUsers:[],rewatchStatus:"",watchedWith:"",suggestedBy:"",votes:stateVotesPlaceholder||{},removeMovieId:null,addMovieOpen:false,addMovieQuery:"",addMovieResults:[],addMovieSelection:null,addMovieLoading:false,addMovieError:"",attendanceOpen:false,attendanceMovieId:null,attendanceSelected:[],assetEditorOpen:false,assetMovieId:null,assetLoading:false,assetError:"",assetSections:{frontLogo:true,detailLogo:true,frontImage:true,backStill:true},assetLanguageGroups:{},assetPreviewFlipped:false,noteEditorOpen:false,noteEditorMovieId:null};
 const voteWeights={must:5,interested:3,watch:1,no:0};movies.forEach(m=>{if(state.votes[m.id])m.score=(Number(baseScores[m.id])||0)+(voteWeights[state.votes[m.id]]||0);if(m.id.startsWith("tmdb-")&&!m.suggestedBy)m.suggestedBy=m.addedBy||"Josh";});
@@ -75,6 +75,57 @@ function detailLogoPath(m){
   const a=caseAssets(m);
   return a.detailLogoPath||m.logoPath||m.tmdbAssets?.logos?.find(x=>x.isoLanguage==='en'||!x.isoLanguage)?.filePath||m.tmdbAssets?.logos?.[0]?.filePath||null;
 }
+let activeServer=null;
+try{activeServer=JSON.parse(localStorage.getItem("watchlist-active-server")||"null")}catch(error){activeServer=null}
+let globalSeenByUser={};
+try{globalSeenByUser=JSON.parse(localStorage.getItem("watchlist-global-seen")||"{}")}catch(error){globalSeenByUser={}}
+
+async function loadServerMembers(){
+  const client=window.WATCHLIST_SUPABASE_CLIENT;
+  if(!client||!activeServer?.guild_id)return;
+  const {data,error}=await client.from("watchlist_server_memberships").select("user_id,guild_id,display_name,avatar_url").eq("guild_id",activeServer.guild_id);
+  if(error){console.warn("Could not load server members:",error.message||error);return}
+  serverUsers=[...new Set((data||[]).map(row=>row.display_name).filter(Boolean))];
+  if(currentUser!=="Guest"&&!serverUsers.includes(currentUser))serverUsers.unshift(currentUser);
+  (data||[]).forEach(row=>{userProfiles[userKey(row.display_name)]={name:row.display_name,avatar:row.avatar_url||""}});
+}
+
+async function loadGlobalSeen(){
+  const client=window.WATCHLIST_SUPABASE_CLIENT;
+  if(!client||currentUser==="Guest")return;
+  const {data,error}=await client.from("watchlist_global_seen").select("data").eq("id","seen").maybeSingle();
+  if(error){console.warn("Could not load global seen state:",error.message||error);return}
+  globalSeenByUser=data?.data&&typeof data.data==="object"?data.data:{};
+  try{localStorage.setItem("watchlist-global-seen",JSON.stringify(globalSeenByUser))}catch(error){}
+  movies.forEach(m=>{m.seen=[];Object.keys(globalSeenByUser).forEach(user=>{if(globalSeenByUser[user]?.[m.id])m.seen.push(user)})});
+}
+
+async function persistGlobalSeen(){
+  if(currentUser==="Guest")return;
+  const client=window.WATCHLIST_SUPABASE_CLIENT;
+  if(!client)return;
+  const {error}=await client.from("watchlist_global_seen").upsert({id:"seen",data:globalSeenByUser,updated_at:new Date().toISOString(),updated_by:currentProfile?.id||null});
+  if(error)console.warn("Could not save global seen state:",error.message||error);
+  try{localStorage.setItem("watchlist-global-seen",JSON.stringify(globalSeenByUser))}catch(error){}
+}
+
+async function loadServerContext(){
+  if(currentUser==="Guest")return;
+  const client=window.WATCHLIST_SUPABASE_CLIENT;
+  if(!client)return;
+  try{
+    if(!activeServer){
+      const {data}=await client.from("watchlist_connected_servers").select("guild_id,guild_name,guild_icon_url").eq("user_id",currentProfile?.id).maybeSingle();
+      if(data){
+        activeServer={guild_id:data.guild_id,guild_name:data.guild_name,guild_icon_url:data.guild_icon_url};
+        try{localStorage.setItem("watchlist-active-server",JSON.stringify(activeServer))}catch(error){}
+      }
+    }
+    if(activeServer){await loadServerMembers();await loadGlobalSeen();await loadSharedWatchlist()}
+    render();
+  }catch(error){console.warn("Could not load server context:",error.message||error);render()}
+}
+
 let sharedSyncChannel=null;
 let sharedSyncApplying=false;
 let sharedSyncLoaded=false;
@@ -82,7 +133,7 @@ let sharedSyncTimer=null;
 
 function sharedSnapshot(){
   return {
-    movies: movies.map(m=>({...m})),
+    serverId:activeServer?.guild_id||null,serverName:activeServer?.guild_name||"",movies: movies.map(m=>{const copy={...m};delete copy.seen;return copy;}),
     votesByUser: {...votesByUser},
     movieReviews: {...movieReviews},
     watchedMovies: [...watchedMovies],
@@ -121,16 +172,17 @@ async function loadSharedWatchlist(){
   const client=window.WATCHLIST_SUPABASE_CLIENT;
   if(!client||currentUser==="Guest")return;
   try{
-    const {data,error}=await client.from("watchlist_shared_state").select("data").eq("id","watchlist").maybeSingle();
+    const sharedId=activeServer?.guild_id?"server:"+activeServer.guild_id:"watchlist";
+    const {data,error}=await client.from("watchlist_shared_state").select("data").eq("id",sharedId).maybeSingle();
     if(error)throw error;
     if(data?.data){sharedApply(data.data);}
     else{
-      await client.from("watchlist_shared_state").upsert({id:"watchlist",data:sharedSnapshot(),updated_by:currentProfile?.id||null});
+      await client.from("watchlist_shared_state").upsert({id:sharedId,data:sharedSnapshot(),updated_by:currentProfile?.id||null});
       sharedSyncLoaded=true;
     }
     if(sharedSyncChannel)client.removeChannel(sharedSyncChannel);
-    sharedSyncChannel=client.channel("watchlist-shared-state").on("postgres_changes",{event:"*",schema:"public",table:"watchlist_shared_state",filter:"id=eq.watchlist"},payload=>{
-      if(payload.new?.data&&!sharedSyncApplying)sharedApply(payload.new.data);
+    sharedSyncChannel=client.channel("watchlist-shared-state-"+(activeServer?.guild_id||"watchlist")).on("postgres_changes",{event:"*",schema:"public",table:"watchlist_shared_state"},payload=>{
+      if(payload.new?.data&&!sharedSyncApplying&&payload.new.id===(activeServer?.guild_id?"server:"+activeServer.guild_id:"watchlist"))sharedApply(payload.new.data);
     }).subscribe();
   }catch(error){console.warn("Shared watchlist sync unavailable:",error.message||error)}
 }
@@ -141,10 +193,11 @@ async function persistSharedWatchlist(){
   clearTimeout(sharedSyncTimer);
   sharedSyncTimer=setTimeout(async()=>{
     try{
-      const latest=await client.from("watchlist_shared_state").select("data").eq("id","watchlist").maybeSingle();
+      const sharedId=activeServer?.guild_id?"server:"+activeServer.guild_id:"watchlist";
+      const latest=await client.from("watchlist_shared_state").select("data").eq("id",sharedId).maybeSingle();
       const remote=latest.data?.data&&typeof latest.data.data==="object"?latest.data.data:{};
       const merged={...remote,...sharedSnapshot()};
-      const {error}=await client.from("watchlist_shared_state").upsert({id:"watchlist",data:merged,updated_by:currentProfile?.id||null});
+      const {error}=await client.from("watchlist_shared_state").upsert({id:sharedId,data:merged,updated_by:currentProfile?.id||null});
       if(error)throw error;
     }catch(error){console.warn("Could not save shared watchlist state:",error.message||error)}
   },60);
@@ -294,7 +347,7 @@ function watchlist(){
  const count=a.length;const hasFilters=(state.genreFilters||[]).length>0||Boolean(state.yearFrom||state.yearTo||state.suggestedBy)||(state.interestUsers||[]).length>0||Boolean(state.interestLevel)||(state.seenUsers||[]).length>0||state.seenMode==='not'||Boolean(state.rewatchStatus);
  const countText=hasFilters&&count!==base.length?count+' movies narrowed down from '+base.length+' with filters.':count+' movies waiting for a movie night.';
  const mainContent=(released.length?(state.view==='list'?listView(released,false):gridView(released,false)):'')+upcomingSection(upcoming);
- return '<div class="hero"><div><div class="eyebrow">YOUR SERVER\'S MOVIE LIBRARY</div><h1>Watchlist</h1><p class="sub">'+countText+'</p></div><button class="primary" onclick="openAddMovie()">＋ Add movie</button></div>'+toolbar()+(count?mainContent:'<div class="empty">Nothing matches those filters.</div>');
+ return '<div class="hero"><div><div class="eyebrow">'+escapeHtml((activeServer?.guild_name||"YOUR SERVER").toUpperCase())+'\'S MOVIE LIBRARY</div><h1>Watchlist</h1><p class="sub">'+countText+'</p></div><button class="primary" onclick="openAddMovie()">＋ Add movie</button></div>'+toolbar()+(count?mainContent:'<div class="empty">Nothing matches those filters.</div>');
 }
 function history(){let a=movies.filter(m=>m.watched&&((m.title+" "+m.genre).toLowerCase().includes(state.search.toLowerCase())));a=applyAdvancedFilters(a,true);return `<div class="hero"><div><div class="eyebrow">THE GROUP ARCHIVE</div><h1>History</h1><p class="sub">Movies watched by this server.</p></div></div>${toolbar(true)}${a.length?(state.view==="list"?listView(a,true):gridView(a,true)):`<div class="empty">Nothing matches your filters.</div>`}`}
 function personVote(m,p){
@@ -308,7 +361,7 @@ function personVote(m,p){
   return ({green:"interested",yellow:"watch",red:"no",must:"must",interested:"interested",watch:"watch",no:"no"})[String(raw).toLowerCase()]||null;
 }
 function personVoteColor(v){return ({must:"green",interested:"green",watch:"yellow",no:"red"})[v]||""}
-function people(){const peopleList=[...new Set([...serverUsers,currentUser].filter(p=>p&&p!=="Guest"))].sort((a,b)=>a===currentUser?-1:b===currentUser?1:a.localeCompare(b));return `<div class="hero"><div><div class="eyebrow">THE SERVER</div><h1>People</h1><p class="sub">Reviews, watch history, and what everyone wants to see.</p></div></div><div class="settings">${peopleList.map(p=>`<div class="setting person-card" data-person="${escapeHtml(p)}" onclick="togglePerson('${escapeHtml(p)}')" style="cursor:pointer"><div style="display:flex;gap:13px;align-items:center">${avatarMarkup(p)}<div><strong>${escapeHtml(p)}</strong></div></div></div>`).join("")}</div>`}
+function people(){const peopleList=[...new Set(serverUsers.filter(p=>p&&p!=="Guest"))].sort((a,b)=>a===currentUser?-1:b===currentUser?1:a.localeCompare(b));return `<div class="hero"><div><div class="eyebrow">THE SERVER</div><h1>People</h1><p class="sub">Reviews, watch history, and what everyone wants to see.</p></div></div><div class="settings">${peopleList.map(p=>`<div class="setting person-card" data-person="${escapeHtml(p)}" onclick="togglePerson('${escapeHtml(p)}')" style="cursor:pointer"><div style="display:flex;gap:13px;align-items:center">${avatarMarkup(p)}<div><strong>${escapeHtml(p)}</strong></div></div></div>`).join("")}</div>`}
 window.setWarningGroup=(groupName,checked)=>{const group=warningGroups.find(g=>g.name===groupName);if(!group)return;const keys=new Set(group.categories.map(x=>x.toLowerCase()));savedWarningCategories=checked?[...new Set([...savedWarningCategories,...keys])]:savedWarningCategories.filter(x=>!keys.has(x));try{localStorage.setItem("watchlist-warning-categories",JSON.stringify(savedWarningCategories))}catch(error){}document.querySelectorAll(".warning-category-option").forEach(label=>{const name=label.querySelector("span")?.textContent?.trim().toLowerCase();if(name&&keys.has(name)){const input=label.querySelector("input");if(input)input.checked=checked}});document.querySelectorAll(".warning-picker-count").forEach(el=>el.textContent=savedWarningCategories.length+" selected")};
 let discordGuildCache=null;
 let discordGuildCachePromise=null;
@@ -328,23 +381,28 @@ async function loadConnectedDiscordServer(){
   return data||null;
 }
 async function connectDiscordServer(guildId){
-  const picker=document.querySelector("#discord-server-picker");
   const client=window.WATCHLIST_SUPABASE_CLIENT;
   const uid=window.WATCHLIST_AUTH_PROFILE?.id;
   if(!client||!uid||!guildId)return;
   const guilds=await getDiscordGuildsCached();
   const guild=guilds.find(x=>x.id===guildId);
   if(!guild)throw new Error("That Discord server is no longer available to this account.");
-  const {error}=await client.from("watchlist_connected_servers").upsert({user_id:uid,guild_id:guild.id,guild_name:guild.name,guild_icon_url:guild.icon?("https://cdn.discordapp.com/icons/"+guild.id+"/"+guild.icon+".png?size=64"):null,updated_at:new Date().toISOString()});
+  const profile=window.WATCHLIST_AUTH_PROFILE||{};
+  const iconUrl=guild.icon?("https://cdn.discordapp.com/icons/"+guild.id+"/"+guild.icon+".png?size=64"):null;
+  const {error}=await client.from("watchlist_connected_servers").upsert({user_id:uid,guild_id:guild.id,guild_name:guild.name,guild_icon_url:iconUrl,updated_at:new Date().toISOString()});
   if(error)throw error;
-  render();
+  const membership=await client.from("watchlist_server_memberships").upsert({user_id:uid,guild_id:guild.id,display_name:profile.name||currentUser,avatar_url:profile.avatar||null,updated_at:new Date().toISOString()});
+  if(membership.error)throw membership.error;
+  activeServer={guild_id:guild.id,guild_name:guild.name,guild_icon_url:iconUrl};
+  try{localStorage.setItem("watchlist-active-server",JSON.stringify(activeServer))}catch(error){}
+  await loadServerContext();
 }
 async function chooseDiscordServer(){
   const picker=document.querySelector("#discord-server-picker");
   if(!picker)return;
   picker.disabled=true;picker.innerHTML='<option>Loading servers…</option>';
   try{
-    const guilds=await window.WATCHLIST_FETCH_DISCORD_GUILDS();
+    const guilds=await getDiscordGuildsCached();
     const current=await loadConnectedDiscordServer();
     picker.innerHTML='<option value="">Select a Discord server…</option>'+guilds.sort((a,b)=>a.name.localeCompare(b.name)).map(g=>'<option value="'+escapeHtml(g.id)+'">'+escapeHtml(g.name)+'</option>').join("");
     if(current)picker.value=current.guild_id;
