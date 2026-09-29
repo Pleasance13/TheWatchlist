@@ -955,7 +955,11 @@ window.confirmAttendance=async()=>{
   const ids=[...new Set(attendees.map(name=>identityIdForName(name)).filter(Boolean))];
   if(!ids.length){alert("Select at least one group member.");return}
   try{
-    for(const userId of ids)await setSeenForAccount(userId,id,true);
+    const client=window.WATCHLIST_SUPABASE_CLIENT;
+    const {error:groupError}=await client.rpc("watchlist_set_group_seen",{
+      p_movie_id:String(id),p_user_ids:ids
+    });
+    if(groupError)throw groupError;
     watchedAttendance[id]=attendees;
     if(!watchedMovies.includes(id))watchedMovies.push(id);
     m.watched=true;m.watchedBy=attendees;m.setToRewatch=false;
