@@ -945,13 +945,10 @@ window.confirmAttendance=async ()=>{
   const chosen=[...state.attendanceSelected];
   const client=window.WATCHLIST_SUPABASE_CLIENT;
   if(client){
-    const seenUsers=[...new Set(chosen.map(stableIdentityKey).filter(Boolean))];
-    for(const name of seenUsers){
-      const profileId=identityIdForName(name);
-      if(profileId===currentProfile?.id){
-        const {error}=await client.rpc("watchlist_set_global_seen",{p_movie_id:id,p_seen:true});
-        if(error){console.warn("Could not save attendance seen state:",error.message||error);return}
-      }
+    const mineChosen=chosen.some(name=>identityIdForName(name)===currentProfile?.id);
+    if(mineChosen){
+      const {error}=await client.rpc("watchlist_set_global_seen",{p_movie_id:id,p_seen:true});
+      if(error){console.warn("Could not save attendance seen state:",error.message||error);return}
     }
     await loadGlobalSeen();
   }
@@ -959,10 +956,22 @@ window.confirmAttendance=async ()=>{
   watchedAttendance[id]=chosen;
   m.seen=Object.keys(globalSeenByUser).filter(key=>globalSeenByUser[key]?.[id]).map(key=>identityDisplayName(key,userProfiles,votesByUser));
   savedSeenStatus[m.id]=[...m.seen];
-  if(!m.watched){m.watched=true;if(!watchedMovies.includes(id))watchedMovies.push(id);state.nav="history";state.detail=id}
-  try{localStorage.setItem("watchlist-watched-movies",JSON.stringify(watchedMovies));localStorage.setItem("watchlist-watched-attendance",JSON.stringify(Object.fromEntries(movies.filter(x=>x.watched).map(x=>[x.id,x.watchedBy||[]]))));localStorage.setItem("watchlist-seen-status",JSON.stringify(savedSeenStatus));localStorage.setItem("watchlist-added-movies",JSON.stringify(movies.filter(x=>x.id.startsWith("tmdb-")).map(x=>({...x,score:0})))}catch(error){}
+  if(!m.watched){
+    m.watched=true;
+    if(!watchedMovies.includes(id))watchedMovies.push(id);
+    state.nav="history";
+    state.detail=id;
+  }
+  try{
+    localStorage.setItem("watchlist-watched-movies",JSON.stringify(watchedMovies));
+    localStorage.setItem("watchlist-watched-attendance",JSON.stringify(Object.fromEntries(movies.filter(x=>x.watched).map(x=>[x.id,x.watchedBy||[]]))));
+    localStorage.setItem("watchlist-seen-status",JSON.stringify(savedSeenStatus));
+    localStorage.setItem("watchlist-added-movies",JSON.stringify(movies.filter(x=>x.id.startsWith("tmdb-")).map(x=>({...x,score:0}))));
+  }catch(error){}
   persistSharedWatchlist();
-  state.attendanceOpen=false;state.attendanceMovieId=null;state.attendanceSelected=[];
+  state.attendanceOpen=false;
+  state.attendanceMovieId=null;
+  state.attendanceSelected=[];
   render();
 };
 window.markWatchedTogether=(id,undo)=>{if(undo)return;openAttendance(id)};
