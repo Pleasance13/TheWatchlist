@@ -177,7 +177,7 @@ async function loadSharedWatchlist(){
     if(error)throw error;
     if(data?.data){sharedApply(data.data);}
     else{
-      let initial=sharedSnapshot();
+      let initial={serverId:activeServer?.guild_id||null,serverName:activeServer?.guild_name||"",movies:[],votesByUser:{},movieReviews:{},watchedMovies:[],watchedAttendance:{},removedMovieIds:[],caseAssets:{},userProfiles:{}};
       if(activeServer?.guild_id){
         const {data:existingServers}=await client.from("watchlist_shared_state").select("id").like("id","server:%").limit(1);
         if(!(existingServers||[]).length){
