@@ -175,7 +175,7 @@ button,input{font:inherit}button{color:inherit}.topbar{height:72px;padding:0 32p
   flex:0 0 auto;
   padding:7px 11px;
 }
-.discord-server-setting{margin-top:0}
+.discord-server-setting{width:100%;max-width:820px;box-sizing:border-box;margin-top:0}
 .discord-server-control{flex:0 0 auto;width:220px}
 .discord-server-control select{box-sizing:border-box;width:100%;min-height:34px;padding:7px 30px 7px 10px;border:1px solid #3b4048;border-radius:7px;background:#20242a;color:#e8e9ec;font:inherit;font-size:12px;outline:none}
 .discord-server-control select:focus{border-color:#6b717b}
