@@ -390,17 +390,20 @@ async function loadConnectedDiscordServer(){
 }
 async function connectDiscordServer(guildId){
   const client=window.WATCHLIST_SUPABASE_CLIENT;
-  const uid=window.WATCHLIST_AUTH_PROFILE?.id;
-  if(!client||!uid||!guildId)return;
+  if(!client||!guildId)return;
+  const {data:{user},error:authError}=await client.auth.getUser();
+  if(authError||!user)throw new Error("Your Discord session is no longer available. Please sign in again.");
+  const uid=user.id;
   const guilds=await getDiscordGuildsCached();
   const guild=guilds.find(x=>x.id===guildId);
   if(!guild)throw new Error("That Discord server is no longer available to this account.");
   const profile=window.WATCHLIST_AUTH_PROFILE||{};
   const iconUrl=guild.icon?("https://cdn.discordapp.com/icons/"+guild.id+"/"+guild.icon+".png?size=64"):null;
-  const {error}=await client.from("watchlist_connected_servers").upsert({user_id:uid,guild_id:guild.id,guild_name:guild.name,guild_icon_url:iconUrl,updated_at:new Date().toISOString()});
+  const now=new Date().toISOString();
+  const {error}=await client.from("watchlist_connected_servers").upsert({user_id:uid,guild_id:guild.id,guild_name:guild.name,guild_icon_url:iconUrl,updated_at:now});
   if(error)throw error;
-  const membership=await client.from("watchlist_server_memberships").upsert({user_id:uid,guild_id:guild.id,display_name:profile.name||currentUser,avatar_url:profile.avatar||null,updated_at:new Date().toISOString()});
-  if(membership.error)throw membership.error;
+  const {error:membershipError}=await client.from("watchlist_server_memberships").upsert({user_id:uid,guild_id:guild.id,display_name:profile.name||currentUser,avatar_url:profile.avatar||null,updated_at:now});
+  if(membershipError)throw membershipError;
   activeServer={guild_id:guild.id,guild_name:guild.name,guild_icon_url:iconUrl};
   try{localStorage.setItem("watchlist-active-server",JSON.stringify(activeServer))}catch(error){}
   await loadServerContext();
