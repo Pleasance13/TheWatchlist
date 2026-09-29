@@ -121,7 +121,7 @@ async function loadServerContext(){
         try{localStorage.setItem("watchlist-active-server",JSON.stringify(activeServer))}catch(error){}
       }
     }
-    if(activeServer){await loadServerMembers();await loadGlobalSeen();await loadSharedWatchlist()}
+    if(activeServer){await loadServerMembers();await loadSharedWatchlist();await loadGlobalSeen();}
     render();
   }catch(error){console.warn("Could not load server context:",error.message||error);render()}
 }
