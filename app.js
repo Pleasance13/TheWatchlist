@@ -14,32 +14,20 @@ function dedupeWarnings(values){
 
 const fallback=(t,y)=>`data:image/svg+xml;charset=UTF-8,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="500" height="750"><rect width="100%" height="100%" fill="#25282d"/><rect x="30" y="30" width="440" height="690" rx="12" fill="#17191c" stroke="#4a4f57"/><text x="250" y="350" fill="#e8e4da" font-family="Arial" font-size="38" font-weight="bold" text-anchor="middle">${t}</text><text x="250" y="400" fill="#9298a1" font-family="Arial" font-size="24" text-anchor="middle">${y}</text></svg>`)}`;
 
-const seedMovies=[
-{id:"alien",title:"Alien",year:1979,genre:"Horror · Sci-Fi",director:"Ridley Scott",runtime:"1h 57m",rating:"R",score:10,seen:[],voters:[["Sarah","green"],["Dan","yellow"]],synopsis:"The crew of a commercial spacecraft encounter a deadly lifeform after answering a mysterious distress signal.",note:"I don't think we've actually watched this together. Fix that.",warnings:["Gore","Body horror"],watched:false},
-{id:"thing",title:"The Thing",year:1982,genre:"Horror · Sci-Fi",director:"John Carpenter",runtime:"1h 49m",rating:"R",score:8,seen:["Sarah"],voters:[["Sarah","yellow"],["Alex","red"]],synopsis:"A research team in Antarctica faces a lifeform capable of perfectly imitating other organisms.",note:"Been meaning to show you guys this for ages.",warnings:["Gore","Animal death"],watched:false},
-{id:"scream",title:"Scream",year:1996,genre:"Horror · Mystery",director:"Wes Craven",runtime:"1h 51m",rating:"R",score:7,seen:["Alex"],voters:[["Dan","yellow"],["Alex","red"]],synopsis:"A masked killer turns a small town's horror-movie knowledge into a deadly game.",note:"A classic group-watch candidate.",warnings:["Violence","Sexual content"],watched:false},
-{id:"predator",title:"Predator",year:1987,genre:"Action · Sci-Fi",director:"John McTiernan",runtime:"1h 47m",rating:"R",score:6,seen:[],voters:[["Sarah","yellow"]],synopsis:"An elite rescue team becomes prey for an extraterrestrial hunter in a Central American jungle.",note:"",warnings:["Gore","Violence"],watched:false},
-{id:"tremors",title:"Tremors",year:1990,genre:"Horror · Comedy",director:"Ron Underwood",runtime:"1h 36m",rating:"PG-13",score:5,seen:["Dan"],voters:[["Dan","green"],["Alex","yellow"]],synopsis:"A tiny desert town is besieged by enormous underground creatures.",note:"",warnings:["Animal death"],watched:false},
-{id:"event",title:"Event Horizon",year:1997,genre:"Horror · Sci-Fi",director:"Paul W. S. Anderson",runtime:"1h 36m",rating:"R",score:3,seen:["Sarah","Dan"],voters:[["Sarah","green"],["Alex","yellow"]],synopsis:"A rescue crew investigates a vanished spaceship and discovers something deeply wrong with its return.",note:"Maybe this one is a terrible idea. Which is exactly why I'm suggesting it.",warnings:["Gore","Disturbing imagery"],watched:true,watchedBy:["Josh","Sarah","Dan"]}
-];
-
-let savedMovies=[];
-try{savedMovies=JSON.parse(localStorage.getItem("watchlist-added-movies")||"[]");}catch(error){savedMovies=[];}
-seedMovies.forEach(m=>{m.suggestedBy="Josh";m.addedBy="Josh";});
-let seedSuggestionNotes={};try{seedSuggestionNotes=JSON.parse(localStorage.getItem("watchlist-suggestion-notes")||"{}")}catch(error){seedSuggestionNotes={}}seedMovies.forEach(m=>{if(Object.prototype.hasOwnProperty.call(seedSuggestionNotes,m.id))m.note=seedSuggestionNotes[m.id]});
-const movies=[...seedMovies,...savedMovies];movies.forEach(movie=>{movie.rating="";movie.warnings=dedupeWarnings(movie.warnings);});
-let savedSeenStatus={};try{savedSeenStatus=JSON.parse(localStorage.getItem("watchlist-seen-status")||"{}")}catch(error){savedSeenStatus={}}
-movies.forEach(m=>{if(Array.isArray(savedSeenStatus[m.id]))m.seen=[...savedSeenStatus[m.id]]});
-const baseScores=Object.fromEntries(movies.map(m=>[m.id,m.id.startsWith("tmdb-")?0:(Number(m.score)||0)]));
-let stateVotesPlaceholder={};try{stateVotesPlaceholder=JSON.parse(localStorage.getItem('watchlist-votes')||'{}')}catch(error){stateVotesPlaceholder={}}
-let movieReviews={};let watchedMovies=[];
-try{movieReviews=JSON.parse(localStorage.getItem("watchlist-movie-reviews")||"{}");}catch(error){movieReviews={}}
-try{watchedMovies=JSON.parse(localStorage.getItem("watchlist-watched-movies")||"[]");}catch(error){watchedMovies=[]}
-let watchedAttendance={};try{watchedAttendance=JSON.parse(localStorage.getItem("watchlist-watched-attendance")||"{}")}catch(error){watchedAttendance={}}
-watchedMovies.forEach(id=>{const m=movies.find(x=>x.id===id);if(m){m.watched=true;m.watchedBy=watchedAttendance[id]||m.watchedBy||[]}});
+const movies=[];
+let savedSeenStatus={};
+let baseScores={};
+let stateVotesPlaceholder={};
+let movieReviews={};
+let watchedMovies=[];
+let watchedAttendance={};
 let currentUser=window.WATCHLIST_CURRENT_USER||"Guest";
 let currentProfile=window.WATCHLIST_AUTH_PROFILE||null;
-let votesByUser={};try{votesByUser=JSON.parse(localStorage.getItem("watchlist-votes-by-user")||"{}")}catch(error){votesByUser={}}
+let votesByUser={};
+let userProfiles={};
+try{localStorage.removeItem("watchlist-added-movies");localStorage.removeItem("watchlist-removed-movies");localStorage.removeItem("watchlist-seen-status");localStorage.removeItem("watchlist-votes");localStorage.removeItem("watchlist-votes-by-user");localStorage.removeItem("watchlist-reviews");localStorage.removeItem("watchlist-watched-movies");localStorage.removeItem("watchlist-watched-attendance");localStorage.removeItem("watchlist-suggestion-notes")}catch(error){}
+
+let votesByUser={};
 let userProfiles={};try{userProfiles=JSON.parse(localStorage.getItem("watchlist-user-profiles")||"{}")}catch(error){userProfiles={}}
 function userKey(name){return String(name||"Guest").trim().toLowerCase()}
 function currentAvatar(){return currentProfile?.avatar||""}
@@ -437,8 +425,9 @@ async function chooseDiscordServer(){
   try{
     const guilds=await getDiscordGuildsCached();
     const current=await loadConnectedDiscordServer();
+    const selected=activeServer||current;
     picker.innerHTML='<option value="">Select a Discord server…</option>'+guilds.sort((a,b)=>a.name.localeCompare(b.name)).map(g=>'<option value="'+escapeHtml(g.id)+'">'+escapeHtml(g.name)+'</option>').join("");
-    if(current)picker.value=current.guild_id;
+    if(selected)picker.value=selected.guild_id;
     picker.disabled=false;
   }catch(error){
     picker.innerHTML='<option value="">Could not load servers</option>';picker.disabled=false;
@@ -618,7 +607,7 @@ function confirmRemoveMovie(){const id=state.removeMovieId;if(!id)return;const i
 function removeMovieModal(){if(!state.removeMovieId)return '';const m=movies.find(x=>x.id===state.removeMovieId);if(!m)return '';return '<div class="modal-backdrop open" onclick="if(event.target===this)closeRemoveMovie()"><section class="remove-confirm-modal" role="dialog" aria-modal="true"><h2>Remove '+m.title+'?</h2><p>Are you sure?</p><div class="remove-confirm-actions"><button class="ghost" onclick="closeRemoveMovie()">No</button><button class="remove-movie-button" onclick="confirmRemoveMovie()">Yes</button></div></section></div>'}
 let headerPrismIntroPlayed=false;
 function syncHeaderPrism(){const logo=document.querySelector(".brand-logo"),avatar=document.querySelector(".topbar .user, .topbar .auth-control"),prism=document.querySelector(".header-prism");if(!logo||!avatar||!prism)return;const l=logo.getBoundingClientRect(),u=avatar.getBoundingClientRect();const left=l.right-l.width*.139,right=u.left-24,width=Math.max(0,right-left);prism.style.setProperty("position","fixed","important");prism.style.setProperty("left",left+"px","important");prism.style.setProperty("right","auto","important");prism.style.setProperty("top",l.top+"px","important");prism.style.setProperty("bottom","auto","important");prism.style.setProperty("width",width+"px","important");prism.style.setProperty("height",l.height+"px","important");prism.style.setProperty("transform","none","important");prism.style.setProperty("margin","0","important");prism.style.setProperty("--prism-height",l.height+"px");if(!headerPrismIntroPlayed){headerPrismIntroPlayed=true;const beam=prism.querySelector("img");if(beam){const reduceMotion=window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)").matches;if(reduceMotion){beam.style.transform="none";}else{beam.style.transformOrigin="left center";beam.style.transform="scaleX(0)";beam.getBoundingClientRect();beam.animate([{transform:"scaleX(0)"},{transform:"scaleX(1)"}],{duration:650,easing:"cubic-bezier(.18,.72,.25,1)",fill:"both"});}}}}
-function render(){const openFilterIds=[...document.querySelectorAll(".filter-dropdown[open][data-filter-id]")].map(el=>el.dataset.filterId);app.innerHTML=header()+`<main class="content">${state.nav==="watchlist"?watchlist():state.nav==="history"?history():state.nav==="people"?people():state.nav==="settings"?settings():detail()}</main>`+addMovieModal()+attendanceModal()+assetEditor()+removeMovieModal()+suggestionNoteEditorModal();openFilterIds.forEach(id=>{const el=[...document.querySelectorAll(".filter-dropdown[data-filter-id]")].find(x=>x.dataset.filterId===id);if(el)el.open=true});bindLiveInputs();bindVhsTilt();requestAnimationFrame(syncHeaderPrism);if(state.nav==="settings"&&window.WATCHLIST_AUTHENTICATED){requestAnimationFrame(()=>{const picker=document.querySelector("#discord-server-picker");if(picker&&picker.dataset.loaded!=="true"){picker.dataset.loaded="loading";chooseDiscordServer().then(()=>{picker.dataset.loaded="true"}).catch(()=>{picker.dataset.loaded="error"})}})}if(!window.__watchlistPrismResize){window.__watchlistPrismResize=true;window.addEventListener("resize",()=>requestAnimationFrame(syncHeaderPrism));window.addEventListener("scroll",()=>requestAnimationFrame(syncHeaderPrism),{passive:true});}}
+function render(){const openFilterIds=[...document.querySelectorAll(".filter-dropdown[open][data-filter-id]")].map(el=>el.dataset.filterId);const signedIn=!!window.WATCHLIST_AUTHENTICATED;const content=signedIn?(state.nav==="watchlist"?watchlist():state.nav==="history"?history():state.nav==="people"?people():state.nav==="settings"?settings():detail()):'<section class="empty-state signed-out-message"><h2>Sign in with Discord to start tracking your watchlist.</h2></section>';app.innerHTML=header()+`<main class="content">${content}</main>`+addMovieModal()+attendanceModal()+assetEditor()+removeMovieModal()+suggestionNoteEditorModal();openFilterIds.forEach(id=>{const el=[...document.querySelectorAll(".filter-dropdown[data-filter-id]")].find(x=>x.dataset.filterId===id);if(el)el.open=true});bindLiveInputs();bindVhsTilt();requestAnimationFrame(syncHeaderPrism);if(state.nav==="settings"&&window.WATCHLIST_AUTHENTICATED){requestAnimationFrame(()=>{const picker=document.querySelector("#discord-server-picker");if(picker&&picker.dataset.loaded!=="true"){picker.dataset.loaded="loading";chooseDiscordServer().then(()=>{picker.dataset.loaded="true"}).catch(()=>{picker.dataset.loaded="error"})}})}if(!window.__watchlistPrismResize){window.__watchlistPrismResize=true;window.addEventListener("resize",()=>requestAnimationFrame(syncHeaderPrism));window.addEventListener("scroll",()=>requestAnimationFrame(syncHeaderPrism),{passive:true});}}
 let addMovieSearchTimer=null;let addMovieSearchRequest=0;
 function bindLiveInputs(){let s=document.querySelector("#search");if(s)s.addEventListener("input",e=>{state.search=e.target.value;updateListOnly()});let r=document.querySelector("#sizeRange");if(r)r.addEventListener("input",e=>setPosterSize(e.target.value));let a=document.querySelector("#addMovieSearch");if(a)a.addEventListener("input",e=>{state.addMovieQuery=e.target.value;clearTimeout(addMovieSearchTimer);const query=e.target.value.trim();if(!query){state.addMovieResults=[];state.addMovieError="";document.querySelector("#addMovieResults").innerHTML=addMovieResults();return}addMovieSearchTimer=setTimeout(()=>searchAddMovies(query),300)})}
 function updateListOnly(){let main=document.querySelector(".content");if(!main)return;let active=document.activeElement===document.querySelector("#search");let pos=document.querySelector("#search")?.selectionStart;main.innerHTML=watchlist();bindLiveInputs();bindVhsTilt();let s=document.querySelector("#search");if(active&&s){s.focus();s.setSelectionRange(pos,pos)}}
