@@ -118,46 +118,43 @@ async function persistGlobalSeen(){
 
 async function migrateCurrentUserIdentity(){
   if(currentUser==="Guest"||!currentProfile?.id)return false;
-  const newKey=userKey(currentUser);
-  const currentAvatarUrl=currentProfile?.avatar||userProfiles[newKey]?.avatar||"";const oldKeys=Object.keys(userProfiles).filter(key=>key!==newKey&&(userProfiles[key]?.id===currentProfile.id||(currentAvatarUrl&&userProfiles[key]?.avatar===currentAvatarUrl)));
-  if(!oldKeys.length){
-    userProfiles[newKey]={...(userProfiles[newKey]||{}),id:currentProfile.id,name:currentUser,avatar:currentProfile.avatar||userProfiles[newKey]?.avatar||""};
-    return false;
-  }
-  const mergeVotes={...(votesByUser[newKey]?.votes||{})};
-  oldKeys.forEach(key=>Object.assign(mergeVotes,votesByUser[key]?.votes||{}));
-  votesByUser[newKey]={...(votesByUser[newKey]||{}),id:currentProfile.id,name:currentUser,avatar:currentProfile.avatar||"",votes:mergeVotes};
-  oldKeys.forEach(key=>delete votesByUser[key]);
+  const newKey=userKey(currentUser), accountId=currentProfile.id, avatar=currentProfile.avatar||"";
+  const profileEntries={...userProfiles};
+  const aliases=new Set(Object.entries(profileEntries).filter(([key,p])=>key!==newKey&&(p?.id===accountId||(avatar&&p?.avatar===avatar))).map(([key])=>key));
+  Object.entries(votesByUser).forEach(([key,entry])=>{if(key!==newKey&&(entry?.id===accountId||(avatar&&entry?.avatar===avatar)))aliases.add(key)});
+  const aliasNames=new Set([...aliases].flatMap(key=>[key,profileEntries[key]?.name,votesByUser[key]?.name,key]).filter(Boolean).map(userKey));
+  const mergedVotes={...(votesByUser[newKey]?.votes||{})};
+  aliases.forEach(key=>Object.assign(mergedVotes,votesByUser[key]?.votes||{}));
+  votesByUser[newKey]={...(votesByUser[newKey]||{}),id:accountId,name:currentUser,avatar,votes:mergedVotes};
+  aliases.forEach(key=>delete votesByUser[key]);
   const mergedSeen={...(globalSeenByUser[newKey]||{})};
-  oldKeys.forEach(key=>Object.assign(mergedSeen,globalSeenByUser[key]||{}));
-  globalSeenByUser[newKey]=mergedSeen;oldKeys.forEach(key=>delete globalSeenByUser[key]);
+  aliases.forEach(key=>Object.assign(mergedSeen,globalSeenByUser[key]||{}));
+  Object.keys(globalSeenByUser).forEach(key=>{if(key!==newKey&&aliasNames.has(userKey(key))){Object.assign(mergedSeen,globalSeenByUser[key]||{});delete globalSeenByUser[key]}});
+  globalSeenByUser[newKey]=mergedSeen;
+  const canonicalName=name=>aliasNames.has(userKey(name))?currentUser:name;
   movies.forEach(m=>{
-    if(m.suggestedBy&&oldKeys.includes(userKey(m.suggestedBy)))m.suggestedBy=currentUser;
-    if(m.addedBy&&oldKeys.includes(userKey(m.addedBy)))m.addedBy=currentUser;
-    if(m.voterResponses){
-      const merged=m.voterResponses[newKey];
-      oldKeys.forEach(key=>{if(m.voterResponses[key]&&!merged)m.voterResponses[newKey]=m.voterResponses[key];delete m.voterResponses[key]});
-    }
-    if(Array.isArray(m.voters))m.voters=m.voters.map(v=>Array.isArray(v)?[oldKeys.includes(userKey(v[0]))?currentUser:v[0],v[1]]:v);
-    if(Array.isArray(m.watchedBy))m.watchedBy=[...new Set(m.watchedBy.map(name=>oldKeys.includes(userKey(name))?currentUser:name))];
+    if(m.suggestedBy)m.suggestedBy=canonicalName(m.suggestedBy);
+    if(m.addedBy)m.addedBy=canonicalName(m.addedBy);
+    const responseMap=m.voterResponses||{}, combined={};
+    Object.entries(responseMap).forEach(([name,answer])=>{const canonical=canonicalName(name);if(canonical===currentUser){if(!combined[canonical]||answer)combined[canonical]=answer}else combined[canonical]=answer});
+    Object.assign(combined,mergedVotes[m.id]?{[currentUser]:mergedVotes[m.id]}:{});
+    m.voterResponses=combined;
+    const voterMap=new Map();(m.voters||[]).forEach(v=>{if(Array.isArray(v)){const name=canonicalName(v[0]);if(!voterMap.has(name)||name===currentUser)voterMap.set(name,[name,v[1]])}});
+    Object.entries(combined).forEach(([name,answer])=>voterMap.set(name,[name,({must:"must",interested:"green",watch:"yellow",no:"red"})[answer]||answer]));
+    m.voters=[...voterMap.values()];
+    if(Array.isArray(m.seen))m.seen=[...new Set(m.seen.map(canonicalName))];
+    if(Array.isArray(m.watchedBy))m.watchedBy=[...new Set(m.watchedBy.map(canonicalName))];
   });
-  Object.keys(movieReviews).forEach(id=>{
-    const reviews=movieReviews[id];if(!reviews||typeof reviews!=="object")return;
-    const merged=reviews[newKey];
-    oldKeys.forEach(key=>{if(reviews[key]&&!merged)reviews[newKey]=reviews[key];delete reviews[key]});
-  });
-  Object.keys(watchedAttendance).forEach(id=>{
-    if(Array.isArray(watchedAttendance[id]))watchedAttendance[id]=[...new Set(watchedAttendance[id].map(name=>oldKeys.includes(userKey(name))?currentUser:name))];
-  });
-  serverUsers=[...new Set(serverUsers.map(name=>oldKeys.includes(userKey(name))?currentUser:name))];
-  try{const client=window.WATCHLIST_SUPABASE_CLIENT;if(client){await client.from("watchlist_server_memberships").update({display_name:currentUser,avatar_url:currentAvatarUrl,updated_at:new Date().toISOString()}).eq("user_id",currentProfile.id);}}catch(error){console.warn("Could not update renamed server membership:",error.message||error)}
-  oldKeys.forEach(key=>delete userProfiles[key]);
-  userProfiles[newKey]={...(userProfiles[newKey]||{}),id:currentProfile.id,name:currentUser,avatar:currentProfile.avatar||""};
-  state.votes=mergeVotes;
-  try{localStorage.setItem("watchlist-user-profiles",JSON.stringify(userProfiles));localStorage.setItem("watchlist-votes-by-user",JSON.stringify(votesByUser));}catch(error){}
-  return true;
+  Object.keys(movieReviews).forEach(id=>{const obj=movieReviews[id];if(!obj||typeof obj!=="object")return;const value=obj[newKey]||[...aliases].map(k=>obj[k]).find(Boolean);aliases.forEach(k=>delete obj[k]);Object.keys(obj).forEach(k=>{if(aliasNames.has(userKey(k))){if(!obj[currentUser]&&obj[k])obj[currentUser]=obj[k];delete obj[k]}});if(value)obj[newKey]=value});
+  Object.keys(watchedAttendance).forEach(id=>{if(Array.isArray(watchedAttendance[id]))watchedAttendance[id]=[...new Set(watchedAttendance[id].map(canonicalName))]});
+  serverUsers=[...new Set(serverUsers.map(canonicalName))];
+  Object.keys(userProfiles).forEach(key=>{if(aliases.has(key))delete userProfiles[key]});
+  userProfiles[newKey]={...(userProfiles[newKey]||{}),id:accountId,name:currentUser,avatar};
+  try{const client=window.WATCHLIST_SUPABASE_CLIENT;if(client)await client.from("watchlist_server_memberships").update({display_name:currentUser,avatar_url:avatar,updated_at:new Date().toISOString()}).eq("user_id",accountId)}catch(error){console.warn("Could not update renamed server membership:",error.message||error)}
+  state.votes=mergedVotes;
+  try{localStorage.setItem("watchlist-user-profiles",JSON.stringify(userProfiles));localStorage.setItem("watchlist-votes-by-user",JSON.stringify(votesByUser));localStorage.setItem("watchlist-global-seen",JSON.stringify(globalSeenByUser))}catch(error){}
+  return aliases.size>0||aliasNames.size>0;
 }
-
 async function loadServerContext(){
   if(currentUser==="Guest")return;
   const client=window.WATCHLIST_SUPABASE_CLIENT;
