@@ -177,7 +177,15 @@ async function loadSharedWatchlist(){
     if(error)throw error;
     if(data?.data){sharedApply(data.data);}
     else{
-      await client.from("watchlist_shared_state").upsert({id:sharedId,data:sharedSnapshot(),updated_by:currentProfile?.id||null});
+      let initial=sharedSnapshot();
+      if(activeServer?.guild_id){
+        const {data:existingServers}=await client.from("watchlist_shared_state").select("id").like("id","server:%").limit(1);
+        if(!(existingServers||[]).length){
+          const {data:legacy}=await client.from("watchlist_shared_state").select("data").eq("id","watchlist").maybeSingle();
+          if(legacy?.data)initial=legacy.data;
+        }
+      }
+      await client.from("watchlist_shared_state").upsert({id:sharedId,data:initial,updated_by:currentProfile?.id||null});
       sharedSyncLoaded=true;
     }
     if(sharedSyncChannel)client.removeChannel(sharedSyncChannel);
