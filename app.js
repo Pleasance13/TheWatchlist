@@ -147,7 +147,7 @@ function sharedApply(data){
   if(!data||typeof data!=="object")return;
   sharedSyncApplying=true;
   if(Array.isArray(data.movies)){
-    movies.splice(0,movies.length,...data.movies.map(m=>({...m,seen:Array.isArray(m.seen)?[...m.seen]:[],voters:Array.isArray(m.voters)?m.voters.map(v=>Array.isArray(v)?[...v]:v):[]})));
+    movies.splice(0,movies.length,...data.movies.map(m=>({...m,seen:Object.keys(globalSeenByUser).filter(name=>globalSeenByUser[name]?.[m.id]),voters:Array.isArray(m.voters)?m.voters.map(v=>Array.isArray(v)?[...v]:v):[]})));
   }
   votesByUser=data.votesByUser&&typeof data.votesByUser==="object"?data.votesByUser:{};
   movieReviews=data.movieReviews&&typeof data.movieReviews==="object"?data.movieReviews:{};
