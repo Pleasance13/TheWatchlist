@@ -34,7 +34,7 @@
   function profileMarkup(user){
     if(!user)return '<button class="auth-signin" type="button" data-watchlist-auth="signin">Sign in with Discord</button>';
     const meta=user.user_metadata||{};
-    const name=meta.global_name||meta.full_name||meta.name||meta.user_name||meta.preferred_username||"Discord user";
+    const name=meta.global_name||meta.full_name||meta.name||meta.preferred_username||meta.user_name||"Discord user";
     const avatar=meta.avatar_url||meta.picture||meta.avatar||"";
     return '<div class="auth-profile">'+(avatar?'<img class="auth-avatar" referrerpolicy="no-referrer" src="'+String(avatar).replace(/&/g,"&amp;").replace(/"/g,"&quot;")+'" alt="">':'<span class="auth-avatar" aria-hidden="true"></span>')+'<span>'+String(name).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]))+'</span></div><button class="auth-signout" type="button" data-watchlist-auth="signout">Sign out</button>';
   }
@@ -45,8 +45,8 @@
     // Discord/Supabase may expose the account handle under different metadata keys.
     // Accept the exact handle (or Discord's legacy discriminator form), not a substring.
     const canEditArtwork=identityValues.some(value=>value===".pleasance"||value==="@.pleasance"||value.endsWith("#.pleasance"));
-    const profile=user?{name:meta.global_name||meta.full_name||meta.name||meta.user_name||meta.preferred_username||"Discord user",avatar:meta.avatar_url||meta.picture||"",canEditArtwork}:null;
-    window.WATCHLIST_AUTH_PROFILE=profile;
+    const profile=user?{id:user.id,name:meta.global_name||meta.full_name||meta.name||meta.preferred_username||meta.user_name||"Discord user",avatar:meta.avatar_url||meta.picture||"",canEditArtwork}:null;
+    window.WATCHLIST_AUTH_PROFILE=profile;\n    window.WATCHLIST_SUPABASE_CLIENT=client;
     window.WATCHLIST_AUTHENTICATED=!!user;
     if(typeof window.watchlistAuthIdentityChanged==="function")window.watchlistAuthIdentityChanged(profile);
   }
@@ -71,7 +71,7 @@
 
   // FIXED SECTION: Rely purely on onAuthStateChange to handle initial session discovery and URL token parsing.
   loadClient().then(lib=>{
-    client=lib.createClient(config.url,config.publishableKey,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
+    client=lib.createClient(config.url,config.publishableKey,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});\n    window.WATCHLIST_SUPABASE_CLIENT=client;
     
     client.auth.onAuthStateChange((event, session)=>{
       paint(session?.user || null);
