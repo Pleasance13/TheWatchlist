@@ -84,7 +84,17 @@
     }catch(error){showError(error);button.disabled=false;}
   });
 
-  window.WATCHLIST_FETCH_DISCORD_GUILDS=async function(){\n    if(!client)throw new Error("Authentication is still loading. Please try again.");\n    const {data,error}=await client.auth.getSession();if(error)throw error;\n    const token=data?.session?.provider_token||lastProviderToken;\n    if(!token)throw new Error("Discord server access is not available in this session. Sign out and sign back in to grant the server-list permission.");\n    const response=await fetch("https://discord.com/api/users/@me/guilds",{headers:{Authorization:"Bearer "+token}});\n    if(!response.ok)throw new Error("Could not load your Discord servers (HTTP "+response.status+").");\n    return response.json();\n  };\n\n  // FIXED SECTION: Rely purely on onAuthStateChange to handle initial session discovery and URL token parsing.
+  window.WATCHLIST_FETCH_DISCORD_GUILDS=async function(){
+    if(!client)throw new Error("Authentication is still loading. Please try again.");
+    const {data,error}=await client.auth.getSession();if(error)throw error;
+    const token=data?.session?.provider_token||lastProviderToken;
+    if(!token)throw new Error("Discord server access is not available in this session. Sign out and sign back in to grant the server-list permission.");
+    const response=await fetch("https://discord.com/api/users/@me/guilds",{headers:{Authorization:"Bearer "+token}});
+    if(!response.ok)throw new Error("Could not load your Discord servers (HTTP "+response.status+").");
+    return response.json();
+  };
+
+  // FIXED SECTION: Rely purely on onAuthStateChange to handle initial session discovery and URL token parsing.
   loadClient().then(lib=>{
     client=lib.createClient(config.url,config.publishableKey,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
     window.WATCHLIST_SUPABASE_CLIENT=client;
