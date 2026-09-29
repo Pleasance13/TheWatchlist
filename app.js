@@ -225,7 +225,7 @@ async function persistGlobalSeen(){
   if(!client)return;
   const stableSeen={};
   Object.entries(globalSeenByUser||{}).forEach(([name,value])=>{stableSeen[stableIdentityKey(name)]=value});
-  const {error}=await client.from("watchlist_global_seen").upsert({id:"seen",data:stableSeen,updated_at:new Date().toISOString(),updated_by:currentProfile?.id||null});
+  const {error}=await client.rpc("watchlist_save_global_seen",{p_data:stableSeen});
   if(error)console.warn("Could not save global seen state:",error.message||error);
   try{localStorage.setItem("watchlist-global-seen",JSON.stringify(globalSeenByUser))}catch(error){}
 }
