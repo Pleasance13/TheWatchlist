@@ -194,7 +194,8 @@ function detailLogoPath(m){
 let activeServer=null;
 try{activeServer=JSON.parse(localStorage.getItem("watchlist-active-server")||"null")}catch(error){activeServer=null}
 let globalSeenByUser={};
-try{globalSeenByUser=JSON.parse(localStorage.getItem("watchlist-global-seen")||"{}")}catch(error){globalSeenByUser={}}
+// Seen state is server-authoritative. Legacy localStorage values are intentionally ignored.
+try{localStorage.removeItem("watchlist-global-seen")}catch(error){}
 
 async function loadServerMembers(){
   const client=window.WATCHLIST_SUPABASE_CLIENT;
@@ -213,11 +214,11 @@ async function loadGlobalSeen(){
   globalSeenByUser={};
   Object.entries(rawSeen).forEach(([key,value])=>{
     if(!value||typeof value!=="object")return;
-    const stable=stableIdentityKey(key);
-    const finalKey=stable||key;
-    globalSeenByUser[finalKey]={...(globalSeenByUser[finalKey]||{}),...value};
+    // Seen state is keyed only by the authenticated account UUID.
+    if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(key)))return;
+    globalSeenByUser[String(key)]=value;
   });
-  try{localStorage.setItem("watchlist-global-seen",JSON.stringify(globalSeenByUser))}catch(error){}
+  try{localStorage.removeItem("watchlist-global-seen")}catch(error){}
   movies.forEach(m=>{
     m.seen=Object.keys(globalSeenByUser).filter(user=>globalSeenByUser[user]?.[m.id]).map(user=>identityDisplayName(user,userProfiles,votesByUser));
   });
