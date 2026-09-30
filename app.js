@@ -324,6 +324,11 @@ function sharedApply(data){
       const decoded=deserializeMovieIdentities(m,incomingProfiles,incomingVotes);
       return {...decoded,seen:Object.keys(globalSeenByUser).filter(name=>globalSeenByUser[name]?.[decoded.id]),voters:Array.isArray(decoded.voters)?decoded.voters.map(v=>Array.isArray(v)?[...v]:v):[]};
     }));
+    // Preserve the legacy attribution fallback for TMDB movies whose shared
+    // record predates the user-attribution fields. Known attributions win.
+    movies.forEach(m=>{
+      if(m.id.startsWith("tmdb-")&&!m.suggestedBy)m.suggestedBy=m.addedBy||"Josh";
+    });
   }
   movieReviews=deserializeReviews(data.movieReviews&&typeof data.movieReviews==="object"?data.movieReviews:{},incomingProfiles,incomingVotes);
   watchedMovies=Array.isArray(data.watchedMovies)?[...data.watchedMovies]:[];
