@@ -1,0 +1,29 @@
+/* Experimental tiled page background — texture sits above the existing page background. */
+body{
+  position:relative;
+  background:
+    radial-gradient(circle at 75% -15%,rgba(222,214,196,.08),transparent 33%),
+    radial-gradient(circle at 15% 30%,rgba(255,255,255,.025),transparent 28%),
+    var(--bg);
+  background-attachment:fixed,fixed,fixed;
+}
+
+body::before{
+  content:"";
+  position:fixed;
+  inset:-100%;
+  width:300%;
+  height:300%;
+  z-index:0;
+  background:url("/background-tile.png") repeat;
+  opacity:.3;
+  transform:rotate(45deg);
+  transform-origin:center;
+  pointer-events:none;
+  mix-blend-mode:normal;
+}
+
+body > *{
+  position:relative;
+  z-index:1;
+}
