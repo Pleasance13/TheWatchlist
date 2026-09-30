@@ -5,6 +5,7 @@ on:
     branches:
       - list-mode-improvement
       - feature/tmdb-integration
+      - fix/browser-history-routing
   workflow_dispatch:
 
 permissions:
