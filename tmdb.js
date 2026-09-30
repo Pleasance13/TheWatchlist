@@ -63,6 +63,8 @@ const TMDB = {
     movie.tmdbStreaming = Array.isArray(data.streaming) ? data.streaming : movie.tmdbStreaming || [];
     movie.tmdbStreamingLink = data.streamingLink || movie.tmdbStreamingLink || null;
     movie.tmdbStreamingRegion = data.streamingRegion || movie.tmdbStreamingRegion || "US";
+    movie.tmdbDigitalReleaseDate = data.digitalReleaseDate || movie.tmdbDigitalReleaseDate || null;
+    movie.tmdbPhysicalReleaseDate = data.physicalReleaseDate || movie.tmdbPhysicalReleaseDate || null;
     movie.imdbId = data.imdbId || movie.imdbId || null;
     movie.tmdbAssets = {
       logos: data.logos || movie.tmdbAssets?.logos || [],
