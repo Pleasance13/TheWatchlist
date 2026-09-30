@@ -687,6 +687,8 @@ button,input{font:inherit}button{color:inherit}.topbar{height:72px;padding:0 32p
 .artwork-controls-column::-webkit-scrollbar-track{background:transparent}
 .artwork-controls-column::-webkit-scrollbar-thumb{background:#3b4048;border-radius:999px}
 .artwork-live-preview .vhs-stage{cursor:pointer}
+/* The asset-picker preview should use the same left-justified back-cover copy as the real VHS cases. */
+.artwork-preview-case .vhs-back-scroll{text-align:left}
 .artwork-preview-case.flipped .vhs-inner{transform:rotateY(171deg)}
 .vhs-front>img{position:relative;z-index:1}
 .vhs-front-logo{z-index:10}
