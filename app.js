@@ -205,6 +205,7 @@ const voteWeights={must:5,interested:3,watch:1,no:0};movies.forEach(m=>{
 });
 const app=document.querySelector("#app");
 let savedCaseAssets={};
+let assetEditorDirty=false;
 try{savedCaseAssets=JSON.parse(localStorage.getItem("watchlist-case-assets")||"{}");}catch(error){savedCaseAssets={}}
 // Temporary UI gate: once Discord auth exists, replace this with the authenticated Josh/Discord user ID check.
 function canEditCaseAssets(){return !!window.WATCHLIST_AUTHENTICATED&&window.WATCHLIST_AUTH_PROFILE?.canEditArtwork===true}
@@ -459,7 +460,7 @@ async function persistSharedWatchlist(){
   }).catch(error=>console.warn("Could not queue shared watchlist state:",error.message||error));
   return sharedSyncSavePromise;
 }
-function saveCaseAssets(){try{localStorage.setItem("watchlist-case-assets",JSON.stringify(savedCaseAssets));}catch(error){}persistSharedWatchlist();}
+function saveCaseAssets(sync=true){try{localStorage.setItem("watchlist-case-assets",JSON.stringify(savedCaseAssets));}catch(error){}if(sync)persistSharedWatchlist();}
 function assetDraft(m){
   const a=caseAssets(m);
   const num=(value,fallback)=>Number.isFinite(Number(value))?Number(value):fallback;
@@ -879,6 +880,7 @@ window.confirmAddMovie=()=>{
 
 window.openAssetEditor=async id=>{
   if(!canEditCaseAssets()||state.nav!=="detail"||state.detail!==id)return;
+  assetEditorDirty=false;
   state.assetMovieId=id;state.assetEditorOpen=true;state.assetLoading=true;state.assetError="";render();
   const m=movies.find(x=>x.id===id);
   try{
@@ -888,7 +890,13 @@ window.openAssetEditor=async id=>{
   }catch(error){state.assetError=error.message||"Could not load TMDB artwork."}
   finally{state.assetLoading=false;render()}
 };
-window.closeAssetEditor=()=>{state.assetEditorOpen=false;state.assetMovieId=null;state.assetLoading=false;render()};
+window.closeAssetEditor=()=>{
+  const shouldSync=assetEditorDirty;
+  assetEditorDirty=false;
+  state.assetEditorOpen=false;state.assetMovieId=null;state.assetLoading=false;
+  if(shouldSync)saveCaseAssets(true);
+  render();
+};
 window.chooseAsset=(type,encodedPath)=>{
   const m=movies.find(x=>x.id===state.assetMovieId);if(!m||!canEditCaseAssets())return;
   const view=preserveArtworkView();
@@ -899,7 +907,7 @@ window.chooseAsset=(type,encodedPath)=>{
   else if(type==="detail-logo")a.detailLogoPath=path;
   else if(type==="poster")a.frontImagePath=path;
   else if(type==="backdrop")a.backStillPath=path;
-  savedCaseAssets[m.id]=a;saveCaseAssets();
+  savedCaseAssets[m.id]=a;assetEditorDirty=true;saveCaseAssets(false);
 
   const targetFlipped=type==="backdrop"?true:type==="poster"?false:wasFlipped;
   const shouldAnimateFlip=(type==="poster"||type==="backdrop")&&wasFlipped!==targetFlipped;
@@ -933,7 +941,8 @@ window.toggleAssetLogo=(button)=>{
   const next=!visible;
   a.frontLogoVisible=next;
   savedCaseAssets[m.id]=a;
-  saveCaseAssets();
+  assetEditorDirty=true;
+  saveCaseAssets(false);
   const live=document.querySelector("[data-asset-preview] .vhs-inner");
   const logo=live?.querySelector(".vhs-front-logo");
   if(logo)logo.classList.toggle("asset-logo-hidden",!next);
@@ -943,7 +952,7 @@ window.setAssetDraft=(field,value)=>{
   const m=movies.find(x=>x.id===state.assetMovieId);if(!m||!canEditCaseAssets())return;
   const a=savedCaseAssets[m.id]||{};
   a[field]=field==="frontLogoVisible"?Boolean(value):Number(value);
-  savedCaseAssets[m.id]=a;saveCaseAssets();
+  savedCaseAssets[m.id]=a;assetEditorDirty=true;saveCaseAssets(false);
 
   const label=document.querySelector('[data-asset-value="'+field+'"]');
   if(label)label.textContent=field==="frontLogoBottom"?value+"% from bottom":value+"%";
