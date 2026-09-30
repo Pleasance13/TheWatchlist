@@ -379,7 +379,16 @@ function sharedApply(data){
   });
   savedSeenStatus=Object.fromEntries(movies.map(m=>[m.id,Object.keys(globalSeenByUser).filter(name=>globalSeenByUser[name]?.[m.id])]));
   watchedMovies.forEach(id=>{const m=movies.find(x=>x.id===id);if(m){m.watched=true;m.watchedBy=watchedAttendance[id]||m.watchedBy||[]}});
-  state.votes=currentUser==="Guest"?{}:(votesByUser[stableIdentityKey(currentUser)]?.votes||votesByUser[userKey(currentUser)]?.votes||{});
+  // The in-memory identity map is name-keyed for UI compatibility, while
+  // persisted records are UUID-keyed. Resolve the active user's votes by the
+  // embedded stable ID/name instead of looking up only the current map key.
+  const currentAccountId=currentProfile?.id||null;
+  const currentVoteEntry=Object.values(votesByUser).find(entry=>{
+    if(!entry||typeof entry!=="object")return false;
+    if(currentAccountId&&entry.id===currentAccountId)return true;
+    return String(entry.name||"").trim().toLowerCase()===String(currentUser||"").trim().toLowerCase();
+  });
+  state.votes=currentUser==="Guest"?{}:{...(currentVoteEntry?.votes||{})};
   // Keep the group score derived from all canonical responses, not the active user's local vote.
   sharedSyncApplying=false;
   sharedSyncLoaded=true;
