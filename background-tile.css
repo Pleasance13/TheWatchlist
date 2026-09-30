@@ -1,12 +1,21 @@
 /* Experimental tiled page background. Keep the existing gradients and grain treatment. */
 body{
-  background-image:
+  position:relative;
+  background:
     radial-gradient(circle at 75% -15%,rgba(222,214,196,.08),transparent 33%),
     radial-gradient(circle at 15% 30%,rgba(255,255,255,.025),transparent 28%),
-    url("/background-tile.png");
-  background-repeat:no-repeat,no-repeat,repeat;
-  background-position:center top,center top,0 0;
-  background-size:auto,auto,auto;
-  background-color:var(--bg);
+    var(--bg);
   background-attachment:fixed,fixed,fixed;
+}
+
+body::before{
+  content:"";
+  position:fixed;
+  inset:-50%;
+  z-index:-1;
+  background:url("/background-tile.png") repeat;
+  opacity:.5;
+  transform:rotate(45deg);
+  transform-origin:center;
+  pointer-events:none;
 }
