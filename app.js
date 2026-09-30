@@ -191,6 +191,38 @@ async function loadUserSettings(){
   try{if(activeServer)localStorage.setItem("watchlist-active-server",JSON.stringify(activeServer));else localStorage.removeItem("watchlist-active-server")}catch(error){}
   try{localStorage.setItem("watchlist-warning-categories",JSON.stringify(savedWarningCategories));localStorage.setItem("watchlist-content-warnings-enabled",String(contentWarningsEnabled));localStorage.setItem("watchlist-display-settings",JSON.stringify(Object.fromEntries(displaySettingKeys.map(key=>[key,state[key]]))));}catch(error){}
 } const warningGroups=[{name:"Violence & gore",categories:["Violence","Gore","Blood","Torture","Body horror","Dismemberment","Weapons","War"]},{name:"Animals",categories:["Animal death","Animal cruelty","Animal injury","Harm to animals"]},{name:"Sexual content",categories:["Sexual content","Nudity","Sexual assault","Rape","Sexual exploitation"]},{name:"Death & self-harm",categories:["Death","Child death","Suicide","Self-harm","Suicide/self-harm"]},{name:"Other disturbing content",categories:["Drug use","Drug overdose","Child abuse","Disturbing imagery","Medical trauma","Abduction/kidnapping","Psychological distress"]}]; const warningCategories=warningGroups.flatMap(group=>group.categories); let savedWarningCategories=[]; try{savedWarningCategories=JSON.parse(localStorage.getItem("watchlist-warning-categories")||"[]")}catch(error){savedWarningCategories=[]}let contentWarningsEnabled=true;try{const savedContentWarnings=localStorage.getItem("watchlist-content-warnings-enabled");if(savedContentWarnings!==null)contentWarningsEnabled=savedContentWarnings==="true"}catch(error){}let savedDisplaySettings={};try{const parsedDisplaySettings=JSON.parse(localStorage.getItem("watchlist-display-settings")||"{}");displaySettingKeys.forEach(key=>{if(typeof parsedDisplaySettings[key]==="boolean")savedDisplaySettings[key]=parsedDisplaySettings[key]})}catch(error){savedDisplaySettings={}}
+function routeFromLocation(){
+  const params=new URLSearchParams(window.location.search);
+  const movieId=params.get("movie");
+  if(movieId)return {nav:"detail",detail:movieId};
+  const page=params.get("page");
+  return {nav:["watchlist","history","people","settings"].includes(page)?page:"watchlist",detail:null};
+}
+function routeUrl(nav,detail=null){
+  const url=new URL(window.location.href);
+  url.search="";
+  url.hash="";
+  if(nav==="detail"&&detail)url.searchParams.set("movie",String(detail));
+  else url.searchParams.set("page",nav);
+  return url.pathname+url.search;
+}
+function applyRoute({replace=false}={}){
+  const route=routeFromLocation();
+  state.nav=route.nav;
+  state.detail=route.detail;
+  const target=routeUrl(state.nav,state.detail);
+  if(replace||window.location.search!==target.slice(target.indexOf("?")))window.history.replaceState(null,document.title,target);
+}
+function navigateRoute(nav,detail=null,{replace=false}={}){
+  const target=routeUrl(nav,detail);
+  if(window.location.pathname+window.location.search!==target){
+    if(replace)window.history.replaceState(null,document.title,target);
+    else window.history.pushState(null,document.title,target);
+  }
+  state.nav=nav;
+  state.detail=detail;
+  render();
+}
 const state={nav:"watchlist",view:"list",search:"",filter:"all",posterSize:2,showSynopsis:true,showRatings:false,showNote:true,showTrailer:false,showCast:true,showStreamingLinks:true,...savedDisplaySettings,detail:null,detailSections:{cast:true,streaming:true,trailer:true},showFilters:false,genreFilters:[],yearFrom:"",yearTo:"",interestUsers:[],interestLevel:"",seenMode:"seen",seenUsers:[],rewatchStatus:"",watchedWith:"",suggestedBy:"",votes:stateVotesPlaceholder||{},removeMovieId:null,addMovieOpen:false,addMovieQuery:"",addMovieResults:[],addMovieSelection:null,addMovieLoading:false,addMovieError:"",attendanceOpen:false,attendanceMovieId:null,attendanceSelected:[],assetEditorOpen:false,assetMovieId:null,assetLoading:false,assetError:"",assetSections:{frontLogo:true,detailLogo:true,frontImage:true,backStill:true},assetLanguageGroups:{},assetPreviewFlipped:false,noteEditorOpen:false,noteEditorMovieId:null};
 const voteWeights={must:5,interested:3,watch:1,no:0};movies.forEach(m=>{
   if(state.votes[m.id])m.score=(Number(baseScores[m.id])||0)+(voteWeights[state.votes[m.id]]||0);
@@ -203,6 +235,7 @@ const voteWeights={must:5,interested:3,watch:1,no:0};movies.forEach(m=>{
   if(!m.suggestedBy&&m.addedBy)m.suggestedBy=m.addedBy;
   if(!m.addedBy&&m.suggestedBy)m.addedBy=m.suggestedBy;
 });
+window.addEventListener("popstate",()=>{applyRoute();render();window.scrollTo({top:0,behavior:"smooth"});});
 const app=document.querySelector("#app");
 let savedCaseAssets={};
 let assetEditorDirty=false;
@@ -987,8 +1020,8 @@ window.setAssetDraft=(field,value)=>{
     if(toggle)toggle.classList.toggle("on",Boolean(value));
   }
 };
-window.setNav=x=>{state.nav=x;state.detail=null;render()};window.setView=x=>{state.view=x;saveUserSettings();render()};window.toggleFilters=()=>{state.showFilters=!state.showFilters;render()};window.setFilter=x=>{state.filter=x;render()};window.setPosterSize=x=>{state.posterSize=Math.max(1,Math.min(4,Math.round(Number(x)||1)));saveUserSettings();const cols=[12,8,6,5][state.posterSize-1];document.querySelectorAll(".grid").forEach(e=>e.style.setProperty("--grid-cols",cols));document.querySelectorAll(".range").forEach(e=>e.value=state.posterSize);requestAnimationFrame(()=>bindVhsTilt())};window.toggleSetting=k=>{state[k]=!state[k];if(displaySettingKeys.includes(k)){try{const saved={};displaySettingKeys.forEach(key=>saved[key]=Boolean(state[key]));localStorage.setItem("watchlist-display-settings",JSON.stringify(saved))}catch(error){}saveUserSettings()}render();if(k==="showRatings"&&state[k]&&state.nav==="detail"){const movie=movies.find(x=>x.id===state.detail);if(movie)loadExternalRatings(movie)}};window.toggleDetailSection=k=>{state.detailSections[k]=!state.detailSections[k];render()};async function loadExternalRatings(movie){if(!state.showRatings||movie.ratingsLoaded||movie.ratingsLoading)return;movie.ratingsLoading=true;movie.ratingsError=false;try{if(!movie.imdbId&&movie.tmdbId){const details=await TMDB.details(movie.tmdbId);TMDB.apply(movie,details)}if(!movie.imdbId)throw new Error("No IMDb ID");const endpoint=window.WATCHLIST_OMDB_ENDPOINT||(location.hostname.endsWith("github.io")?"https://the-watchlist-two.vercel.app/api/omdb":"/api/omdb");const url=new URL(endpoint,window.location.origin);url.searchParams.set("imdbID",movie.imdbId);const response=await fetch(url);const data=await response.json().catch(()=>({}));if(!response.ok||data.error)throw new Error("Ratings unavailable");movie.imdbRating=data.imdbRating&&data.imdbRating!=="N/A"?data.imdbRating:null;movie.rottenTomatoesRating=data.rottenTomatoesRating&&data.rottenTomatoesRating!=="N/A"?data.rottenTomatoesRating:null;movie.ratingsLoaded=true;}catch(error){movie.ratingsError=true;}finally{movie.ratingsLoading=false;if(state.nav==="detail"&&state.detail===movie.id)render()}}
-window.openMovie=id=>{const movie=movies.find(x=>x.id===id);if(!movie)return;state.detail=movie.id;state.nav="detail";render();window.scrollTo({top:0,behavior:"smooth"});if(movie.tmdbId&&!movie.tmdbDetailsLoading){movie.tmdbDetailsLoading=true;TMDB.details(movie.tmdbId).then(data=>{TMDB.apply(movie,data);movie.tmdbDetailsLoaded=true;if(state.showRatings)loadExternalRatings(movie);}).catch(error=>console.warn("TMDB details unavailable for "+movie.title,error.message)).finally(()=>{movie.tmdbDetailsLoading=false;if(state.nav==="detail"&&state.detail===movie.id)render()})}else if(state.showRatings)loadExternalRatings(movie)};window.togglePerson=p=>{
+window.setNav=x=>{if(!["watchlist","history","people","settings"].includes(x))return;navigateRoute(x,null);};window.setView=x=>{state.view=x;saveUserSettings();render()};window.toggleFilters=()=>{state.showFilters=!state.showFilters;render()};window.setFilter=x=>{state.filter=x;render()};window.setPosterSize=x=>{state.posterSize=Math.max(1,Math.min(4,Math.round(Number(x)||1)));saveUserSettings();const cols=[12,8,6,5][state.posterSize-1];document.querySelectorAll(".grid").forEach(e=>e.style.setProperty("--grid-cols",cols));document.querySelectorAll(".range").forEach(e=>e.value=state.posterSize);requestAnimationFrame(()=>bindVhsTilt())};window.toggleSetting=k=>{state[k]=!state[k];if(displaySettingKeys.includes(k)){try{const saved={};displaySettingKeys.forEach(key=>saved[key]=Boolean(state[key]));localStorage.setItem("watchlist-display-settings",JSON.stringify(saved))}catch(error){}saveUserSettings()}render();if(k==="showRatings"&&state[k]&&state.nav==="detail"){const movie=movies.find(x=>x.id===state.detail);if(movie)loadExternalRatings(movie)}};window.toggleDetailSection=k=>{state.detailSections[k]=!state.detailSections[k];render()};async function loadExternalRatings(movie){if(!state.showRatings||movie.ratingsLoaded||movie.ratingsLoading)return;movie.ratingsLoading=true;movie.ratingsError=false;try{if(!movie.imdbId&&movie.tmdbId){const details=await TMDB.details(movie.tmdbId);TMDB.apply(movie,details)}if(!movie.imdbId)throw new Error("No IMDb ID");const endpoint=window.WATCHLIST_OMDB_ENDPOINT||(location.hostname.endsWith("github.io")?"https://the-watchlist-two.vercel.app/api/omdb":"/api/omdb");const url=new URL(endpoint,window.location.origin);url.searchParams.set("imdbID",movie.imdbId);const response=await fetch(url);const data=await response.json().catch(()=>({}));if(!response.ok||data.error)throw new Error("Ratings unavailable");movie.imdbRating=data.imdbRating&&data.imdbRating!=="N/A"?data.imdbRating:null;movie.rottenTomatoesRating=data.rottenTomatoesRating&&data.rottenTomatoesRating!=="N/A"?data.rottenTomatoesRating:null;movie.ratingsLoaded=true;}catch(error){movie.ratingsError=true;}finally{movie.ratingsLoading=false;if(state.nav==="detail"&&state.detail===movie.id)render()}}
+window.openMovie=id=>{const movie=movies.find(x=>x.id===id);if(!movie)return;navigateRoute("detail",movie.id);window.scrollTo({top:0,behavior:"smooth"});if(movie.tmdbId&&!movie.tmdbDetailsLoading){movie.tmdbDetailsLoading=true;TMDB.details(movie.tmdbId).then(data=>{TMDB.apply(movie,data);movie.tmdbDetailsLoaded=true;if(state.showRatings)loadExternalRatings(movie);}).catch(error=>console.warn("TMDB details unavailable for "+movie.title,error.message)).finally(()=>{movie.tmdbDetailsLoading=false;if(state.nav==="detail"&&state.detail===movie.id)render()})}else if(state.showRatings)loadExternalRatings(movie)};window.togglePerson=p=>{
 const card=document.querySelector('[data-person="'+p+'"]');if(!card)return;const old=card.querySelector(".person-details");if(old){old.remove();return}
 // Interest is independent of Seen status. A movie can be both watched/seen
 // and still have a recorded interest response, so don't hide it here.
@@ -1101,5 +1134,6 @@ async function hydrateTmdbArtwork(){
   render();
 }
 window.toggleWarningCategory=(category,checked)=>{const key=String(category).toLowerCase();savedWarningCategories=checked?[...new Set([...savedWarningCategories,key])]:savedWarningCategories.filter(x=>x!==key);try{localStorage.setItem("watchlist-warning-categories",JSON.stringify(savedWarningCategories))}catch(error){}saveUserSettings();document.querySelectorAll(".warning-picker-count").forEach(el=>el.textContent=savedWarningCategories.length+" selected")};
+applyRoute({replace:true});
 render();
 hydrateTmdbArtwork();document.addEventListener("toggle",event=>{const target=event.target;if(!target.matches(".filter-dropdown")||!target.open)return;document.querySelectorAll(".filter-dropdown[open]").forEach(other=>{if(other!==target&&!other.contains(target)&&!target.contains(other))other.open=false})},true);
