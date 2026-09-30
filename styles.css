@@ -1738,3 +1738,19 @@ button,input{font:inherit}button{color:inherit}.topbar{height:72px;padding:0 32p
 .setting.warning-settings>.warning-settings-header>button.toggle{grid-column:2;grid-row:1;justify-self:end;align-self:center;margin:0}
 .setting.warning-settings>.warning-category-controls{width:100%;flex:0 0 100%;align-self:stretch}
 .setting.warning-settings .warning-category-picker{width:100%;max-width:none;box-sizing:border-box}
+
+/* Shared Seen Before controls in list and grid views. */
+.seen-button{position:relative;width:auto;height:28px;padding:4px 8px;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:#666b73;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:6px;flex:0 0 auto;font-size:11px;font-weight:650;white-space:nowrap}
+.seen-button:hover{border-color:var(--line2);color:var(--text)}
+.seen-button svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.seen-button.on{color:#f1f0eb;border-color:#4b5058}
+.seen-slash{position:absolute;width:22px;height:1.5px;background:currentColor;transform:rotate(-45deg);opacity:.9}
+.seen-button.on .seen-slash{display:none}
+.grid-title-line{display:flex;align-items:center;gap:7px;min-width:0}
+.grid-title-line .grid-title{margin-top:12px;min-width:0}
+.grid-title-line .seen-button{margin-top:10px;width:24px;height:24px;padding:2px;border-color:transparent;background:transparent}
+.grid-title-line .seen-button:hover{border-color:var(--line);background:var(--panel)}
+.grid-title-line .seen-button svg{width:17px;height:17px}
+.grid-title-line .seen-button-compact span{display:none}
+.row>.seen-button{justify-self:end}
+@media(max-width:760px){.row>.seen-button{grid-column:3;grid-row:1;justify-self:end}.row{grid-template-columns:28px 44px minmax(0,1fr) auto}.row>.seen-button{display:inline-flex}.row>.seen-button span{display:none}.row>.seen-button{width:28px;height:28px;padding:2px}.grid-title-line .seen-button{width:24px;height:24px}}
