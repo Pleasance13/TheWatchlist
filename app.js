@@ -91,7 +91,10 @@ function serializeMovieIdentities(movie){
   }
   if(Array.isArray(copy.voters))copy.voters=copy.voters.map(v=>Array.isArray(v)?[stableIdentityKey(v[0]),v[1]]:v);
   if(Array.isArray(copy.watchedBy))copy.watchedBy=copy.watchedBy.map(name=>stableIdentityKey(name));
+  // Ratings loading/error state is transient UI state and must never be persisted.
   delete copy.seen;
+  delete copy.ratingsLoading;
+  delete copy.ratingsError;
   return copy;
 }
 function deserializeMovieIdentities(movie,profiles={},votes={}){
@@ -402,6 +405,10 @@ function sharedApply(data){
   if(Array.isArray(data.movies)){
     movies.splice(0,movies.length,...data.movies.map(m=>{
       const decoded=deserializeMovieIdentities(m,incomingProfiles,incomingVotes);
+      // Never restore transient rating request state from the database. Older rows may
+      // contain a stuck loading/error flag from the previous ratings implementation.
+      delete decoded.ratingsLoading;
+      delete decoded.ratingsError;
       return {...decoded,seen:Object.keys(globalSeenByUser).filter(name=>globalSeenByUser[name]?.[decoded.id]),voters:Array.isArray(decoded.voters)?decoded.voters.map(v=>Array.isArray(v)?[...v]:v):[]};
     }));
   }
