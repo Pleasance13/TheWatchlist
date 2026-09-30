@@ -1734,3 +1734,71 @@ button,input{font:inherit}button{color:inherit}.topbar{height:72px;padding:0 32p
 .grid-title-line .seen-button-compact span{display:none}
 .row>.seen-button{justify-self:end}
 @media(max-width:760px){.row>.seen-button{grid-column:3;grid-row:1;justify-self:end}.row{grid-template-columns:28px 44px minmax(0,1fr) auto}.row>.seen-button{display:inline-flex}.row>.seen-button span{display:none}.row>.seen-button{width:28px;height:28px;padding:2px}.grid-title-line .seen-button{width:24px;height:24px}}
+
+
+/* Final Seen button layout overrides */
+.row>.seen-button,
+.grid-title-line>.seen-button,
+.seen-button-compact{
+  width:76px!important;
+  min-width:76px!important;
+  max-width:76px!important;
+  flex:0 0 76px!important;
+  height:28px!important;
+  box-sizing:border-box!important;
+}
+.grid-title-line{
+  display:block!important;
+}
+.grid-title-line .grid-title{
+  margin-top:12px!important;
+}
+.grid-title-line>.seen-button{
+  display:inline-flex!important;
+  margin-top:6px!important;
+  padding:3px 7px!important;
+  border-color:var(--line)!important;
+  background:var(--panel)!important;
+}
+.grid-title-line .seen-button span{
+  display:inline!important;
+}
+.grid-title-line .seen-button .seen-icon{
+  display:block!important;
+}
+.seen-button .seen-icon{
+  width:16px!important;
+  height:16px!important;
+  flex:0 0 16px!important;
+  background-color:currentColor!important;
+}
+.seen-button.on .seen-icon{
+  -webkit-mask-image:url("/assets/seen.svg")!important;
+  mask-image:url("/assets/seen.svg")!important;
+}
+.seen-button.off .seen-icon{
+  -webkit-mask-image:url("/assets/not-seen.svg")!important;
+  mask-image:url("/assets/not-seen.svg")!important;
+}
+.detail-title-row{
+  display:flex!important;
+  align-items:center!important;
+  gap:10px!important;
+}
+.detail-title-row .detail-seen-button{
+  width:145px!important;
+  min-width:145px!important;
+  max-width:145px!important;
+  flex:0 0 145px!important;
+  height:30px!important;
+  margin-left:0!important;
+}
+@media(max-width:520px){
+  .detail-title-row{gap:7px!important}
+  .detail-title-row .detail-seen-button{
+    width:145px!important;
+    min-width:145px!important;
+    max-width:145px!important;
+    flex-basis:145px!important;
+  }
+}
