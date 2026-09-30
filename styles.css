@@ -107,7 +107,7 @@ button,input{font:inherit}button{color:inherit}.topbar{height:72px;padding:0 32p
 }
 
 /* Seen controls */
-.seen-button{box-sizing:border-box;width:72px;height:28px;display:inline-flex;align-items:center;justify-content:center;gap:5px;padding:3px 7px;border:1px solid var(--line);border-radius:6px;background:var(--panel);font-size:10px;font-weight:650;color:var(--text);cursor:pointer;white-space:nowrap}
+.seen-button{box-sizing:border-box;width:76px;min-width:76px;flex:0 0 76px;height:28px;display:inline-flex;align-items:center;justify-content:center;gap:5px;padding:3px 7px;border:1px solid var(--line);border-radius:6px;background:var(--panel);font-size:10px;font-weight:650;color:var(--text);cursor:pointer;white-space:nowrap}
 .seen-button:hover{border-color:var(--line2)}
 .seen-button.off{color:#666b73}
 .seen-button img{display:block;width:16px;height:16px;object-fit:contain;flex:0 0 16px}
@@ -115,12 +115,12 @@ button,input{font:inherit}button{color:inherit}.topbar{height:72px;padding:0 32p
 .seen-button.on .seen-icon{-webkit-mask-image:url("assets/seen.svg");mask-image:url("assets/seen.svg")}
 .seen-button.off .seen-icon{-webkit-mask-image:url("assets/not-seen.svg");mask-image:url("assets/not-seen.svg")}
 .row>.seen-button{justify-self:end}
-.detail-title-row .detail-seen-button{width:auto;min-width:122px;height:30px;margin:0}
+.detail-title-row .detail-seen-button{width:128px;min-width:128px;flex:0 0 128px;height:30px;margin:0}
 .detail-title-row .detail-seen-button .seen-icon{width:17px;height:17px;flex-basis:17px}
 .grid-title-line{display:block;min-width:0}
 .grid-title-line .grid-title{margin-top:12px;min-width:0}
 .grid-title-line .seen-button{margin-top:6px}
-.seen-button-compact{width:72px;height:28px}
+.seen-button-compact{width:76px;min-width:76px;flex:0 0 76px;height:28px}
 /* Final UI polish */
 .brand{
   appearance:none;
