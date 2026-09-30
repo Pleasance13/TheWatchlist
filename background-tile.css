@@ -16,6 +16,7 @@ body::before{
   height:300%;
   z-index:0;
   background:url("/background-tile.png") repeat;
+  background-size:80% auto;
   opacity:.6;
   transform:rotate(45deg);
   transform-origin:center;
