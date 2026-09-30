@@ -103,8 +103,14 @@
       paint(session?.user || null,session);
       
       // Clean up the URL hash parameters once successfully signed in so they don't linger in the browser address bar
-      if(event === "SIGNED_IN" && window.location.hash) {
-        window.history.replaceState(null, document.title, window.location.pathname + window.location.search);
+      if(event === "SIGNED_IN") {
+        const currentUrl=new URL(window.location.href);
+        currentUrl.hash="";
+        // OAuth returns to the app entry point. Replace it so browser Back starts
+        // with in-app navigation rather than the transient Discord callback URL.
+        const page=currentUrl.searchParams.get("page")||"watchlist";
+        if(!currentUrl.searchParams.get("movie"))currentUrl.searchParams.set("page",page);
+        window.history.replaceState(null, document.title, currentUrl.pathname + currentUrl.search);
       }
     });
   }).catch(showError);
