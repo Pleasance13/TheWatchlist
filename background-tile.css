@@ -1,4 +1,4 @@
-/* Experimental tiled page background. */
+/* Experimental tiled page background — texture sits above the existing page background. */
 body{
   position:relative;
   background:
@@ -20,6 +20,7 @@ body::before{
   transform:rotate(45deg);
   transform-origin:center;
   pointer-events:none;
+  mix-blend-mode:normal;
 }
 
 body > *{
