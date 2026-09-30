@@ -12,6 +12,9 @@
   });
   let client=null;
   let lastProviderToken=null;
+  const providerTokenStorageKey="watchlist-discord-provider-token";
+  function storedProviderToken(){try{return sessionStorage.getItem(providerTokenStorageKey)||null}catch(error){return null}}
+  function storeProviderToken(token){try{if(token)sessionStorage.setItem(providerTokenStorageKey,token);else sessionStorage.removeItem(providerTokenStorageKey)}catch(error){}}
   const style=document.createElement("style");
   style.textContent=`
     .auth-control{display:flex;align-items:center;gap:9px;margin-left:14px}
@@ -52,8 +55,9 @@
   }
   
   function paint(user,session=null){
-    if(session?.provider_token)lastProviderToken=session.provider_token;
-    if(!user)lastProviderToken=null;
+    if(session?.provider_token){lastProviderToken=session.provider_token;storeProviderToken(session.provider_token)}
+    else if(user&&!lastProviderToken)lastProviderToken=storedProviderToken();
+    if(!user){lastProviderToken=null;storeProviderToken(null)}
     const meta=discordProfileData(user);
     const identityValues=[meta.user_name,meta.preferred_username,meta.username,meta.global_name,meta.full_name,meta.name,user?.email].filter(value=>typeof value==="string").map(value=>value.trim().toLowerCase());
     // Discord/Supabase may expose the account handle under different metadata keys.
@@ -87,9 +91,13 @@
   window.WATCHLIST_FETCH_DISCORD_GUILDS=async function(){
     if(!client)throw new Error("Authentication is still loading. Please try again.");
     const {data,error}=await client.auth.getSession();if(error)throw error;
-    const token=data?.session?.provider_token||lastProviderToken;
+    const token=data?.session?.provider_token||lastProviderToken||storedProviderToken();
     if(!token)throw new Error("Discord server access is not available in this session. Sign out and sign back in to grant the server-list permission.");
     const response=await fetch("https://discord.com/api/users/@me/guilds",{headers:{Authorization:"Bearer "+token}});
+    if(response.status===401||response.status===403){
+      lastProviderToken=null;storeProviderToken(null);
+      throw new Error("Discord server access has expired. Please sign in with Discord again to refresh server access.");
+    }
     if(!response.ok)throw new Error("Could not load your Discord servers (HTTP "+response.status+").");
     return response.json();
   };
