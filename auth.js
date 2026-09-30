@@ -88,11 +88,25 @@
     }catch(error){showError(error);button.disabled=false;}
   });
 
+  async function refreshDiscordAccess(){
+    if(!client)throw new Error("Authentication is still loading. Please try again.");
+    const {data,error}=await client.auth.getSession();if(error)throw error;
+    if(!data?.session?.user)throw new Error("Please sign in with Discord first.");
+    const reauthKey="watchlist-discord-reauth-in-progress";
+    if(sessionStorage.getItem(reauthKey)==="1"){
+      sessionStorage.removeItem(reauthKey);
+      throw new Error("Discord server access could not be restored. Please sign in with Discord again.");
+    }
+    sessionStorage.setItem(reauthKey,"1");
+    const {error:oauthError}=await client.auth.signInWithOAuth({provider:"discord",options:{redirectTo:window.location.origin+window.location.pathname+window.location.search,scopes:"identify email guilds"}});
+    if(oauthError){sessionStorage.removeItem(reauthKey);throw oauthError}
+    throw new Error("Refreshing Discord server access…");
+  }
   window.WATCHLIST_FETCH_DISCORD_GUILDS=async function(){
     if(!client)throw new Error("Authentication is still loading. Please try again.");
     const {data,error}=await client.auth.getSession();if(error)throw error;
     const token=data?.session?.provider_token||lastProviderToken||storedProviderToken();
-    if(!token)throw new Error("Discord server access is not available in this session. Sign out and sign back in to grant the server-list permission.");
+    if(!token)return refreshDiscordAccess();
     const response=await fetch("https://discord.com/api/users/@me/guilds",{headers:{Authorization:"Bearer "+token}});
     if(response.status===401||response.status===403){
       lastProviderToken=null;storeProviderToken(null);
