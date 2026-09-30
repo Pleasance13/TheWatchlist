@@ -106,19 +106,21 @@ button,input{font:inherit}button{color:inherit}.topbar{height:72px;padding:0 32p
  .detail-vhs{width:170px;padding:16px 29px 16px 10px}
 }
 
-/* Refined Seen controls */
-.seen-button{box-sizing:border-box;width:94px;height:30px;display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:4px 8px;border:1px solid var(--line);border-radius:7px;background:var(--panel);font-size:11px;font-weight:650;color:#8b9098;cursor:pointer;white-space:nowrap}
-.seen-button:hover{border-color:var(--line2);color:var(--text)}
-.seen-button.on{color:var(--text);border-color:#555b64;background:var(--panel2)}
-.seen-button img{display:block;width:17px;height:17px;object-fit:contain;flex:0 0 17px}
-.detail-title-row .seen-button{flex:0 0 auto;margin:0;height:27px}
-.seen-control{display:contents}
-
-/* Grid: put the Seen button underneath the title. */
+/* Seen controls */
+.seen-button{box-sizing:border-box;width:72px;height:28px;display:inline-flex;align-items:center;justify-content:center;gap:5px;padding:3px 7px;border:1px solid var(--line);border-radius:6px;background:var(--panel);font-size:10px;font-weight:650;color:var(--text);cursor:pointer;white-space:nowrap}
+.seen-button:hover{border-color:var(--line2)}
+.seen-button.off{color:#666b73}
+.seen-button img{display:block;width:16px;height:16px;object-fit:contain;flex:0 0 16px}
+.seen-icon{display:block;width:16px;height:16px;flex:0 0 16px;background-color:currentColor;-webkit-mask:center/contain no-repeat;mask:center/contain}
+.seen-button.on .seen-icon{-webkit-mask-image:url("assets/seen.svg");mask-image:url("assets/seen.svg")}
+.seen-button.off .seen-icon{-webkit-mask-image:url("assets/not-seen.svg");mask-image:url("assets/not-seen.svg")}
+.row>.seen-button{justify-self:end}
+.detail-title-row .detail-seen-button{width:auto;min-width:122px;height:30px;margin:0}
+.detail-title-row .detail-seen-button .seen-icon{width:17px;height:17px;flex-basis:17px}
 .grid-title-line{display:block;min-width:0}
 .grid-title-line .grid-title{margin-top:12px;min-width:0}
 .grid-title-line .seen-button{margin-top:6px}
-.seen-button-compact{width:94px;height:30px}
+.seen-button-compact{width:72px;height:28px}
 /* Final UI polish */
 .brand{
   appearance:none;
