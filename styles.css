@@ -1754,11 +1754,11 @@ button,input{font:inherit}button{color:inherit}.topbar{height:72px;padding:0 32p
 }
 .grid-title-line>.seen-button{
   display:inline-flex!important;
-  width:65px!important;
-  min-width:65px!important;
-  max-width:65px!important;
-  flex:0 0 65px!important;
-  height:25px!important;
+  width:69px!important;
+  min-width:69px!important;
+  max-width:69px!important;
+  flex:0 0 69px!important;
+  height:19px!important;
   margin-top:6px!important;
   padding:2px 5px!important;
   border-color:var(--line)!important;
