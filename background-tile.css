@@ -1,6 +1,7 @@
 /* Experimental tiled page background. Keep the existing gradients and grain treatment. */
 body{
   position:relative;
+  isolation:isolate;
   background:
     radial-gradient(circle at 75% -15%,rgba(222,214,196,.08),transparent 33%),
     radial-gradient(circle at 15% 30%,rgba(255,255,255,.025),transparent 28%),
