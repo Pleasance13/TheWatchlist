@@ -753,7 +753,7 @@ function tmdbDetailsSections(m){
 }
 function detail(){
  let m=movies.find(x=>x.id===state.detail);
- if(!m)return '<div class="hero"><div><div class="eyebrow">MOVIE</div><h1>Details</h1></div><button class="ghost" onclick="setNav(\'watchlist\')">← Back</button></div><section class="detail"><p class="muted">Movie not found.</p></section>';
+ if(!m)return '<div class="hero"><div><div class="eyebrow">MOVIE</div><h1>Details</h1></div></div><section class="detail"><p class="muted">Movie not found.</p></section>';
  let selected=currentVote(m.id);
  const detailWarnings=contentWarningsEnabled?dedupeWarnings(m.warnings).filter(w=>savedWarningCategories.includes(String(w).toLowerCase())):[];
  const detailGenres=(Array.isArray(m.genre)?m.genre:String(m.genre||"").split(/\\s*[·,/]\s*/)).map(x=>String(x).trim()).filter(Boolean);
