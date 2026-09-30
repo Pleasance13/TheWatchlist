@@ -237,10 +237,20 @@ export default async function handler(req, res) {
       }
 
       const usReleases = (releaseDates.results || []).find(country => country.iso_3166_1 === "US");
-      const usCertifications = (usReleases?.release_dates || []).filter(release => release.certification).sort((a, b) => {
+      const usReleaseEntries = usReleases?.release_dates || [];
+      const usCertifications = usReleaseEntries.filter(release => release.certification).sort((a, b) => {
         const preferred = date => date.type === 3 ? 0 : date.type === 2 ? 1 : 2;
         return preferred(a) - preferred(b);
       });
+      // TMDB release types: 4 = digital, 5 = physical, 6 = TV/streaming.
+      // Keep the earliest date for each post-theatrical category so the client
+      // can move a movie out of Upcoming as soon as any such release occurs.
+      const firstReleaseDateOfType = type => usReleaseEntries
+        .filter(release => release.type === type && release.release_date)
+        .map(release => release.release_date.slice(0, 10))
+        .sort()[0] || null;
+      const digitalReleaseDate = firstReleaseDateOfType(4);
+      const physicalReleaseDate = firstReleaseDateOfType(5);
       const certification = usCertifications[0]?.certification || (releaseDates.results || []).flatMap(country => country.release_dates || []).find(release => release.certification)?.certification || null;
 
       const cast = (credits.cast || []).slice(0, 12).map(person => ({
@@ -309,6 +319,8 @@ export default async function handler(req, res) {
         streaming,
         streamingLink: regionProviders.link || null,
         streamingRegion: region,
+        digitalReleaseDate,
+        physicalReleaseDate,
         imdbId: externalIds.imdb_id || null,
         posterPath: movie.poster_path || null,
         textlessPosterPath: textlessPoster ? textlessPoster.file_path : null,

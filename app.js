@@ -224,8 +224,18 @@ function navigateRoute(nav,detail=null,{replace=false}={}){
   render();
 }
 const state={nav:"watchlist",view:"list",search:"",filter:"all",posterSize:2,showSynopsis:true,showRatings:false,showNote:true,showTrailer:false,showCast:true,showStreamingLinks:true,...savedDisplaySettings,detail:null,detailSections:{cast:true,streaming:true,trailer:true},showFilters:false,genreFilters:[],yearFrom:"",yearTo:"",interestUsers:[],interestLevel:"",seenMode:"seen",seenUsers:[],rewatchStatus:"",watchedWith:"",suggestedBy:"",votes:stateVotesPlaceholder||{},removeMovieId:null,addMovieOpen:false,addMovieQuery:"",addMovieResults:[],addMovieSelection:null,addMovieLoading:false,addMovieError:"",attendanceOpen:false,attendanceMovieId:null,attendanceSelected:[],assetEditorOpen:false,assetMovieId:null,assetLoading:false,assetError:"",assetSections:{frontLogo:true,detailLogo:true,frontImage:true,backStill:true},assetLanguageGroups:{},assetPreviewFlipped:false,noteEditorOpen:false,noteEditorMovieId:null};
-const voteWeights={must:5,interested:3,watch:1,no:0};movies.forEach(m=>{
-  if(state.votes[m.id])m.score=(Number(baseScores[m.id])||0)+(voteWeights[state.votes[m.id]]||0);
+const voteWeights={must:3.5,interested:3,watch:1,no:0};
+const POSITIVE_INTEREST_RESPONSES=new Set(["must","interested","watch"]);
+function positiveInterestCount(m){return Object.values(m.voterResponses||{}).filter(answer=>POSITIVE_INTEREST_RESPONSES.has(String(answer||"").toLowerCase())).length}
+function calculateMovieScore(m){
+  const responses=Object.values(m.voterResponses||{});
+  const responseScore=responses.reduce((sum,answer)=>sum+(voteWeights[String(answer||"").toLowerCase()]||0),0);
+  // A small group-size bump rewards movies that attract broad positive interest.
+  const responseCountBump=positiveInterestCount(m)*0.25;
+  return (Number(baseScores[m.id])||0)+responseScore+responseCountBump;
+}
+movies.forEach(m=>{
+  if(state.votes[m.id])m.score=calculateMovieScore(m);
   const ownerId=m.suggestedById||m.addedById;
   if(ownerId){
     const ownerName=identityDisplayName(ownerId,userProfiles,votesByUser);
@@ -409,7 +419,7 @@ function sharedApply(data){
     Object.entries(source).forEach(([name,answer])=>{const key=userKey(name),profile=userProfiles[key],id=profile?.id||votesByUser[key]?.id;const canonical=id?(canonicalById[id]||profile?.name||votesByUser[key]?.name||name):(canonicalByKey[key]||name);if(answer&&(!combined[canonical]||canonical===currentUser))combined[canonical]=answer});
     Object.entries(votesByUser).forEach(([key,entry])=>{const answer=entry?.votes?.[m.id];if(!answer)return;const id=entry?.id||userProfiles[key]?.id;const canonical=id?(canonicalById[id]||entry.name||userProfiles[key]?.name||key):(entry.name||userProfiles[key]?.name||key);combined[canonical]=answer});
     m.voterResponses=combined;m.voters=Object.entries(combined).map(([name,answer])=>[name,({must:"must",interested:"green",watch:"yellow",no:"red"})[answer]||answer]);
-    m.score=(Number(baseScores[m.id])||0)+Object.values(combined).reduce((sum,answer)=>sum+({must:5,interested:3,watch:1,no:0,green:3,yellow:1,red:0}[answer]||0),0);
+    m.score=calculateMovieScore(m);
   });
   savedSeenStatus=Object.fromEntries(movies.map(m=>[m.id,Object.keys(globalSeenByUser).filter(name=>globalSeenByUser[name]?.[m.id])]));
   watchedMovies.forEach(id=>{const m=movies.find(x=>x.id===id);if(m){m.watched=true;m.watchedBy=watchedAttendance[id]||m.watchedBy||[]}});
@@ -517,7 +527,7 @@ function voterEntries(m){const byName=new Map();Object.entries(m.voterResponses|
 
 function escapeHtml(value){return String(value??"").replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]))}
 function responseLabel(k){return ({must:"Must Watch",interested:"Interested",watch:"I'd Watch",no:"Not Interested"})[k]||"No response"}
-function rankOf(m){const ranked=movies.filter(x=>!x.watched).slice().sort((a,b)=>b.score-a.score);const n=ranked.findIndex(x=>x.id===m.id);return n>=0?n+1:"—"}
+function rankOf(m){const ranked=movies.filter(x=>!x.watched&&!isUpcomingMovie(x)).slice().sort((a,b)=>b.score-a.score);const n=ranked.findIndex(x=>x.id===m.id);return n>=0?n+1:"—"}
 function rankSticker(rank,extraClass=""){if(!Number.isFinite(Number(rank))||Number(rank)<1||Number(rank)>5)return "";const n=Number(rank);return `<span class="rank-sticker rank-sticker-${n} ${extraClass}" aria-label="Rank #${n}" style="--sticker-index:${n-1}"><span class="rank-sticker-number">#${n}</span>${n===1?'<span class="rank-sticker-shine" aria-hidden="true"></span>':""}</span>`}
 function header(){return `<header class="topbar"><div class="header-prism" aria-hidden="true"><img src="thewatchlist-prism.svg" alt=""></div><button class="brand" onclick="location.href=routeUrl('watchlist');return false" aria-label="Go to Watchlist"><img class="brand-logo" src="thewatchlist-logo.svg" alt="The Watchlist"></button><nav class="nav">${["watchlist","history","people","settings"].map(x=>`<button class="${state.nav===x?"active":""}" onclick="location.href=routeUrl('${x}');return false"><span>${x[0].toUpperCase()+x.slice(1)}</span></button>`).join("")}</nav>${window.watchlistAuthControlMarkup?window.watchlistAuthControlMarkup():""}</header>`}function genreList(){return [...new Set(movies.flatMap(m=>(m.genre||"").split(/\s*[·,/&]\s*/).map(x=>x.trim()).filter(Boolean)))].sort()}
 function filterActive(key){const v=state[key];return Array.isArray(v)?v.length>0:Boolean(v)}
@@ -549,9 +559,9 @@ function stack(v){return `<div class="stack">${v.map(([n,c,label])=>{const tip=`
 function seenButton(m,compact=false){const seen=m.seen.includes(currentUser);return `<button class="seen-button ${seen?"on":"off"} ${compact?"seen-button-compact":""}" data-movie-id="${m.id}" onclick="event.stopPropagation();toggleSeen(this.dataset.movieId)" aria-label="${seen?"Mark as not seen":"Mark as seen"}"><span class="seen-icon" aria-hidden="true"></span><span>${seen?"Seen":"Not seen"}</span></button>`}
 function responseButtons(m,compact=false){const mine=currentVote(m.id);return `<div class="quick-votes ${compact?"compact":""}" onclick="event.stopPropagation()">${[["must","Must Watch"],["interested","Interested"],["watch","I'd Watch"],["no","Not Interested"]].map(([k,l])=>`<button class="quick-vote quick-${k} ${mine===k?"selected":""}" onclick="vote('${m.id}','${k}')" title="${l}" aria-label="${l}">${compact?({must:"Must Watch",interested:"Interested",watch:"I'd Watch",no:"Not Interested"}[k]):l}</button>`).join("")}</div>`}
 
-function listView(items,historyMode=false){const globalRanks=new Map(movies.filter(x=>!x.watched).slice().sort((a,b)=>b.score-a.score).map((m,i)=>[m.id,i+1]));return `<div class="list">${items.map((m,i)=>{const mine=currentVote(m.id),rank=globalRanks.get(m.id)||"—";return `<article class="row ${mine==="no"?"not-interested-row":""} ${historyMode?"history-row":""}" data-movie-id="${m.id}">${historyMode?"":`<div class="rank">${rank<=5?rankSticker(rank,"list-rank-sticker"):`#${rank}`}</div>`}<div class="list-vhs" aria-hidden="true"><div class="vhs-stage">${caseFaces(m,"","list-vhs-inner")}</div></div><div onclick="openMovie('${m.id}')" style="cursor:pointer"><div class="title">${m.title}</div><div class="meta">${m.year} · ${m.genre} · ${m.director}</div>${historyMode?"":responseButtons(m,true)}</div><div>${historyMode?stack((m.watchedBy||[]).map(n=>[n,"watched","Watched"])):stack(voterEntries(m))}</div>${seenButton(m)}</article>`}).join("")}</div>`}
+function listView(items,historyMode=false,showRank=true){const globalRanks=new Map(movies.filter(x=>!x.watched&&!isUpcomingMovie(x)).slice().sort((a,b)=>b.score-a.score).map((m,i)=>[m.id,i+1]));return `<div class="list">${items.map((m,i)=>{const mine=currentVote(m.id),rank=globalRanks.get(m.id)||"—";return `<article class="row ${mine==="no"?"not-interested-row":""} ${historyMode?"history-row":""}" data-movie-id="${m.id}">${historyMode?"":`<div class="rank">${showRank?(rank<=5?rankSticker(rank,"list-rank-sticker"):`#${rank}`):""}</div>`}<div class="list-vhs" aria-hidden="true"><div class="vhs-stage">${caseFaces(m,"","list-vhs-inner")}</div></div><div onclick="openMovie('${m.id}')" style="cursor:pointer"><div class="title">${m.title}</div><div class="meta">${m.year} · ${m.genre} · ${m.director}</div>${historyMode?"":responseButtons(m,true)}</div><div>${historyMode?stack((m.watchedBy||[]).map(n=>[n,"watched","Watched"])):stack(voterEntries(m))}</div>${seenButton(m)}</article>`}).join("")}</div>`}
 
-function caseFaces(m, backHtml, extraClass=""){
+function caseFaces(m, backHtml, extraClass="",showRank=true){
   const assets=caseAssets(m);
   const poster=m.posterPath&&window.TMDB?TMDB.image(m.posterPath,"w500"):fallback(m.title,m.year);
   const defaultPoster=m.textlessPosterPath&&window.TMDB?TMDB.image(m.textlessPosterPath,"w500"):poster;
@@ -567,7 +577,7 @@ function caseFaces(m, backHtml, extraClass=""){
   const style=`--poster-art:url("${frontImage}");--backdrop-art:url("${backdrop}")`;
   const objectPosition=`object-position:${Number.isFinite(Number(assets.frontImageX))?100-Number(assets.frontImageX):50}% ${Number.isFinite(Number(assets.frontImageY))?Number(assets.frontImageY):50}%`;
   return `<div class="vhs-inner ${extraClass}" style="${style}">
-    <div class="vhs-front">${m.watched?"":rankSticker(rankOf(m))}<img src="${frontImage}" alt="${m.title}" style="${objectPosition}">${frontLogo}</div>
+    <div class="vhs-front">${m.watched||!showRank?"":rankSticker(rankOf(m))}<img src="${frontImage}" alt="${m.title}" style="${objectPosition}">${frontLogo}</div>
     <div class="vhs-back"><img class="vhs-back-art" src="${backdrop}" alt="" aria-hidden="true" style="object-position:${Number.isFinite(Number(assets.backStillX))?100-Number(assets.backStillX):50}% ${Number.isFinite(Number(assets.backStillY))?Number(assets.backStillY):50}%"><div class="vhs-back-scroll">${logo&&window.TMDB?`<div class="vhs-back-logo">${logoMarkup}</div>`:""}${backHtml}</div></div>
     <div class="vhs-side vhs-right">${spineMarkup}</div>
     <div class="vhs-side vhs-left">${spineMarkup}</div><div class="vhs-side vhs-top"></div><div class="vhs-side vhs-bottom"></div>
@@ -602,8 +612,8 @@ function backContent(m){
     ${warnings?`<div class="back-warnings">${warnings}</div>`:""}
   `;
 }
-function caseArticle(m,extra=""){const notInterested=currentVote(m.id)==="no";return `<article class="vhs ${extra} ${notInterested?"not-interested-card":""}" data-vhs="${m.id}" data-movie-id="${m.id}"><div class="vhs-stage" onclick="toggleCase(event,this.parentElement)">${caseFaces(m,backContent(m))}</div><div class="grid-title-line"><div class="grid-title" data-open-movie="${m.id}" onclick="event.stopPropagation();openMovie(this.dataset.openMovie)">${m.title}</div>${seenButton(m,true)}</div><div class="grid-meta" data-open-movie="${m.id}" onclick="event.stopPropagation();openMovie(this.dataset.openMovie)">${m.year} · ${m.genre}</div>${responseButtons(m,true)}</article>`}
-function gridView(items,historyMode=false){return `<div class="grid" style="--grid-cols:${[12,8,6,5][state.posterSize-1]||8}">${items.map(m=>caseArticle(m,historyMode?"history-movie":"")).join("")}</div>`}
+function caseArticle(m,extra="",showRank=true){const notInterested=currentVote(m.id)==="no";return `<article class="vhs ${extra} ${notInterested?"not-interested-card":""}" data-vhs="${m.id}" data-movie-id="${m.id}"><div class="vhs-stage" onclick="toggleCase(event,this.parentElement)">${caseFaces(m,backContent(m),showRank)}</div><div class="grid-title-line"><div class="grid-title" data-open-movie="${m.id}" onclick="event.stopPropagation();openMovie(this.dataset.openMovie)">${m.title}</div>${seenButton(m,true)}</div><div class="grid-meta" data-open-movie="${m.id}" onclick="event.stopPropagation();openMovie(this.dataset.openMovie)">${m.year} · ${m.genre}</div>${responseButtons(m,true)}</article>`}
+function gridView(items,historyMode=false,showRank=true){return `<div class="grid" style="--grid-cols:${[12,8,6,5][state.posterSize-1]||8}">${items.map(m=>caseArticle(m,historyMode?"history-movie":"",showRank)).join("")}</div>`}
 function applyAdvancedFilters(items,historyMode=false){
  let a=items.slice();
  const genres=state.genreFilters||[];
@@ -622,14 +632,29 @@ function applyAdvancedFilters(items,historyMode=false){
  return a;
 }
 
-function isUpcomingMovie(m){const y=Number(m.year);return !y||!Number.isFinite(y)||y>new Date().getFullYear()||Boolean(m.releaseDate&&new Date(m.releaseDate)>new Date())}
-function upcomingSection(items){if(!items.length)return '';return '<section class="upcoming-section"><h2 class="upcoming-heading">Upcoming releases</h2>'+(state.view==='list'?listView(items,false):gridView(items,false))+'</section>'}
+function isUpcomingMovie(m){
+  const now=new Date();
+  const releaseDate=m.releaseDate?new Date(m.releaseDate):null;
+  if(!releaseDate||Number.isNaN(releaseDate.getTime()))return !Number(m.year)||!Number.isFinite(Number(m.year))||Number(m.year)>now.getFullYear();
+  if(releaseDate>now)return true;
+  const digitalDate=m.tmdbDigitalReleaseDate?new Date(m.tmdbDigitalReleaseDate):null;
+  const physicalDate=m.tmdbPhysicalReleaseDate?new Date(m.tmdbPhysicalReleaseDate):null;
+  const hasReleasedPostTheatricalDate=[digitalDate,physicalDate].some(date=>date&&!Number.isNaN(date.getTime())&&date<=now);
+  const hasFuturePostTheatricalDate=[digitalDate,physicalDate].some(date=>date&&!Number.isNaN(date.getTime())&&date>now);
+  const hasStreamingAvailability=Array.isArray(m.tmdbStreaming)&&m.tmdbStreaming.some(provider=>["flatrate","free","ads","rent","buy"].includes(provider.type));
+  if(hasReleasedPostTheatricalDate||hasStreamingAvailability)return false;
+  if(hasFuturePostTheatricalDate)return true;
+  // A theatrically released movie with no post-theatrical release yet stays in
+  // Upcoming until TMDB reports a digital, physical, or streaming release.
+  return true;
+}
+function upcomingSection(items){if(!items.length)return '';return '<section class="upcoming-section"><h2 class="upcoming-heading">Upcoming releases</h2>'+(state.view==='list'?listView(items,false,false):gridView(items,false,false))+'</section>'}
 function watchlist(){
  const base=movies.filter(m=>!m.watched&&((m.title+' '+m.genre).toLowerCase().includes(state.search.toLowerCase())));
- const a=applyAdvancedFilters(base);const released=a.filter(m=>!isUpcomingMovie(m)).sort((x,y)=>(Number(y.score)||0)-(Number(x.score)||0));const upcoming=a.filter(isUpcomingMovie).sort((x,y)=>(Number(x.year)||9999)-(Number(y.year)||9999)||x.title.localeCompare(y.title));
+ const a=applyAdvancedFilters(base);const released=a.filter(m=>!isUpcomingMovie(m)).sort((x,y)=>(Number(y.score)||0)-(Number(x.score)||0));const upcoming=a.filter(isUpcomingMovie).sort((x,y)=>(Number(y.score)||0)-(Number(x.score)||0)||(new Date(x.releaseDate||"9999-12-31")-new Date(y.releaseDate||"9999-12-31"))||x.title.localeCompare(y.title));
  const count=a.length;const hasFilters=(state.genreFilters||[]).length>0||Boolean(state.yearFrom||state.yearTo||state.suggestedBy)||(state.interestUsers||[]).length>0||Boolean(state.interestLevel)||(state.seenUsers||[]).length>0||state.seenMode==='not'||Boolean(state.rewatchStatus);
  const countText=hasFilters&&count!==base.length?count+' movies narrowed down from '+base.length+' with filters.':count+' movies waiting for a movie night.';
- const mainContent=(released.length?(state.view==='list'?listView(released,false):gridView(released,false)):'')+upcomingSection(upcoming);
+ const mainContent=(released.length?(state.view==='list'?listView(released,false,true):gridView(released,false,true)):'')+upcomingSection(upcoming);
  return '<div class="hero"><div><div class="eyebrow">'+escapeHtml((activeServer?.guild_name||"YOUR SERVER").toUpperCase())+'\'S MOVIE LIBRARY</div><h1>Watchlist</h1><p class="sub">'+countText+'</p></div><button class="primary" onclick="openAddMovie()">＋ Add movie</button></div>'+toolbar()+(count?mainContent:'<div class="empty">Nothing matches those filters.</div>');
 }
 function history(){let a=movies.filter(m=>m.watched&&((m.title+" "+m.genre).toLowerCase().includes(state.search.toLowerCase())));a=applyAdvancedFilters(a,true);return `<div class="hero"><div><div class="eyebrow">THE GROUP ARCHIVE</div><h1>History</h1><p class="sub">Movies watched by this server.</p></div></div>${toolbar(true)}${a.length?(state.view==="list"?listView(a,true):gridView(a,true)):`<div class="empty">Nothing matches your filters.</div>`}`}
@@ -905,7 +930,7 @@ window.confirmAddMovie=()=>{
   const duplicate=movies.some(m=>m.tmdbId===d.tmdbId||(normalizeTitle(m.title)===normalizeTitle(d.title)&&String(m.year)===String(d.year||"")));
   if(duplicate){state.addMovieError="Already in watchlist";return render()}
   const note=(document.querySelector("#addMovieNote")?.value||"").trim();
-  const movie={id:"tmdb-"+d.tmdbId,title:d.title,year:d.year||"",genre:(d.genre||[]).join(" · "),director:(d.director||[]).join(", "),runtime:d.runtime?formatRuntime(d.runtime):"",rating:d.rating||"",score:0,seen:[],voters:[],synopsis:d.synopsis||"",note,warnings:Array.isArray(d.warnings)?d.warnings:[],watched:false,suggestedBy:currentUser,addedBy:currentUser,suggestedById:identityId,addedById:identityId,releaseDate:d.releaseDate||"",tmdbId:d.tmdbId,posterPath:d.posterPath||null,textlessPosterPath:d.textlessPosterPath||null,backdropPath:d.backdropPath||null,logoPath:d.logoPath||null};
+  const movie={id:"tmdb-"+d.tmdbId,title:d.title,year:d.year||"",genre:(d.genre||[]).join(" · "),director:(d.director||[]).join(", "),runtime:d.runtime?formatRuntime(d.runtime):"",rating:d.rating||"",score:0,seen:[],voters:[],synopsis:d.synopsis||"",note,warnings:Array.isArray(d.warnings)?d.warnings:[],watched:false,suggestedBy:currentUser,addedBy:currentUser,suggestedById:identityId,addedById:identityId,releaseDate:d.releaseDate||"",tmdbId:d.tmdbId,posterPath:d.posterPath||null,textlessPosterPath:d.textlessPosterPath||null,backdropPath:d.backdropPath||null,logoPath:d.logoPath||null,digitalReleaseDate:d.digitalReleaseDate||null,physicalReleaseDate:d.physicalReleaseDate||null,tmdbStreaming:Array.isArray(d.streaming)?d.streaming:[]};
   movies.push(movie);
   removedMovieIds=removedMovieIds.filter(removedId=>removedId!==movie.id);
   try{localStorage.setItem("watchlist-removed-movies",JSON.stringify(removedMovieIds));localStorage.setItem("watchlist-added-movies",JSON.stringify(movies.filter(m=>m.id.startsWith("tmdb-")).map(m=>({...m,score:0}))));}catch(error){}
@@ -1047,7 +1072,7 @@ window.clearOneFilter=key=>{if(key==="yearFrom"||key==="yearTo"){state.yearFrom=
 window.closeFilterDropdowns=()=>document.querySelectorAll(".filter-dropdown[open]").forEach(el=>el.open=false);if(!window.__filterOutsideBound){document.addEventListener("click",e=>{if(!e.target.closest(".filter-dropdown"))window.closeFilterDropdowns()});window.__filterOutsideBound=true;}
 window.clearAllFilters=()=>{state.genreFilters=[];state.yearFrom="";state.yearTo="";state.interestUsers=[];state.interestLevel="";state.seenMode="seen";state.seenUsers=[];state.rewatchStatus="";state.suggestedBy="";state.filter="all";state.search="";render()};
 window.resetAdvancedFilters=window.clearAllFilters;
-window.vote=async(id,k)=>{if(currentUser==="Guest")return;const old=state.votes[id];if(old===k)return;const before=new Map([...document.querySelectorAll("[data-movie-id]")].map(el=>[el.dataset.movieId,el.getBoundingClientRect()]));const weights={must:5,interested:3,watch:1,no:0};const m=movies.find(x=>x.id===id);if(!m)return;state.votes[id]=k;m.voterResponses={...(m.voterResponses||{}),[currentUser]:k};votesByUser[currentProfile?.id||identityIdForName(currentUser)||userKey(currentUser)]={id:currentProfile?.id||identityIdForName(currentUser)||null,name:currentUser,avatar:currentAvatar(),votes:{...state.votes}};m.score=(Number(baseScores[id])||0)+Object.values(m.voterResponses).reduce((sum,answer)=>sum+({must:5,interested:3,watch:1,no:0,green:3,yellow:1,red:0}[answer]||0),0);try{localStorage.setItem("watchlist-votes-by-user",JSON.stringify(votesByUser));localStorage.setItem("watchlist-votes",JSON.stringify(state.votes));localStorage.setItem("watchlist-added-movies",JSON.stringify(movies.filter(x=>x.id.startsWith("tmdb-")).map(x=>({...x,score:0}))))}catch(error){}await persistSharedWatchlist();render();requestAnimationFrame(()=>{document.querySelectorAll("[data-movie-id]").forEach(el=>{const first=before.get(el.dataset.movieId);if(!first)return;const last=el.getBoundingClientRect();const dx=first.left-last.left,dy=first.top-last.top;if(Math.abs(dx)+Math.abs(dy)>1){el.animate([{transform:`translate(${dx}px,${dy}px)`},{transform:"translate(0,0)"}],{duration:420,easing:"cubic-bezier(.2,.75,.2,1)"})}})})};
+window.vote=async(id,k)=>{if(currentUser==="Guest")return;const old=state.votes[id];if(old===k)return;const before=new Map([...document.querySelectorAll("[data-movie-id]")].map(el=>[el.dataset.movieId,el.getBoundingClientRect()]));const m=movies.find(x=>x.id===id);if(!m)return;state.votes[id]=k;m.voterResponses={...(m.voterResponses||{}),[currentUser]:k};votesByUser[currentProfile?.id||identityIdForName(currentUser)||userKey(currentUser)]={id:currentProfile?.id||identityIdForName(currentUser)||null,name:currentUser,avatar:currentAvatar(),votes:{...state.votes}};m.score=calculateMovieScore(m);try{localStorage.setItem("watchlist-votes-by-user",JSON.stringify(votesByUser));localStorage.setItem("watchlist-votes",JSON.stringify(state.votes));localStorage.setItem("watchlist-added-movies",JSON.stringify(movies.filter(x=>x.id.startsWith("tmdb-")).map(x=>({...x,score:0}))))}catch(error){}await persistSharedWatchlist();render();requestAnimationFrame(()=>{document.querySelectorAll("[data-movie-id]").forEach(el=>{const first=before.get(el.dataset.movieId);if(!first)return;const last=el.getBoundingClientRect();const dx=first.left-last.left,dy=first.top-last.top;if(Math.abs(dx)+Math.abs(dy)>1){el.animate([{transform:`translate(${dx}px,${dy}px)`},{transform:"translate(0,0)"}],{duration:420,easing:"cubic-bezier(.2,.75,.2,1)"})}})})};
 window.toggleSeen=async id=>{
   if(currentUser==="Guest"||!currentProfile?.id)return;
   const m=movies.find(x=>x.id===id);
