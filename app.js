@@ -415,17 +415,21 @@ async function loadSharedWatchlist(){
     }).subscribe();
   }catch(error){console.warn("Shared watchlist sync unavailable:",error.message||error)}
 }
+let sharedSyncSavePromise=Promise.resolve();
 async function persistSharedWatchlist(){
   if(sharedSyncApplying||currentUser==="Guest")return;
   const client=window.WATCHLIST_SUPABASE_CLIENT;
   if(!client)return;
-  clearTimeout(sharedSyncTimer);
-  sharedSyncTimer=setTimeout(async()=>{
+
+  // Queue writes instead of debouncing them. A rapid series of vote changes must
+  // never leave an older in-flight save able to overwrite the final state.
+  const local=sharedSnapshot();
+  const sharedId=activeServer?.guild_id?"server:"+activeServer.guild_id:"watchlist";
+  sharedSyncSavePromise=sharedSyncSavePromise.then(async()=>{
     try{
-      const sharedId=activeServer?.guild_id?"server:"+activeServer.guild_id:"watchlist";
       const latest=await client.from("watchlist_shared_state").select("data").eq("id",sharedId).maybeSingle();
+      if(latest.error)throw latest.error;
       const remote=latest.data?.data&&typeof latest.data.data==="object"?latest.data.data:{};
-      const local=sharedSnapshot();
       const merged={...remote,...local,
         votesByUser:{...(remote.votesByUser||{}),...(local.votesByUser||{})},
         movieReviews:{...(remote.movieReviews||{}),...(local.movieReviews||{})},
@@ -434,10 +438,17 @@ async function persistSharedWatchlist(){
         removedMovieIds:[...new Set([...(remote.removedMovieIds||[]),...(local.removedMovieIds||[])])],
         caseAssets:{...(remote.caseAssets||{}),...(local.caseAssets||{})}
       };
-      const {error}=await client.from("watchlist_shared_state").upsert({id:sharedId,data:merged,updated_by:currentProfile?.id||null});
+      const {error}=await client.from("watchlist_shared_state").upsert({
+        id:sharedId,
+        data:merged,
+        updated_by:currentProfile?.id||null
+      });
       if(error)throw error;
-    }catch(error){console.warn("Could not save shared watchlist state:",error.message||error)}
-  },60);
+    }catch(error){
+      console.warn("Could not save shared watchlist state:",error.message||error);
+    }
+  }).catch(error=>console.warn("Could not queue shared watchlist state:",error.message||error));
+  return sharedSyncSavePromise;
 }
 function saveCaseAssets(){try{localStorage.setItem("watchlist-case-assets",JSON.stringify(savedCaseAssets));}catch(error){}persistSharedWatchlist();}
 function assetDraft(m){
@@ -982,7 +993,7 @@ window.clearOneFilter=key=>{if(key==="yearFrom"||key==="yearTo"){state.yearFrom=
 window.closeFilterDropdowns=()=>document.querySelectorAll(".filter-dropdown[open]").forEach(el=>el.open=false);if(!window.__filterOutsideBound){document.addEventListener("click",e=>{if(!e.target.closest(".filter-dropdown"))window.closeFilterDropdowns()});window.__filterOutsideBound=true;}
 window.clearAllFilters=()=>{state.genreFilters=[];state.yearFrom="";state.yearTo="";state.interestUsers=[];state.interestLevel="";state.seenMode="seen";state.seenUsers=[];state.rewatchStatus="";state.suggestedBy="";state.filter="all";state.search="";render()};
 window.resetAdvancedFilters=window.clearAllFilters;
-window.vote=(id,k)=>{if(currentUser==="Guest")return;const old=state.votes[id];if(old===k)return;const before=new Map([...document.querySelectorAll("[data-movie-id]")].map(el=>[el.dataset.movieId,el.getBoundingClientRect()]));const weights={must:5,interested:3,watch:1,no:0};const m=movies.find(x=>x.id===id);if(!m)return;state.votes[id]=k;m.voterResponses={...(m.voterResponses||{}),[currentUser]:k};votesByUser[currentProfile?.id||identityIdForName(currentUser)||userKey(currentUser)]={id:currentProfile?.id||identityIdForName(currentUser)||null,name:currentUser,avatar:currentAvatar(),votes:{...state.votes}};m.score=(Number(baseScores[id])||0)+Object.values(m.voterResponses).reduce((sum,answer)=>sum+({must:5,interested:3,watch:1,no:0,green:3,yellow:1,red:0}[answer]||0),0);try{localStorage.setItem("watchlist-votes-by-user",JSON.stringify(votesByUser));localStorage.setItem("watchlist-votes",JSON.stringify(state.votes));localStorage.setItem("watchlist-added-movies",JSON.stringify(movies.filter(x=>x.id.startsWith("tmdb-")).map(x=>({...x,score:0}))))}catch(error){}persistSharedWatchlist();render();requestAnimationFrame(()=>{document.querySelectorAll("[data-movie-id]").forEach(el=>{const first=before.get(el.dataset.movieId);if(!first)return;const last=el.getBoundingClientRect();const dx=first.left-last.left,dy=first.top-last.top;if(Math.abs(dx)+Math.abs(dy)>1){el.animate([{transform:`translate(${dx}px,${dy}px)`},{transform:"translate(0,0)"}],{duration:420,easing:"cubic-bezier(.2,.75,.2,1)"})}})})};
+window.vote=async(id,k)=>{if(currentUser==="Guest")return;const old=state.votes[id];if(old===k)return;const before=new Map([...document.querySelectorAll("[data-movie-id]")].map(el=>[el.dataset.movieId,el.getBoundingClientRect()]));const weights={must:5,interested:3,watch:1,no:0};const m=movies.find(x=>x.id===id);if(!m)return;state.votes[id]=k;m.voterResponses={...(m.voterResponses||{}),[currentUser]:k};votesByUser[currentProfile?.id||identityIdForName(currentUser)||userKey(currentUser)]={id:currentProfile?.id||identityIdForName(currentUser)||null,name:currentUser,avatar:currentAvatar(),votes:{...state.votes}};m.score=(Number(baseScores[id])||0)+Object.values(m.voterResponses).reduce((sum,answer)=>sum+({must:5,interested:3,watch:1,no:0,green:3,yellow:1,red:0}[answer]||0),0);try{localStorage.setItem("watchlist-votes-by-user",JSON.stringify(votesByUser));localStorage.setItem("watchlist-votes",JSON.stringify(state.votes));localStorage.setItem("watchlist-added-movies",JSON.stringify(movies.filter(x=>x.id.startsWith("tmdb-")).map(x=>({...x,score:0}))))}catch(error){}await persistSharedWatchlist();render();requestAnimationFrame(()=>{document.querySelectorAll("[data-movie-id]").forEach(el=>{const first=before.get(el.dataset.movieId);if(!first)return;const last=el.getBoundingClientRect();const dx=first.left-last.left,dy=first.top-last.top;if(Math.abs(dx)+Math.abs(dy)>1){el.animate([{transform:`translate(${dx}px,${dy}px)`},{transform:"translate(0,0)"}],{duration:420,easing:"cubic-bezier(.2,.75,.2,1)"})}})})};
 window.toggleSeen=async id=>{
   if(currentUser==="Guest"||!currentProfile?.id)return;
   const m=movies.find(x=>x.id===id);
