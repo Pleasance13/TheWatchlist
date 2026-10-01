@@ -640,6 +640,16 @@ function advancedFilterPanel(historyMode=false){
  </div>`
 }
 
+function sortLabel(key){return ({server:"Server Interest",user:"User Interest",release:"Release Date",rt:"RT avg. score",imdb:"IMDb avg. score",runtime:"Runtime"})[key]||"Server Interest"}
+function sortState(historyMode=false){return {key:historyMode?state.historySort:state.watchlistSort,dir:historyMode?state.historySortDir:state.watchlistSortDir}}
+function setSort(key,historyMode=false){if(!["server","user","release","rt","imdb","runtime"].includes(key))key="server";if(historyMode)state.historySort=key;else state.watchlistSort=key;render()}
+function toggleSortDirection(historyMode=false){if(historyMode)state.historySortDir=state.historySortDir==="asc"?"desc":"asc";else state.watchlistSortDir=state.watchlistSortDir==="asc"?"desc":"asc";render()}
+function sortNumericValue(value){if(value===null||value===undefined||value==="")return null;const n=Number(String(value).replace(/[^0-9.\-]/g,""));return Number.isFinite(n)?n:null}
+function runtimeMinutes(value){if(value===null||value===undefined||value==="")return null;const text=String(value).toLowerCase().trim();const h=text.match(/(\d+(?:\.\d+)?)\s*h/),m=text.match(/(\d+(?:\.\d+)?)\s*m/);if(h||m)return (h?Number(h[1])*60:0)+(m?Number(m[1]):0);return sortNumericValue(text)}
+function releaseTimestamp(m){if(!m?.releaseDate)return null;const t=new Date(m.releaseDate).getTime();return Number.isFinite(t)?t:null}
+function userInterestValue(m){return ({must:4,interested:3,watch:2,no:1})[String(currentVote(m.id)||"").toLowerCase()]??null}
+function sortValue(m,key){switch(key){case "server":return Number.isFinite(Number(m.score))?Number(m.score):null;case "user":return userInterestValue(m);case "release":return releaseTimestamp(m);case "rt":return sortNumericValue(m.rottenTomatoesRating??m.rottenTomatoesScore??m.rtScore??m.rottenTomatoes);case "imdb":return sortNumericValue(m.imdbRating??m.imdbScore);case "runtime":return runtimeMinutes(m.runtime);default:return Number.isFinite(Number(m.score))?Number(m.score):null}}
+function sortMovies(items,historyMode=false){const {key,dir}=sortState(historyMode),factor=dir==="asc"?1:-1;return items.slice().sort((a,b)=>{const av=sortValue(a,key),bv=sortValue(b,key),am=av===null,bm=bv===null;if(am!==bm)return am?1:-1;if(am&&bm)return String(a.title||"").localeCompare(String(b.title||""),undefined,{numeric:true,sensitivity:"base"});if(av!==bv)return (av-bv)*factor;return String(a.title||"").localeCompare(String(b.title||""),undefined,{numeric:true,sensitivity:"base"})})}
 function toolbar(historyMode=false){
  const sort=sortState(historyMode);
  const options=[["server","Server Interest"],["user","User Interest"],["release","Release Date"],["rt","RT avg. score"],["imdb","IMDb avg. score"],["runtime","Runtime"]];
