@@ -741,13 +741,13 @@ function isUpcomingMovie(m){
 function upcomingSection(items){if(!items.length)return '';return '<section class="upcoming-section"><h2 class="upcoming-heading">Upcoming releases</h2>'+(state.view==='list'?listView(items,false,false):gridView(items,false,false))+'</section>'}
 function watchlist(){
  const base=movies.filter(m=>!m.watched&&((m.title+' '+m.genre).toLowerCase().includes(state.search.toLowerCase())));
- const a=applyAdvancedFilters(base);const released=a.filter(m=>!isUpcomingMovie(m)).sort((x,y)=>(Number(y.score)||0)-(Number(x.score)||0));const upcoming=a.filter(isUpcomingMovie).sort((x,y)=>(Number(y.score)||0)-(Number(x.score)||0)||(new Date(x.releaseDate||"9999-12-31")-new Date(y.releaseDate||"9999-12-31"))||x.title.localeCompare(y.title));
+ const a=applyAdvancedFilters(base);const released=sortMovies(a.filter(m=>!isUpcomingMovie(m)),false);const upcoming=sortMovies(a.filter(isUpcomingMovie),false);
  const count=a.length;const hasFilters=(state.genreFilters||[]).length>0||Boolean(state.yearFrom||state.yearTo||state.suggestedBy)||(state.interestUsers||[]).length>0||Boolean(state.interestLevel)||(state.seenUsers||[]).length>0||state.seenMode==='not'||Boolean(state.rewatchStatus);
  const countText=hasFilters&&count!==base.length?count+' movies narrowed down from '+base.length+' with filters.':count+' movies waiting for a movie night.';
  const mainContent=(released.length?(state.view==='list'?listView(released,false,true):gridView(released,false,true)):'')+upcomingSection(upcoming);
  return '<div class="hero"><div><div class="eyebrow">'+escapeHtml((activeServer?.guild_name||"YOUR SERVER").toUpperCase())+'\'S MOVIE LIBRARY</div><h1>Watchlist</h1><p class="sub">'+countText+'</p></div><button class="primary" onclick="openAddMovie()">＋ Add movie</button></div>'+toolbar()+(count?mainContent:'<div class="empty">Nothing matches those filters.</div>');
 }
-function history(){let a=movies.filter(m=>m.watched&&((m.title+" "+m.genre).toLowerCase().includes(state.search.toLowerCase())));a=applyAdvancedFilters(a,true);return `<div class="hero"><div><div class="eyebrow">THE GROUP ARCHIVE</div><h1>History</h1><p class="sub">Movies watched by this server.</p></div></div>${toolbar(true)}${a.length?(state.view==="list"?listView(a,true):gridView(a,true)):`<div class="empty">Nothing matches your filters.</div>`}`}
+function history(){let a=movies.filter(m=>m.watched&&((m.title+" "+m.genre).toLowerCase().includes(state.search.toLowerCase())));a=sortMovies(applyAdvancedFilters(a,true),true);return `<div class="hero"><div><div class="eyebrow">THE GROUP ARCHIVE</div><h1>History</h1><p class="sub">Movies watched by this server.</p></div></div>${toolbar(true)}${a.length?(state.view==="list"?listView(a,true):gridView(a,true)):`<div class="empty">Nothing matches your filters.</div>`}`}
 function personVote(m,p){
   // Resolve each person's exact response first; legacy color-only voter entries
   // are normalized below so every person uses the same interest/seen rules.
