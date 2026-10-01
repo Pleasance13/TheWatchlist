@@ -327,7 +327,7 @@ movies.forEach(m=>{
   if(!m.suggestedBy&&m.addedBy)m.suggestedBy=m.addedBy;
   if(!m.addedBy&&m.suggestedBy)m.addedBy=m.suggestedBy;
 });
-window.addEventListener("popstate",()=>{applyRoute();render();window.scrollTo({top:0,behavior:"smooth"});});
+window.addEventListener("popstate",()=>{savePersistentFilterState(state.nav);applyRoute();loadPersistentFilterState();state.showFilters=hasAppliedFilters(state.nav);render();window.scrollTo({top:0,behavior:"smooth"});});
 const app=document.querySelector("#app");
 let savedCaseAssets={};
 let assetEditorDirty=false;
