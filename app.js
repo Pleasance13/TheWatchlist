@@ -161,7 +161,7 @@ window.watchlistAuthIdentityChanged=function(profile){
   currentProfile=profile||null;
   currentUser=profile?.name||"Guest";
   window.WATCHLIST_CURRENT_USER=currentUser;
-  if(currentUser!=="Guest")loadPersistentFilterState();
+  if(currentUser!=="Guest"){loadPersistentFilterState();state.showFilters=hasAppliedFilters(state.nav);}
   window.WATCHLIST_AUTHENTICATED=!!profile;
   if(!serverUsers.includes(currentUser)&&currentUser!=="Guest")serverUsers.push(currentUser);
   if(currentUser!=="Guest"){userProfiles[userKey(currentUser)]={id:currentProfile?.id||null,name:currentUser,avatar:currentProfile?.avatar||""};try{localStorage.setItem("watchlist-user-profiles",JSON.stringify(userProfiles))}catch(error){}}
