@@ -243,6 +243,16 @@ function filterFieldsForNav(nav){
 function filterDefaultsForNav(nav){
   return nav==="history"?HISTORY_FILTER_DEFAULTS:WATCHLIST_FILTER_DEFAULTS;
 }
+function hasAppliedFilters(nav=state.nav){
+  const fields=filterFieldsForNav(nav);
+  const defaults=filterDefaultsForNav(nav);
+  return fields.some(key=>{
+    const value=state[key];
+    const base=defaults[key];
+    if(Array.isArray(value))return value.length>0;
+    return String(value??"")!==String(base??"");
+  });
+}
 function captureFilterState(nav=state.nav){
   const defaults=filterDefaultsForNav(nav),fields=filterFieldsForNav(nav),out={};
   fields.forEach(key=>{
@@ -1146,7 +1156,7 @@ window.toggleSeenUser=(p,on)=>{state.seenUsers=on?[...new Set([...(state.seenUse
 window.setRewatchStatus=x=>{state.rewatchStatus=x;savePersistentFilterState();render()};
 window.setSuggestedBy=x=>{state.suggestedBy=x;savePersistentFilterState();render()};
 window.clearOneFilter=key=>{if(key==="yearFrom"||key==="yearTo"){state.yearFrom="";state.yearTo=""}else if(key==="interestUsers"||key==="interestLevel"){state.interestUsers=[];state.interestLevel=""}else if(key==="seenUsers"){state.seenUsers=[];state.seenMode="seen"}else if(key==="seenMode"){state.seenMode="seen"}else state[key]=Array.isArray(state[key])?[]:"";const owner={genre:"genre",genreFilters:"genre",yearFrom:"year",yearTo:"year",suggestedBy:"suggested",interestUsers:"interest",interestLevel:"interest",seenUsers:"seen",seenMode:"seen",rewatchStatus:"rewatch"}[key];if(owner){const el=document.querySelector('[data-filter-id="'+owner+'"]');if(el)el.open=false}savePersistentFilterState();render()};
-window.closeFilterDropdowns=()=>document.querySelectorAll(".filter-dropdown[open]").forEach(el=>el.open=false);if(!window.__filterOutsideBound){document.addEventListener("click",e=>{if(!e.target.closest(".filter-dropdown"))window.closeFilterDropdowns()});window.__filterOutsideBound=true;}
+window.closeFilterDropdowns=()=>document.querySelectorAll(".filter-dropdown[open]").forEach(el=>el.open=false);if(!window.__filterOutsideBound){document.addEventListener("click",e=>{if(!e.target.closest(".filter-dropdown"))window.closeFilterDropdowns()});window.__filterOutsideBound=true;}if(!window.__filterSwitchBound){document.addEventListener("click",e=>{const summary=e.target.closest(".filter-dropdown>summary");if(!summary)return;const dropdown=summary.parentElement;const topControl=dropdown.closest(".filter-control");if(!topControl)return;document.querySelectorAll(".filter-dropdown[open]").forEach(other=>{if(other===dropdown)return;const otherTopControl=other.closest(".filter-control");if(otherTopControl&&otherTopControl!==topControl)other.open=false;});});window.__filterSwitchBound=true;}
 window.clearAllFilters=()=>{state.genreFilters=[];state.yearFrom="";state.yearTo="";state.interestUsers=[];state.interestLevel="";state.seenMode="seen";state.seenUsers=[];state.rewatchStatus="";state.suggestedBy="";state.filter="all";state.search="";savePersistentFilterState();render()};
 window.resetAdvancedFilters=window.clearAllFilters;
 window.vote=async(id,k)=>{if(currentUser==="Guest")return;const old=state.votes[id];if(old===k)return;const before=new Map([...document.querySelectorAll("[data-movie-id]")].map(el=>[el.dataset.movieId,el.getBoundingClientRect()]));const m=movies.find(x=>x.id===id);if(!m)return;state.votes[id]=k;m.voterResponses={...(m.voterResponses||{}),[currentUser]:k};votesByUser[currentProfile?.id||identityIdForName(currentUser)||userKey(currentUser)]={id:currentProfile?.id||identityIdForName(currentUser)||null,name:currentUser,avatar:currentAvatar(),votes:{...state.votes}};m.score=calculateMovieScore(m);try{localStorage.setItem("watchlist-votes-by-user",JSON.stringify(votesByUser));localStorage.setItem("watchlist-votes",JSON.stringify(state.votes));localStorage.setItem("watchlist-added-movies",JSON.stringify(movies.filter(x=>x.id.startsWith("tmdb-")).map(x=>({...x,score:0}))))}catch(error){}
@@ -1245,5 +1255,6 @@ async function hydrateTmdbArtwork(){
 window.toggleWarningCategory=(category,checked)=>{const key=String(category).toLowerCase();savedWarningCategories=checked?[...new Set([...savedWarningCategories,key])]:savedWarningCategories.filter(x=>x!==key);try{localStorage.setItem("watchlist-warning-categories",JSON.stringify(savedWarningCategories))}catch(error){}saveUserSettings();document.querySelectorAll(".warning-picker-count").forEach(el=>el.textContent=savedWarningCategories.length+" selected")};
 applyRoute({replace:true});
 loadPersistentFilterState();
+state.showFilters=hasAppliedFilters(state.nav);
 render();
 hydrateTmdbArtwork();document.addEventListener("toggle",event=>{const target=event.target;if(!target.matches(".filter-dropdown")||!target.open)return;document.querySelectorAll(".filter-dropdown[open]").forEach(other=>{if(other!==target&&!other.contains(target)&&!target.contains(other))other.open=false})},true);
