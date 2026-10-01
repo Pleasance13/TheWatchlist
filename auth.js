@@ -83,7 +83,7 @@
         const {error}=await client.auth.signInWithOAuth({provider:"discord",options:{redirectTo:window.location.origin+window.location.pathname,scopes:"identify email guilds"}});
         if(error)throw error;
       }else{
-        const {error}=await client.auth.signOut();if(error)throw error;paint(null);
+        const {error}=await client.auth.signOut();if(error)throw error;if(typeof window.watchlistClearFilterPersistence==="function")window.watchlistClearFilterPersistence();paint(null);
       }
     }catch(error){showError(error);button.disabled=false;}
   });
