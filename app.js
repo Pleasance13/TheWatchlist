@@ -550,11 +550,12 @@ async function loadSharedWatchlist(){
     }
     if(sharedSyncChannel)client.removeChannel(sharedSyncChannel);
     sharedSyncChannel=client.channel("watchlist-shared-state-"+(activeServer?.guild_id||"watchlist")).on("postgres_changes",{event:"*",schema:"public",table:"watchlist_shared_state"},payload=>{
-      if(payload.new?.data&&!sharedSyncApplying&&payload.new.id===(activeServer?.guild_id?"server:"+activeServer.guild_id:"watchlist"))sharedApply(payload.new.data);
+      if(payload.new?.data&&!sharedSyncApplying&&!sharedSyncWritePending&&payload.new.id===(activeServer?.guild_id?"server:"+activeServer.guild_id:"watchlist"))sharedApply(payload.new.data);
     }).subscribe();
   }catch(error){console.warn("Shared watchlist sync unavailable:",error.message||error)}
 }
 let sharedSyncSavePromise=Promise.resolve();
+let sharedSyncWritePending=false;
 async function persistSharedWatchlist(){
   if(sharedSyncApplying||currentUser==="Guest")return;
   const client=window.WATCHLIST_SUPABASE_CLIENT;
@@ -564,6 +565,7 @@ async function persistSharedWatchlist(){
   // never leave an older in-flight save able to overwrite the final state.
   const local=sharedSnapshot();
   const sharedId=activeServer?.guild_id?"server:"+activeServer.guild_id:"watchlist";
+  sharedSyncWritePending=true;
   sharedSyncSavePromise=sharedSyncSavePromise.then(async()=>{
     try{
       const latest=await client.from("watchlist_shared_state").select("data").eq("id",sharedId).maybeSingle();
@@ -586,7 +588,7 @@ async function persistSharedWatchlist(){
     }catch(error){
       console.warn("Could not save shared watchlist state:",error.message||error);
     }
-  }).catch(error=>console.warn("Could not queue shared watchlist state:",error.message||error));
+  }).catch(error=>console.warn("Could not queue shared watchlist state:",error.message||error)).finally(()=>{sharedSyncWritePending=false;});
   return sharedSyncSavePromise;
 }
 function saveCaseAssets(sync=true){try{localStorage.setItem("watchlist-case-assets",JSON.stringify(savedCaseAssets));}catch(error){}if(sync)persistSharedWatchlist();}
@@ -1243,7 +1245,7 @@ window.editSuggestionNote=id=>{
 };
 function suggestionNoteEditorModal(){if(!state.noteEditorOpen)return "";const m=movies.find(x=>x.id===state.noteEditorMovieId);if(!m)return "";return '<div class="modal-backdrop open note-editor-backdrop" onclick="if(event.target===this)closeSuggestionNoteEditor()"><section class="add-modal note-editor-modal" role="dialog" aria-modal="true" aria-labelledby="suggestion-note-editor-title"><div class="modal-head"><div><div class="eyebrow">YOUR SUGGESTION</div><h2 id="suggestion-note-editor-title">'+(m.note?"Edit note":"Add a note")+'</h2><p class="attendance-sub">'+escapeHtml(m.title)+'</p></div><button class="modal-close" onclick="closeSuggestionNoteEditor()" aria-label="Close">×</button></div><label class="add-label">Your note<textarea id="suggestionNoteDraft" class="review-text" rows="4" placeholder="Why should we watch this?">'+escapeHtml(m.note||"")+'</textarea></label><div class="add-form-actions"><button class="ghost" onclick="closeSuggestionNoteEditor()">Cancel</button><button class="primary" onclick="saveSuggestionNote()">Save note</button></div></section></div>'}
 window.closeSuggestionNoteEditor=()=>{state.noteEditorOpen=false;state.noteEditorMovieId=null;render()};
-window.saveSuggestionNote=async()=>{const m=movies.find(x=>x.id===state.noteEditorMovieId);if(!m)return;const note=(document.querySelector("#suggestionNoteDraft")?.value||"").trim();m.note=note;const identityId=currentProfile?.id||window.WATCHLIST_AUTH_PROFILE?.id||null;m.suggestedById=m.suggestedById||m.addedById||identityId;m.addedById=m.addedById||identityId;m.suggestedBy=m.suggestedBy||currentUser;m.addedBy=m.addedBy||currentUser;try{if(m.id.startsWith("tmdb-"))localStorage.setItem("watchlist-added-movies",JSON.stringify(movies.filter(x=>x.id.startsWith("tmdb-")).map(x=>({...x,score:0}))));else{let notes={};try{notes=JSON.parse(localStorage.getItem("watchlist-suggestion-notes")||"{}")}catch(error){}notes[m.id]=m.note;localStorage.setItem("watchlist-suggestion-notes",JSON.stringify(notes));}}catch(error){}await persistSharedWatchlist();state.noteEditorOpen=false;state.noteEditorMovieId=null;render()};
+window.saveSuggestionNote=async()=>{const m=movies.find(x=>x.id===state.noteEditorMovieId);if(!m)return;const note=(document.querySelector("#suggestionNoteDraft")?.value||"").trim();m.note=note;const identityId=currentProfile?.id||window.WATCHLIST_AUTH_PROFILE?.id||null;m.suggestedById=m.suggestedById||m.addedById||identityId;m.addedById=m.addedById||identityId;m.suggestedBy=m.suggestedBy||currentUser;m.addedBy=m.addedBy||currentUser;try{if(m.id.startsWith("tmdb-"))localStorage.setItem("watchlist-added-movies",JSON.stringify(movies.filter(x=>x.id.startsWith("tmdb-")).map(x=>({...x,score:0}))));else{let notes={};try{notes=JSON.parse(localStorage.getItem("watchlist-suggestion-notes")||"{}")}catch(error){}notes[m.id]=m.note;localStorage.setItem("watchlist-suggestion-notes",JSON.stringify(notes));}}catch(error){}persistSharedWatchlist();state.noteEditorOpen=false;state.noteEditorMovieId=null;render()};
 window.saveReview=id=>{const section=document.querySelector(".review-section");if(!section)return;const text=(document.querySelector("#reviewText")?.value||"").trim();const rating=Number(section.dataset.rating||0);if(!rating&&!text)return;movieReviews[id]=movieReviews[id]||{};movieReviews[id][currentUser]={rating,review:text,userId:currentProfile?.id||identityIdForName(currentUser)||null,name:currentUser,avatar:currentAvatar()};try{localStorage.setItem("watchlist-movie-reviews",JSON.stringify(movieReviews));}catch(error){}persistSharedWatchlist();render()};
 let tmdbHydrated=false;
 async function hydrateTmdbArtwork(){
