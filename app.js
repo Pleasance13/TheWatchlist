@@ -550,12 +550,12 @@ async function loadSharedWatchlist(){
     }
     if(sharedSyncChannel)client.removeChannel(sharedSyncChannel);
     sharedSyncChannel=client.channel("watchlist-shared-state-"+(activeServer?.guild_id||"watchlist")).on("postgres_changes",{event:"*",schema:"public",table:"watchlist_shared_state"},payload=>{
-      if(payload.new?.data&&!sharedSyncApplying&&!sharedSyncWritePending&&payload.new.id===(activeServer?.guild_id?"server:"+activeServer.guild_id:"watchlist"))sharedApply(payload.new.data);
+      if(payload.new?.data&&!sharedSyncApplying&&sharedSyncWritePendingCount===0&&payload.new.id===(activeServer?.guild_id?"server:"+activeServer.guild_id:"watchlist"))sharedApply(payload.new.data);
     }).subscribe();
   }catch(error){console.warn("Shared watchlist sync unavailable:",error.message||error)}
 }
 let sharedSyncSavePromise=Promise.resolve();
-let sharedSyncWritePending=false;
+let sharedSyncWritePendingCount=0;
 async function persistSharedWatchlist(){
   if(sharedSyncApplying||currentUser==="Guest")return;
   const client=window.WATCHLIST_SUPABASE_CLIENT;
@@ -565,7 +565,7 @@ async function persistSharedWatchlist(){
   // never leave an older in-flight save able to overwrite the final state.
   const local=sharedSnapshot();
   const sharedId=activeServer?.guild_id?"server:"+activeServer.guild_id:"watchlist";
-  sharedSyncWritePending=true;
+  sharedSyncWritePendingCount++;
   sharedSyncSavePromise=sharedSyncSavePromise.then(async()=>{
     try{
       const latest=await client.from("watchlist_shared_state").select("data").eq("id",sharedId).maybeSingle();
