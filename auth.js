@@ -80,7 +80,7 @@
     try{
       if(!client)client=await loadClient().then(lib=>lib.createClient(config.url,config.publishableKey,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}}));
       if(button.dataset.watchlistAuth==="signin"){
-        const {error}=await client.auth.signInWithOAuth({provider:"discord",options:{redirectTo:window.location.origin+window.location.pathname,scopes:"identify email guilds"}});
+        const {error}=await client.auth.signInWithOAuth({provider:"discord",options:{redirectTo:window.location.origin+window.location.pathname,scopes:"identify guilds"}});
         if(error)throw error;
       }else{
         const {error}=await client.auth.signOut();if(error)throw error;if(typeof window.watchlistClearFilterPersistence==="function")window.watchlistClearFilterPersistence();paint(null);
@@ -98,7 +98,7 @@
       throw new Error("Discord server access could not be restored. Please sign in with Discord again.");
     }
     sessionStorage.setItem(reauthKey,"1");
-    const {error:oauthError}=await client.auth.signInWithOAuth({provider:"discord",options:{redirectTo:window.location.origin+window.location.pathname+window.location.search,scopes:"identify email guilds"}});
+    const {error:oauthError}=await client.auth.signInWithOAuth({provider:"discord",options:{redirectTo:window.location.origin+window.location.pathname+window.location.search,scopes:"identify guilds"}});
     if(oauthError){sessionStorage.removeItem(reauthKey);throw oauthError}
     throw new Error("Refreshing Discord server access…");
   }
