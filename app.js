@@ -1068,7 +1068,7 @@ window.chooseAsset=(type,encodedPath)=>{
   else if(type==="detail-logo")a.detailLogoPath=path;
   else if(type==="poster")a.frontImagePath=path;
   else if(type==="backdrop")a.backStillPath=path;
-  savedCaseAssets[m.id]=a;assetEditorDirty=true;saveCaseAssets(false);
+  savedCaseAssets[m.id]=a;assetEditorDirty=true;saveCaseAssets(true);
 
   const targetFlipped=type==="backdrop"?true:type==="poster"?false:wasFlipped;
   const shouldAnimateFlip=(type==="poster"||type==="backdrop")&&wasFlipped!==targetFlipped;
@@ -1103,7 +1103,7 @@ window.toggleAssetLogo=(button)=>{
   a.frontLogoVisible=next;
   savedCaseAssets[m.id]=a;
   assetEditorDirty=true;
-  saveCaseAssets(false);
+  saveCaseAssets(true);
   const live=document.querySelector("[data-asset-preview] .vhs-inner");
   const logo=live?.querySelector(".vhs-front-logo");
   if(logo)logo.classList.toggle("asset-logo-hidden",!next);
@@ -1113,7 +1113,7 @@ window.setAssetDraft=(field,value)=>{
   const m=movies.find(x=>x.id===state.assetMovieId);if(!m||!canEditCaseAssets())return;
   const a=savedCaseAssets[m.id]||{};
   a[field]=field==="frontLogoVisible"?Boolean(value):Number(value);
-  savedCaseAssets[m.id]=a;assetEditorDirty=true;saveCaseAssets(false);
+  savedCaseAssets[m.id]=a;assetEditorDirty=true;saveCaseAssets(true);
 
   const label=document.querySelector('[data-asset-value="'+field+'"]');
   if(label)label.textContent=field==="frontLogoBottom"?value+"% from bottom":value+"%";
