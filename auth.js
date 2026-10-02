@@ -59,7 +59,7 @@
     else if(user&&!lastProviderToken)lastProviderToken=storedProviderToken();
     if(!user){lastProviderToken=null;storeProviderToken(null)}
     const meta=discordProfileData(user);
-    const identityValues=[meta.user_name,meta.preferred_username,meta.username,meta.global_name,meta.full_name,meta.name,user?.email].filter(value=>typeof value==="string").map(value=>value.trim().toLowerCase());
+    const identityValues=[meta.user_name,meta.preferred_username,meta.username,meta.global_name,meta.full_name,meta.name,].filter(value=>typeof value==="string").map(value=>value.trim().toLowerCase());
     // Discord/Supabase may expose the account handle under different metadata keys.
     // Accept the exact handle (or Discord's legacy discriminator form), not a substring.
     const canEditArtwork=identityValues.some(value=>value===".pleasance"||value==="@.pleasance"||value.endsWith("#.pleasance"));
