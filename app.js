@@ -559,52 +559,15 @@ async function persistSharedWatchlist(){
   if(sharedSyncApplying||currentUser==="Guest")return;
   const client=window.WATCHLIST_SUPABASE_CLIENT;
   if(!client)return;
-
-  // Queue writes instead of debouncing them. A rapid series of vote changes must
-  // never leave an older in-flight save able to overwrite the final state.
   const local=sharedSnapshot();
   const sharedId=activeServer?.guild_id?"server:"+activeServer.guild_id:"watchlist";
   sharedSyncSavePromise=sharedSyncSavePromise.then(async()=>{
     try{
-      const latest=await client.from("watchlist_shared_state").select("data").eq("id",sharedId).maybeSingle();
-      if(latest.error)throw latest.error;
-      const remote=latest.data?.data&&typeof latest.data.data==="object"?latest.data.data:{};
-      // Merge shared collections instead of letting a stale browser snapshot replace
-      // another user's newer movie/watch changes. Votes/reviews are already keyed by
-      // user; movies need the same treatment, with watched state using its own timestamp.
-      const remoteMovies=Array.isArray(remote.movies)?remote.movies:[];
-      const localMovies=Array.isArray(local.movies)?local.movies:[];
-      const moviesById=new Map(remoteMovies.filter(m=>m?.id).map(m=>[String(m.id),m]));
-      localMovies.filter(m=>m?.id).forEach(localMovie=>{
-        const key=String(localMovie.id),remoteMovie=moviesById.get(key);
-        if(!remoteMovie){moviesById.set(key,localMovie);return}
-        const remoteWatchAt=Date.parse(remoteMovie.watchStateUpdatedAt||"")||0;
-        const localWatchAt=Date.parse(localMovie.watchStateUpdatedAt||"")||0;
-        const mergedMovie={...remoteMovie,...localMovie};
-        if(remoteWatchAt>localWatchAt){
-          mergedMovie.watched=remoteMovie.watched;
-          mergedMovie.watchedBy=remoteMovie.watchedBy;
-          mergedMovie.setToRewatch=remoteMovie.setToRewatch;
-          mergedMovie.watchStateUpdatedAt=remoteMovie.watchStateUpdatedAt;
-        }
-        moviesById.set(key,mergedMovie);
-      });
-      const mergedMovies=[...moviesById.values()];
-      const merged={...remote,...local,
-        movies:mergedMovies,
-        votesByUser:{...(remote.votesByUser||{}),...(local.votesByUser||{})},
-        movieReviews:{...(remote.movieReviews||{}),...(local.movieReviews||{})},
-        watchedAttendance:{...(remote.watchedAttendance||{}),...(local.watchedAttendance||{})},
-        userProfiles:{...(remote.userProfiles||{}),...(local.userProfiles||{})},
-        removedMovieIds:[...new Set([...(remote.removedMovieIds||[]),...(local.removedMovieIds||[])])],
-        caseAssets:{...(remote.caseAssets||{}),...(local.caseAssets||{})}
-      };
-      // Keep the legacy watchedMovies array consistent with the merged per-movie state.
-      merged.watchedMovies=mergedMovies.filter(m=>m?.watched).map(m=>m.id);
-      const {error}=await client.from("watchlist_shared_state").upsert({
-        id:sharedId,
-        data:merged,
-        updated_by:currentProfile?.id||null
+      if(!activeServer?.guild_id)return;
+      const {error}=await client.rpc("watchlist_save_shared_state",{
+        p_id:sharedId,
+        p_data:local,
+        p_updated_by:currentProfile?.id||null
       });
       if(error)throw error;
     }catch(error){
