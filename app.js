@@ -495,7 +495,7 @@ function sharedApply(data){
   movieReviews=deserializeReviews(data.movieReviews&&typeof data.movieReviews==="object"?data.movieReviews:{},incomingProfiles,incomingVotes);
   watchedMovies=Array.isArray(data.watchedMovies)?[...data.watchedMovies]:[];
   watchedAttendance=deserializeAttendance(data.watchedAttendance&&typeof data.watchedAttendance==="object"?data.watchedAttendance:{},incomingProfiles,incomingVotes);
-  removedMovieIds=Array.isArray(data.removedMovieIds)?[...data.removedMovieIds]:[];
+  removedMovieIds=Array.isArray(data.removedMovieIds)?[...data.removedMovieIds]:[];\n  removedMovieAt=data.removedMovieAt&&typeof data.removedMovieAt==="object"?{...data.removedMovieAt}:{};
   savedCaseAssets=data.caseAssets&&typeof data.caseAssets==="object"?data.caseAssets:{};
   // Resolve every stored response to one canonical account name before rendering.
   const canonicalByKey={};const canonicalById={};
