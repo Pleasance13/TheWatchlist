@@ -169,7 +169,7 @@ window.watchlistAuthIdentityChanged=function(profile){
   state.votes=currentUser==="Guest"?{}:(votesByUser[stableIdentityKey(currentUser)]?.votes||votesByUser[userKey(currentUser)]?.votes||{});
   if(typeof render==="function")render();
 };
-let removedMovieIds=[];try{removedMovieIds=JSON.parse(localStorage.getItem("watchlist-removed-movies")||"[]")}catch(error){removedMovieIds=[]}for(let i=movies.length-1;i>=0;i--){if(removedMovieIds.includes(movies[i].id))movies.splice(i,1)}
+let removedMovieIds=[];let removedMovieAt={};try{removedMovieIds=JSON.parse(localStorage.getItem("watchlist-removed-movies")||"[]")}catch(error){removedMovieIds=[]}for(let i=movies.length-1;i>=0;i--){if(removedMovieIds.includes(movies[i].id))movies.splice(i,1)}
 let serverUsers=[];
 const displaySettingKeys=["showSynopsis","showRatings","showNote","showTrailer","showCast","showStreamingLinks"];
 const defaultUserSettings={showSynopsis:true,showRatings:true,showNote:true,showTrailer:true,showCast:true,showStreamingLinks:true,contentWarningsEnabled:true,warningCategories:[],view:"list",posterSize:2,activeServer:null};
@@ -470,6 +470,7 @@ function sharedSnapshot(){
     watchedMovies: [...watchedMovies],
     watchedAttendance: serializeAttendance(watchedAttendance),
     removedMovieIds: [...removedMovieIds],
+    removedMovieAt: {...removedMovieAt},
     caseAssets: {...savedCaseAssets},
     userProfiles: serializeIdentityMap(userProfiles)
   };
@@ -990,7 +991,7 @@ function assetEditor(){
 }
 function openRemoveMovie(id){state.removeMovieId=id;render()}
 function closeRemoveMovie(){state.removeMovieId=null;render()}
-function confirmRemoveMovie(){const id=state.removeMovieId;if(!id)return;const idx=movies.findIndex(x=>x.id===id);if(idx<0)return;removedMovieIds.push(id);try{localStorage.setItem('watchlist-removed-movies',JSON.stringify([...new Set(removedMovieIds)]));if(id.startsWith('tmdb-'))localStorage.setItem('watchlist-added-movies',JSON.stringify(movies.filter(x=>x.id.startsWith('tmdb-')&&x.id!==id).map(x=>({...x,score:0}))));}catch(error){}movies.splice(idx,1);persistSharedWatchlist();state.removeMovieId=null;state.detail=null;state.nav='watchlist';render()}
+function confirmRemoveMovie(){const id=state.removeMovieId;if(!id)return;const idx=movies.findIndex(x=>x.id===id);if(idx<0)return;removedMovieIds.push(id);removedMovieAt[id]=new Date().toISOString();try{localStorage.setItem('watchlist-removed-movies',JSON.stringify([...new Set(removedMovieIds)]));if(id.startsWith('tmdb-'))localStorage.setItem('watchlist-added-movies',JSON.stringify(movies.filter(x=>x.id.startsWith('tmdb-')&&x.id!==id).map(x=>({...x,score:0}))));}catch(error){}movies.splice(idx,1);persistSharedWatchlist();state.removeMovieId=null;state.detail=null;state.nav='watchlist';render()}
 function removeMovieModal(){if(!state.removeMovieId)return '';const m=movies.find(x=>x.id===state.removeMovieId);if(!m)return '';return '<div class="modal-backdrop open" onclick="if(event.target===this)closeRemoveMovie()"><section class="remove-confirm-modal" role="dialog" aria-modal="true"><h2>Remove '+m.title+'?</h2><p>Are you sure?</p><div class="remove-confirm-actions"><button class="ghost" onclick="closeRemoveMovie()">No</button><button class="remove-movie-button" onclick="confirmRemoveMovie()">Yes</button></div></section></div>'}
 let headerPrismIntroPlayed=false;
 function syncHeaderPrism(){const logo=document.querySelector(".brand-logo"),avatar=document.querySelector(".topbar .user, .topbar .auth-control"),prism=document.querySelector(".header-prism");if(!logo||!avatar||!prism)return;const l=logo.getBoundingClientRect(),u=avatar.getBoundingClientRect();const left=l.right-l.width*.139,right=u.left-24,width=Math.max(0,right-left);prism.style.setProperty("position","fixed","important");prism.style.setProperty("left",left+"px","important");prism.style.setProperty("right","auto","important");prism.style.setProperty("top",l.top+"px","important");prism.style.setProperty("bottom","auto","important");prism.style.setProperty("width",width+"px","important");prism.style.setProperty("height",l.height+"px","important");prism.style.setProperty("transform","none","important");prism.style.setProperty("margin","0","important");prism.style.setProperty("--prism-height",l.height+"px");if(!headerPrismIntroPlayed){headerPrismIntroPlayed=true;const beam=prism.querySelector("img");if(beam){const reduceMotion=window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)").matches;if(reduceMotion){beam.style.transform="none";}else{beam.style.transformOrigin="left center";beam.style.transform="scaleX(0)";beam.getBoundingClientRect();beam.animate([{transform:"scaleX(0)"},{transform:"scaleX(1)"}],{duration:650,easing:"cubic-bezier(.18,.72,.25,1)",fill:"both"});}}}}
@@ -1021,9 +1022,9 @@ window.confirmAddMovie=()=>{
   const duplicate=movies.some(m=>m.tmdbId===d.tmdbId||(normalizeTitle(m.title)===normalizeTitle(d.title)&&String(m.year)===String(d.year||"")));
   if(duplicate){state.addMovieError="Already in watchlist";return render()}
   const note=(document.querySelector("#addMovieNote")?.value||"").trim();
-  const movie={id:"tmdb-"+d.tmdbId,title:d.title,year:d.year||"",genre:(d.genre||[]).join(" · "),director:(d.director||[]).join(", "),runtime:d.runtime?formatRuntime(d.runtime):"",rating:d.rating||"",score:0,seen:[],voters:[],synopsis:d.synopsis||"",note,warnings:Array.isArray(d.warnings)?d.warnings:[],watched:false,suggestedBy:currentUser,addedBy:currentUser,suggestedById:identityId,addedById:identityId,releaseDate:d.releaseDate||"",tmdbId:d.tmdbId,imdbId:d.imdbId||null,posterPath:d.posterPath||null,textlessPosterPath:d.textlessPosterPath||null,backdropPath:d.backdropPath||null,logoPath:d.logoPath||null,digitalReleaseDate:d.digitalReleaseDate||null,physicalReleaseDate:d.physicalReleaseDate||null,tmdbStreaming:Array.isArray(d.streaming)?d.streaming:[],watchStateUpdatedAt:new Date().toISOString()};
+  const movie={id:"tmdb-"+d.tmdbId,title:d.title,year:d.year||"",genre:(d.genre||[]).join(" · "),director:(d.director||[]).join(", "),runtime:d.runtime?formatRuntime(d.runtime):"",rating:d.rating||"",score:0,seen:[],voters:[],synopsis:d.synopsis||"",note,warnings:Array.isArray(d.warnings)?d.warnings:[],watched:false,suggestedBy:currentUser,addedBy:currentUser,suggestedById:identityId,addedById:identityId,releaseDate:d.releaseDate||"",tmdbId:d.tmdbId,imdbId:d.imdbId||null,posterPath:d.posterPath||null,textlessPosterPath:d.textlessPosterPath||null,backdropPath:d.backdropPath||null,logoPath:d.logoPath||null,digitalReleaseDate:d.digitalReleaseDate||null,physicalReleaseDate:d.physicalReleaseDate||null,tmdbStreaming:Array.isArray(d.streaming)?d.streaming:[],addedAt:new Date().toISOString(),watchStateUpdatedAt:new Date().toISOString()};
   movies.push(movie);
-  removedMovieIds=removedMovieIds.filter(removedId=>removedId!==movie.id);
+  removedMovieIds=removedMovieIds.filter(removedId=>removedId!==movie.id);delete removedMovieAt[movie.id];
   try{localStorage.setItem("watchlist-removed-movies",JSON.stringify(removedMovieIds));localStorage.setItem("watchlist-added-movies",JSON.stringify(movies.filter(m=>m.id.startsWith("tmdb-")).map(m=>({...m,score:0}))));}catch(error){}
   persistSharedWatchlist();
   state.addMovieOpen=false;state.addMovieSelection=null;state.addMovieError="";render()
