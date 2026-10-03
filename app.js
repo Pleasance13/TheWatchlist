@@ -569,7 +569,29 @@ async function persistSharedWatchlist(){
       const latest=await client.from("watchlist_shared_state").select("data").eq("id",sharedId).maybeSingle();
       if(latest.error)throw latest.error;
       const remote=latest.data?.data&&typeof latest.data.data==="object"?latest.data.data:{};
+      // Merge shared collections instead of letting a stale browser snapshot replace
+      // another user's newer movie/watch changes. Votes/reviews are already keyed by
+      // user; movies need the same treatment, with watched state using its own timestamp.
+      const remoteMovies=Array.isArray(remote.movies)?remote.movies:[];
+      const localMovies=Array.isArray(local.movies)?local.movies:[];
+      const moviesById=new Map(remoteMovies.filter(m=>m?.id).map(m=>[String(m.id),m]));
+      localMovies.filter(m=>m?.id).forEach(localMovie=>{
+        const key=String(localMovie.id),remoteMovie=moviesById.get(key);
+        if(!remoteMovie){moviesById.set(key,localMovie);return}
+        const remoteWatchAt=Date.parse(remoteMovie.watchStateUpdatedAt||"")||0;
+        const localWatchAt=Date.parse(localMovie.watchStateUpdatedAt||"")||0;
+        const mergedMovie={...remoteMovie,...localMovie};
+        if(remoteWatchAt>localWatchAt){
+          mergedMovie.watched=remoteMovie.watched;
+          mergedMovie.watchedBy=remoteMovie.watchedBy;
+          mergedMovie.setToRewatch=remoteMovie.setToRewatch;
+          mergedMovie.watchStateUpdatedAt=remoteMovie.watchStateUpdatedAt;
+        }
+        moviesById.set(key,mergedMovie);
+      });
+      const mergedMovies=[...moviesById.values()];
       const merged={...remote,...local,
+        movies:mergedMovies,
         votesByUser:{...(remote.votesByUser||{}),...(local.votesByUser||{})},
         movieReviews:{...(remote.movieReviews||{}),...(local.movieReviews||{})},
         watchedAttendance:{...(remote.watchedAttendance||{}),...(local.watchedAttendance||{})},
@@ -577,6 +599,8 @@ async function persistSharedWatchlist(){
         removedMovieIds:[...new Set([...(remote.removedMovieIds||[]),...(local.removedMovieIds||[])])],
         caseAssets:{...(remote.caseAssets||{}),...(local.caseAssets||{})}
       };
+      // Keep the legacy watchedMovies array consistent with the merged per-movie state.
+      merged.watchedMovies=mergedMovies.filter(m=>m?.watched).map(m=>m.id);
       const {error}=await client.from("watchlist_shared_state").upsert({
         id:sharedId,
         data:merged,
@@ -1031,7 +1055,7 @@ window.confirmAddMovie=()=>{
   const duplicate=movies.some(m=>m.tmdbId===d.tmdbId||(normalizeTitle(m.title)===normalizeTitle(d.title)&&String(m.year)===String(d.year||"")));
   if(duplicate){state.addMovieError="Already in watchlist";return render()}
   const note=(document.querySelector("#addMovieNote")?.value||"").trim();
-  const movie={id:"tmdb-"+d.tmdbId,title:d.title,year:d.year||"",genre:(d.genre||[]).join(" · "),director:(d.director||[]).join(", "),runtime:d.runtime?formatRuntime(d.runtime):"",rating:d.rating||"",score:0,seen:[],voters:[],synopsis:d.synopsis||"",note,warnings:Array.isArray(d.warnings)?d.warnings:[],watched:false,suggestedBy:currentUser,addedBy:currentUser,suggestedById:identityId,addedById:identityId,releaseDate:d.releaseDate||"",tmdbId:d.tmdbId,imdbId:d.imdbId||null,posterPath:d.posterPath||null,textlessPosterPath:d.textlessPosterPath||null,backdropPath:d.backdropPath||null,logoPath:d.logoPath||null,digitalReleaseDate:d.digitalReleaseDate||null,physicalReleaseDate:d.physicalReleaseDate||null,tmdbStreaming:Array.isArray(d.streaming)?d.streaming:[]};
+  const movie={id:"tmdb-"+d.tmdbId,title:d.title,year:d.year||"",genre:(d.genre||[]).join(" · "),director:(d.director||[]).join(", "),runtime:d.runtime?formatRuntime(d.runtime):"",rating:d.rating||"",score:0,seen:[],voters:[],synopsis:d.synopsis||"",note,warnings:Array.isArray(d.warnings)?d.warnings:[],watched:false,suggestedBy:currentUser,addedBy:currentUser,suggestedById:identityId,addedById:identityId,releaseDate:d.releaseDate||"",tmdbId:d.tmdbId,imdbId:d.imdbId||null,posterPath:d.posterPath||null,textlessPosterPath:d.textlessPosterPath||null,backdropPath:d.backdropPath||null,logoPath:d.logoPath||null,digitalReleaseDate:d.digitalReleaseDate||null,physicalReleaseDate:d.physicalReleaseDate||null,tmdbStreaming:Array.isArray(d.streaming)?d.streaming:[],watchStateUpdatedAt:new Date().toISOString()};
   movies.push(movie);
   removedMovieIds=removedMovieIds.filter(removedId=>removedId!==movie.id);
   try{localStorage.setItem("watchlist-removed-movies",JSON.stringify(removedMovieIds));localStorage.setItem("watchlist-added-movies",JSON.stringify(movies.filter(m=>m.id.startsWith("tmdb-")).map(m=>({...m,score:0}))));}catch(error){}
@@ -1218,9 +1242,10 @@ window.confirmAttendance=async()=>{
       p_movie_id:String(id),p_user_ids:ids
     });
     if(groupError)throw groupError;
+    const watchStateUpdatedAt=new Date().toISOString();
     watchedAttendance[id]=attendees;
     if(!watchedMovies.includes(id))watchedMovies.push(id);
-    m.watched=true;m.watchedBy=attendees;m.setToRewatch=false;
+    m.watched=true;m.watchedBy=attendees;m.setToRewatch=false;m.watchStateUpdatedAt=watchStateUpdatedAt;
     state.attendanceOpen=false;state.attendanceMovieId=null;state.attendanceSelected=[];
     await loadGlobalSeen();
     await persistSharedWatchlist();
@@ -1232,7 +1257,7 @@ window.confirmAttendance=async()=>{
   }catch(error){console.warn("Could not save group watch:",error.message||error);alert("Could not save the group watch. Please try again.")}
 };
 window.markWatchedTogether=(id,undo)=>{if(undo)return;openAttendance(id)};
-window.watchAgain=id=>{const m=movies.find(x=>x.id===id);if(!m)return;m.setToRewatch=true;m.watched=false;m.watchedBy=[];watchedMovies=watchedMovies.filter(x=>x!==id);try{localStorage.setItem("watchlist-watched-movies",JSON.stringify(watchedMovies));localStorage.setItem("watchlist-watched-attendance",JSON.stringify(Object.fromEntries(movies.filter(x=>x.watched).map(x=>[x.id,x.watchedBy||[]]))));}catch(error){}persistSharedWatchlist();state.nav="watchlist";state.detail=null;render()};
+window.watchAgain=id=>{const m=movies.find(x=>x.id===id);if(!m)return;m.setToRewatch=true;m.watched=false;m.watchedBy=[];m.watchStateUpdatedAt=new Date().toISOString();watchedMovies=watchedMovies.filter(x=>x!==id);try{localStorage.setItem("watchlist-watched-movies",JSON.stringify(watchedMovies));localStorage.setItem("watchlist-watched-attendance",JSON.stringify(Object.fromEntries(movies.filter(x=>x.watched).map(x=>[x.id,x.watchedBy||[]]))));}catch(error){}persistSharedWatchlist();state.nav="watchlist";state.detail=null;render()};
 window.editWatchedBy=id=>{const m=movies.find(x=>x.id===id);if(!m)return;openAttendance(id)};
 window.setReviewRating=(event,index)=>{const button=event.currentTarget;const rect=button.getBoundingClientRect();const value=index+(event.clientX-rect.left<rect.width/2?.5:1);const section=document.querySelector(".review-section");if(section)section.dataset.rating=value;document.querySelectorAll(".review-form .rating-star .star-gradient").forEach((el,i)=>{const fill=Math.round(Math.max(0,Math.min(1,value-i))*2)/2;el.style.setProperty("--star-fill",fill*100+"%")});};
 window.editSuggestionNote=id=>{
