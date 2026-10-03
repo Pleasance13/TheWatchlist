@@ -158,3 +158,21 @@ $$;
 
 revoke all on function private.watchlist_merge_shared_json(jsonb,jsonb) from public, anon, authenticated;
 grant execute on function public.watchlist_save_shared_state(text,jsonb,uuid) to authenticated;
+
+
+-- Frontend calls the 2-argument form so the authenticated Supabase session is
+-- the sole source of updater identity. Keep the 3-argument implementation above
+-- for compatibility with the existing database definition.
+create or replace function public.watchlist_save_shared_state(p_id text, p_data jsonb)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public, private
+as $$
+begin
+  return public.watchlist_save_shared_state(p_id, p_data, auth.uid());
+end;
+$$;
+
+revoke all on function public.watchlist_save_shared_state(text,jsonb) from public;
+grant execute on function public.watchlist_save_shared_state(text,jsonb) to authenticated;
