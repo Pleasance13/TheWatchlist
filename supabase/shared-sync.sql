@@ -117,14 +117,23 @@ begin
   v_current:=coalesce(v_current,'{}'::jsonb);
   v_merged:=private.watchlist_merge_shared_json(v_current,coalesce(p_data,'{}'::jsonb));
 
-  -- A removal is a tombstone, preventing a stale browser snapshot from restoring it.
+  -- Removal tombstones beat stale snapshots, but a later explicit re-add wins because
+  -- the movie carries a newer addedAt timestamp.
   if jsonb_typeof(v_merged->'removedMovieIds')='array' then
     v_merged:=jsonb_set(v_merged,array['movies'],coalesce((
       select jsonb_agg(m)
       from jsonb_array_elements(coalesce(v_merged->'movies','[]'::jsonb)) m
       where not exists (
-        select 1 from jsonb_array_elements_text(v_merged->'removedMovieIds') r
+        select 1
+        from jsonb_array_elements_text(v_merged->'removedMovieIds') r
         where r=m->>'id'
+          and (
+            not (v_merged ? 'removedMovieAt')
+            or jsonb_typeof(v_merged->'removedMovieAt')<>'object'
+            or not (v_merged->'removedMovieAt' ? (m->>'id'))
+            or nullif(v_merged->'removedMovieAt'->>(m->>'id'),'')::timestamptz >= nullif(m->>'addedAt','')::timestamptz
+            or nullif(m->>'addedAt','') is null
+          )
       )
     ),'[]'::jsonb),true);
   end if;
