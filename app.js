@@ -568,8 +568,7 @@ async function persistSharedWatchlist(){
       if(!activeServer?.guild_id)return;
       const {data:merged,error}=await client.rpc("watchlist_save_shared_state",{
         p_id:sharedId,
-        p_data:local,
-        p_updated_by:currentProfile?.id||null
+        p_data:local
       });
       if(error)throw error;
       // The RPC returns the conflict-merged canonical state. Apply it locally so this
@@ -1027,7 +1026,12 @@ window.confirmAddMovie=()=>{
   movies.push(movie);
   removedMovieIds=removedMovieIds.filter(removedId=>removedId!==movie.id);delete removedMovieAt[movie.id];
   try{localStorage.setItem("watchlist-removed-movies",JSON.stringify(removedMovieIds));localStorage.setItem("watchlist-added-movies",JSON.stringify(movies.filter(m=>m.id.startsWith("tmdb-")).map(m=>({...m,score:0}))));}catch(error){}
-  persistSharedWatchlist();
+  persistSharedWatchlist().then(()=>{
+    state.addMovieOpen=false;state.addMovieSelection=null;state.addMovieError="";render();
+  }).catch(error=>{
+    state.addMovieError=error?.message||"Could not save movie. Please try again.";
+    render();
+  });
   state.addMovieOpen=false;state.addMovieSelection=null;state.addMovieError="";render()
 };
 
