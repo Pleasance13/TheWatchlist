@@ -564,12 +564,15 @@ async function persistSharedWatchlist(){
   sharedSyncSavePromise=sharedSyncSavePromise.then(async()=>{
     try{
       if(!activeServer?.guild_id)return;
-      const {error}=await client.rpc("watchlist_save_shared_state",{
+      const {data:merged,error}=await client.rpc("watchlist_save_shared_state",{
         p_id:sharedId,
         p_data:local,
         p_updated_by:currentProfile?.id||null
       });
       if(error)throw error;
+      // The RPC returns the conflict-merged canonical state. Apply it locally so this
+      // browser immediately adopts changes that another user committed while we were editing.
+      if(merged&&typeof merged==="object")sharedApply(merged);
     }catch(error){
       console.warn("Could not save shared watchlist state:",error.message||error);
     }
