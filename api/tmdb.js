@@ -175,7 +175,7 @@ export default async function handler(req, res) {
         if (aEnglish !== bEnglish) return bEnglish - aEnglish;
 
         return 0;
-      }).slice(0, 8);
+      }).slice(0, 20);
 
       const results = await Promise.all(ordered.map(async movie => {
         let images = {};
