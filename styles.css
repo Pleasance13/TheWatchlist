@@ -1817,3 +1817,9 @@ button,input{font:inherit}button{color:inherit}.topbar{height:72px;padding:0 32p
 @media(max-width:650px){.sort-dropdown>summary{font-size:12px;padding:8px 9px;height:40px}.sort-direction{width:36px;height:40px}}
 
 .add-load-more{width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:8px;background:var(--panel2);color:var(--text);font:inherit;font-size:12px;font-weight:650;cursor:pointer}.add-load-more:hover{border-color:var(--line2);background:#1d2024}
+
+
+/* Keep the movie search modal fully visible at high zoom/short viewports.
+   The results list may shrink below eight rows, but it is the only scrollable region. */
+.add-modal{display:flex;flex-direction:column;min-height:0;overflow:hidden}
+.add-modal .add-results{flex:0 1 550px;min-height:0;max-height:550px;overflow-y:auto}
