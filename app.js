@@ -450,7 +450,7 @@ async function loadServerContext(){
         try{localStorage.setItem("watchlist-active-server",JSON.stringify(activeServer))}catch(error){}
       }
     }
-    if(activeServer){await loadServerMembers();await loadSharedWatchlist();await loadServerMembers();await loadGlobalSeen();if(await migrateCurrentUserIdentity()){await persistSharedWatchlist();await persistGlobalSeen();}}
+    if(activeServer){await loadServerMembers();await loadSharedWatchlist();await loadGlobalSeen();if(await migrateCurrentUserIdentity()){await persistSharedWatchlist();await persistGlobalSeen();}}
     render();
   }catch(error){console.warn("Could not load server context:",error.message||error);render()}
 }
@@ -480,7 +480,22 @@ function sharedApply(data){
   sharedSyncApplying=true;
   const incomingProfiles=data.userProfiles&&typeof data.userProfiles==="object"?data.userProfiles:{};
   const incomingVotes=data.votesByUser&&typeof data.votesByUser==="object"?data.votesByUser:{};
+  const existingProfiles={...userProfiles};
   userProfiles=decodeIdentityMap(incomingProfiles);
+  // Server membership data is loaded just before the shared snapshot. Preserve
+  // any locally discovered identity details so a newer member's avatar is not
+  // erased by an older shared snapshot.
+  Object.entries(existingProfiles).forEach(([key,profile])=>{
+    if(!profile)return;
+    const current=userProfiles[key];
+    if(!current)userProfiles[key]={...profile};
+    else userProfiles[key]={
+      ...current,
+      id:current.id||profile.id||null,
+      name:current.name||profile.name||key,
+      avatar:current.avatar||profile.avatar||""
+    };
+  });
   votesByUser=decodeIdentityMap(incomingVotes);
   if(Array.isArray(data.movies)){
     movies.splice(0,movies.length,...data.movies.map(m=>{
