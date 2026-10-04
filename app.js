@@ -1165,7 +1165,7 @@ window.openMovie=id=>{const movie=movies.find(x=>String(x.id)===String(id));if(!
 const card=document.querySelector('[data-person="'+p+'"]');if(!card)return;const old=card.querySelector(".person-details");if(old){old.remove();return}
 // Interest is independent of Seen status. A movie can be both watched/seen
 // and still have a recorded interest response, so don't hide it here.
-const interests=movies.filter(m=>{const v=personVote(m,p);return Boolean(v)&&v!=="no"});
+const interests=movies.filter(m=>{const v=personVote(m,p);return Boolean(v)&&v!=="no"}).sort((a,b)=>{const rank={must:4,interested:3,watch:2};const av=rank[personVote(a,p)]||0;const bv=rank[personVote(b,p)]||0;return (bv-av)||String(a.title||"").localeCompare(String(b.title||""));});
 const watched=movies.filter(m=>(m.watchedBy||[]).includes(p));
 const together=p===currentUser?[]:movies.filter(m=>(m.watchedBy||[]).includes(p)&&(m.watchedBy||[]).includes(currentUser));
 const reviewed=movies.filter(m=>(movieReviews[m.id]||{})[p]);
