@@ -156,10 +156,26 @@ export default async function handler(req, res) {
         language: "en-US"
       });
 
-      // Preserve TMDB's relevance-ranked search results. Re-sorting by
-      // popularity can push an unrelated, similarly named title ahead of
-      // the exact title the user searched for (e.g. "Ben 10" for "The Ten").
-      const ordered = (data.results || []).slice(0, 8);
+      // Prefer an exact title match first, then prefer English-language
+      // movies while preserving TMDB's relevance order within each group.
+      // This keeps searches like "The Ten" from surfacing an unrelated
+      // popular title first, while restoring the intended English preference.
+      const normalizedQuery = query.toLowerCase().normalize("NFKD")
+        .replace(/[^a-z0-9]+/g, " ").trim();
+      const normalizedTitle = value => String(value || "").toLowerCase()
+        .normalize("NFKD").replace(/[^a-z0-9]+/g, " ").trim();
+
+      const ordered = (data.results || []).slice().sort((a, b) => {
+        const aExact = normalizedTitle(a.title) === normalizedQuery ? 1 : 0;
+        const bExact = normalizedTitle(b.title) === normalizedQuery ? 1 : 0;
+        if (aExact !== bExact) return bExact - aExact;
+
+        const aEnglish = a.original_language === "en" ? 1 : 0;
+        const bEnglish = b.original_language === "en" ? 1 : 0;
+        if (aEnglish !== bEnglish) return bEnglish - aEnglish;
+
+        return 0;
+      }).slice(0, 8);
 
       const results = await Promise.all(ordered.map(async movie => {
         let images = {};
