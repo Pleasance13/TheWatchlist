@@ -1242,25 +1242,39 @@ window.confirmAttendance=async()=>{
   const attendees=[...state.attendanceSelected];
   const ids=[...new Set(attendees.map(name=>identityIdForName(name)).filter(Boolean))];
   if(!ids.length){alert("Select at least one group member.");return}
+
+  // Commit the visible result optimistically. The database operations happen
+  // underneath it, so "Mark watched" never feels like a blocking save.
+  const previous={watched:Boolean(m.watched),watchedBy:[...(m.watchedBy||[])],setToRewatch:Boolean(m.setToRewatch),watchStateUpdatedAt:m.watchStateUpdatedAt||null,attendance:[...(watchedAttendance[id]||[])],wasListed:watchedMovies.includes(id)};
+  const watchStateUpdatedAt=new Date().toISOString();
+  watchedAttendance[id]=attendees;
+  if(!watchedMovies.includes(id))watchedMovies.push(id);
+  m.watched=true;m.watchedBy=attendees;m.setToRewatch=false;m.watchStateUpdatedAt=watchStateUpdatedAt;
+  state.attendanceOpen=false;state.attendanceMovieId=null;state.attendanceSelected=[];
   try{
-    const client=window.WATCHLIST_SUPABASE_CLIENT;
-    const {error:groupError}=await client.rpc("watchlist_set_group_seen",{
-      p_movie_id:String(id),p_user_ids:ids
-    });
+    localStorage.setItem("watchlist-watched-movies",JSON.stringify(watchedMovies));
+    localStorage.setItem("watchlist-watched-attendance",JSON.stringify(watchedAttendance));
+  }catch(error){}
+  render();
+
+  const client=window.WATCHLIST_SUPABASE_CLIENT;
+  try{
+    if(!client)throw new Error("Supabase client unavailable");
+    const {error:groupError}=await client.rpc("watchlist_set_group_seen",{p_movie_id:String(id),p_user_ids:ids});
     if(groupError)throw groupError;
-    const watchStateUpdatedAt=new Date().toISOString();
-    watchedAttendance[id]=attendees;
-    if(!watchedMovies.includes(id))watchedMovies.push(id);
-    m.watched=true;m.watchedBy=attendees;m.setToRewatch=false;m.watchStateUpdatedAt=watchStateUpdatedAt;
-    state.attendanceOpen=false;state.attendanceMovieId=null;state.attendanceSelected=[];
     persistSharedPatch({movies:[{id,watched:true,watchedBy:attendees,setToRewatch:false,watchStateUpdatedAt}]});
-    await loadGlobalSeen();
+    loadGlobalSeen().then(()=>render());
+  }catch(error){
+    m.watched=previous.watched;m.watchedBy=previous.watchedBy;m.setToRewatch=previous.setToRewatch;m.watchStateUpdatedAt=previous.watchStateUpdatedAt;
+    watchedAttendance[id]=previous.attendance;
+    if(!previous.wasListed)watchedMovies=watchedMovies.filter(x=>x!==id);
     try{
       localStorage.setItem("watchlist-watched-movies",JSON.stringify(watchedMovies));
       localStorage.setItem("watchlist-watched-attendance",JSON.stringify(watchedAttendance));
-    }catch(error){}
+    }catch(ignore){}
     render();
-  }catch(error){console.warn("Could not save group watch:",error.message||error);alert("Could not save the group watch. Please try again.")}
+    console.warn("Could not save group watch:",error.message||error);
+  }
 };
 window.markWatchedTogether=(id,undo)=>{if(undo)return;openAttendance(id)};
 window.watchAgain=id=>{const m=movies.find(x=>x.id===id);if(!m)return;m.setToRewatch=true;m.watched=false;m.watchedBy=[];m.watchStateUpdatedAt=new Date().toISOString();watchedMovies=watchedMovies.filter(x=>x!==id);try{localStorage.setItem("watchlist-watched-movies",JSON.stringify(watchedMovies));localStorage.setItem("watchlist-watched-attendance",JSON.stringify(Object.fromEntries(movies.filter(x=>x.watched).map(x=>[x.id,x.watchedBy||[]]))));}catch(error){}persistSharedPatch({movies:[{id:m.id,watched:false,watchedBy:[],setToRewatch:true,watchStateUpdatedAt:m.watchStateUpdatedAt}]});state.nav="watchlist";state.detail=null;render()};
