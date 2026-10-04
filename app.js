@@ -572,30 +572,33 @@ async function loadSharedWatchlist(){
   }catch(error){console.warn("Shared watchlist sync unavailable:",error.message||error)}
 }
 let sharedSyncSavePromise=Promise.resolve();
-async function persistSharedWatchlist(){
-  if(sharedSyncApplying||currentUser==="Guest")return;
+async function persistSharedPatch(patch){
+  if(sharedSyncApplying||currentUser==="Guest"||!activeServer?.guild_id)return;
   const client=window.WATCHLIST_SUPABASE_CLIENT;
   if(!client)return;
-  const local=sharedSnapshot();
-  const sharedId=activeServer?.guild_id?"server:"+activeServer.guild_id:"watchlist";
+  const sharedId="server:"+activeServer.guild_id;
   sharedSyncSavePromise=sharedSyncSavePromise.then(async()=>{
     try{
-      if(!activeServer?.guild_id)return;
-      const {data:merged,error}=await client.rpc("watchlist_save_shared_state",{
-        p_id:sharedId,
-        p_data:local
-      });
+      const {data:merged,error}=await client.rpc("watchlist_apply_shared_patch",{p_id:sharedId,p_patch:patch});
       if(error)throw error;
-      // The RPC returns the conflict-merged canonical state. Apply it locally so this
-      // browser immediately adopts changes that another user committed while we were editing.
       if(merged&&typeof merged==="object")sharedApply(merged);
     }catch(error){
-      console.warn("Could not save shared watchlist state:",error.message||error);
+      console.warn("Could not save shared watchlist patch:",error.message||error);
     }
-  }).catch(error=>console.warn("Could not queue shared watchlist state:",error.message||error));
+  }).catch(error=>console.warn("Could not queue shared watchlist patch:",error.message||error));
   return sharedSyncSavePromise;
 }
-function saveCaseAssets(sync=true){try{localStorage.setItem("watchlist-case-assets",JSON.stringify(savedCaseAssets));}catch(error){}if(sync)persistSharedWatchlist();}
+async function persistSharedWatchlist(){
+  if(sharedSyncApplying||currentUser==="Guest")return;
+  return persistSharedPatch(sharedSnapshot());
+}
+function saveCaseAssets(sync=true){
+  try{localStorage.setItem("watchlist-case-assets",JSON.stringify(savedCaseAssets));}catch(error){}
+  if(sync){
+    const id=state.assetMovieId;
+    if(id)persistSharedPatch({caseAssets:{[id]:savedCaseAssets[id]||{}}});
+  }
+}
 function assetDraft(m){
   const a=caseAssets(m);
   const num=(value,fallback)=>Number.isFinite(Number(value))?Number(value):fallback;
@@ -1190,19 +1193,32 @@ window.vote=async(id,k)=>{if(currentUser==="Guest")return;const old=state.votes[
 // Render and animate immediately. Persistence is queued in the background so a
 // slow Supabase round trip never blocks the interaction or ranking update.
 render();requestAnimationFrame(()=>{document.querySelectorAll("[data-movie-id]").forEach(el=>{const first=before.get(el.dataset.movieId);if(!first)return;const last=el.getBoundingClientRect();const dx=first.left-last.left,dy=first.top-last.top;if(Math.abs(dx)+Math.abs(dy)>1){el.animate([{transform:`translate(${dx}px,${dy}px)`},{transform:"translate(0,0)"}],{duration:420,easing:"cubic-bezier(.2,.75,.2,1)"})}})});
-persistSharedWatchlist();};
+persistSharedPatch({
+  votesByUser:{[currentProfile?.id||identityIdForName(currentUser)||userKey(currentUser)]:votesByUser[currentProfile?.id||identityIdForName(currentUser)||userKey(currentUser)]},
+  movies:[{id:m.id,voterResponses:{[currentUser]:k}}]
+});};
 window.toggleSeen=async id=>{
   if(currentUser==="Guest"||!currentProfile?.id)return;
   const m=movies.find(x=>x.id===id);
   if(!m)return;
   const userId=currentProfile.id;
   const wasSeen=Boolean(globalSeenByUser[userId]?.[id]);
+  const nextSeen=!wasSeen;
+  globalSeenByUser[userId]={...(globalSeenByUser[userId]||{})};
+  if(nextSeen)globalSeenByUser[userId][id]=true;else delete globalSeenByUser[userId][id];
+  m.seen=Object.keys(globalSeenByUser).filter(uid=>globalSeenByUser[uid]?.[id]).map(uid=>identityDisplayName(uid,userProfiles,votesByUser));
+  savedSeenStatus[id]=m.seen;
+  render();
   try{
-    await setSeenForAccount(userId,id,!wasSeen);
-    await loadGlobalSeen();
-    savedSeenStatus[id]=Object.keys(globalSeenByUser).filter(uid=>globalSeenByUser[uid]?.[id]).map(uid=>identityDisplayName(uid,userProfiles,votesByUser));
+    await setSeenForAccount(userId,id,nextSeen);
+    loadGlobalSeen().then(()=>{savedSeenStatus[id]=Object.keys(globalSeenByUser).filter(uid=>globalSeenByUser[uid]?.[id]).map(uid=>identityDisplayName(uid,userProfiles,votesByUser));render()});
+  }catch(error){
+    if(nextSeen)delete globalSeenByUser[userId][id];else globalSeenByUser[userId][id]=true;
+    m.seen=Object.keys(globalSeenByUser).filter(uid=>globalSeenByUser[uid]?.[id]).map(uid=>identityDisplayName(uid,userProfiles,votesByUser));
+    savedSeenStatus[id]=m.seen;
     render();
-  }catch(error){console.warn("Could not save seen state:",error.message||error);alert("Could not save Seen status. Please try again.")}
+    console.warn("Could not save seen state:",error.message||error);
+  }
 };
 window.openAttendance=id=>{
   const m=movies.find(x=>x.id===id);if(!m)return;
@@ -1235,8 +1251,8 @@ window.confirmAttendance=async()=>{
     if(!watchedMovies.includes(id))watchedMovies.push(id);
     m.watched=true;m.watchedBy=attendees;m.setToRewatch=false;m.watchStateUpdatedAt=watchStateUpdatedAt;
     state.attendanceOpen=false;state.attendanceMovieId=null;state.attendanceSelected=[];
+    persistSharedPatch({movies:[{id,watched:true,watchedBy:attendees,setToRewatch:false,watchStateUpdatedAt}]});
     await loadGlobalSeen();
-    await persistSharedWatchlist();
     try{
       localStorage.setItem("watchlist-watched-movies",JSON.stringify(watchedMovies));
       localStorage.setItem("watchlist-watched-attendance",JSON.stringify(watchedAttendance));
@@ -1245,7 +1261,7 @@ window.confirmAttendance=async()=>{
   }catch(error){console.warn("Could not save group watch:",error.message||error);alert("Could not save the group watch. Please try again.")}
 };
 window.markWatchedTogether=(id,undo)=>{if(undo)return;openAttendance(id)};
-window.watchAgain=id=>{const m=movies.find(x=>x.id===id);if(!m)return;m.setToRewatch=true;m.watched=false;m.watchedBy=[];m.watchStateUpdatedAt=new Date().toISOString();watchedMovies=watchedMovies.filter(x=>x!==id);try{localStorage.setItem("watchlist-watched-movies",JSON.stringify(watchedMovies));localStorage.setItem("watchlist-watched-attendance",JSON.stringify(Object.fromEntries(movies.filter(x=>x.watched).map(x=>[x.id,x.watchedBy||[]]))));}catch(error){}persistSharedWatchlist();state.nav="watchlist";state.detail=null;render()};
+window.watchAgain=id=>{const m=movies.find(x=>x.id===id);if(!m)return;m.setToRewatch=true;m.watched=false;m.watchedBy=[];m.watchStateUpdatedAt=new Date().toISOString();watchedMovies=watchedMovies.filter(x=>x!==id);try{localStorage.setItem("watchlist-watched-movies",JSON.stringify(watchedMovies));localStorage.setItem("watchlist-watched-attendance",JSON.stringify(Object.fromEntries(movies.filter(x=>x.watched).map(x=>[x.id,x.watchedBy||[]]))));}catch(error){}persistSharedPatch({movies:[{id:m.id,watched:false,watchedBy:[],setToRewatch:true,watchStateUpdatedAt:m.watchStateUpdatedAt}]});state.nav="watchlist";state.detail=null;render()};
 window.editWatchedBy=id=>{const m=movies.find(x=>x.id===id);if(!m)return;openAttendance(id)};
 window.setReviewRating=(event,index)=>{const button=event.currentTarget;const rect=button.getBoundingClientRect();const value=index+(event.clientX-rect.left<rect.width/2?.5:1);const section=document.querySelector(".review-section");if(section)section.dataset.rating=value;document.querySelectorAll(".review-form .rating-star .star-gradient").forEach((el,i)=>{const fill=Math.round(Math.max(0,Math.min(1,value-i))*2)/2;el.style.setProperty("--star-fill",fill*100+"%")});};
 window.editSuggestionNote=id=>{
@@ -1256,8 +1272,11 @@ window.editSuggestionNote=id=>{
 };
 function suggestionNoteEditorModal(){if(!state.noteEditorOpen)return "";const m=movies.find(x=>x.id===state.noteEditorMovieId);if(!m)return "";return '<div class="modal-backdrop open note-editor-backdrop" onclick="if(event.target===this)closeSuggestionNoteEditor()"><section class="add-modal note-editor-modal" role="dialog" aria-modal="true" aria-labelledby="suggestion-note-editor-title"><div class="modal-head"><div><div class="eyebrow">YOUR SUGGESTION</div><h2 id="suggestion-note-editor-title">'+(m.note?"Edit note":"Add a note")+'</h2><p class="attendance-sub">'+escapeHtml(m.title)+'</p></div><button class="modal-close" onclick="closeSuggestionNoteEditor()" aria-label="Close">×</button></div><label class="add-label">Your note<textarea id="suggestionNoteDraft" class="review-text" rows="4" placeholder="Why should we watch this?">'+escapeHtml(m.note||"")+'</textarea></label><div class="add-form-actions"><button class="ghost" onclick="closeSuggestionNoteEditor()">Cancel</button><button class="primary" onclick="saveSuggestionNote()">Save note</button></div></section></div>'}
 window.closeSuggestionNoteEditor=()=>{state.noteEditorOpen=false;state.noteEditorMovieId=null;render()};
-window.saveSuggestionNote=()=>{const m=movies.find(x=>x.id===state.noteEditorMovieId);if(!m)return;const note=(document.querySelector("#suggestionNoteDraft")?.value||"").trim();m.note=note;const identityId=currentProfile?.id||window.WATCHLIST_AUTH_PROFILE?.id||null;m.suggestedById=m.suggestedById||m.addedById||identityId;m.addedById=m.addedById||identityId;m.suggestedBy=m.suggestedBy||currentUser;m.addedBy=m.addedBy||currentUser;try{if(m.id.startsWith("tmdb-"))localStorage.setItem("watchlist-added-movies",JSON.stringify(movies.filter(x=>x.id.startsWith("tmdb-")).map(x=>({...x,score:0}))));else{let notes={};try{notes=JSON.parse(localStorage.getItem("watchlist-suggestion-notes")||"{}")}catch(error){}notes[m.id]=m.note;localStorage.setItem("watchlist-suggestion-notes",JSON.stringify(notes));}}catch(error){}persistSharedWatchlist();state.noteEditorOpen=false;state.noteEditorMovieId=null;render()};
-window.saveReview=id=>{const section=document.querySelector(".review-section");if(!section)return;const text=(document.querySelector("#reviewText")?.value||"").trim();const rating=Number(section.dataset.rating||0);if(!rating&&!text)return;movieReviews[id]=movieReviews[id]||{};movieReviews[id][currentUser]={rating,review:text,userId:currentProfile?.id||identityIdForName(currentUser)||null,name:currentUser,avatar:currentAvatar()};try{localStorage.setItem("watchlist-movie-reviews",JSON.stringify(movieReviews));}catch(error){}persistSharedWatchlist();render()};
+window.saveSuggestionNote=()=>{const m=movies.find(x=>x.id===state.noteEditorMovieId);if(!m)return;const note=(document.querySelector("#suggestionNoteDraft")?.value||"").trim();m.note=note;const identityId=currentProfile?.id||window.WATCHLIST_AUTH_PROFILE?.id||null;m.suggestedById=m.suggestedById||m.addedById||identityId;m.addedById=m.addedById||identityId;m.suggestedBy=m.suggestedBy||currentUser;m.addedBy=m.addedBy||currentUser;try{if(m.id.startsWith("tmdb-"))localStorage.setItem("watchlist-added-movies",JSON.stringify(movies.filter(x=>x.id.startsWith("tmdb-")).map(x=>({...x,score:0}))));else{let notes={};try{notes=JSON.parse(localStorage.getItem("watchlist-suggestion-notes")||"{}")}catch(error){}notes[m.id]=m.note;localStorage.setItem("watchlist-suggestion-notes",JSON.stringify(notes));}}catch(error){}persistSharedPatch({movies:[{id:m.id,note:m.note,suggestedById:m.suggestedById,addedById:m.addedById}]});state.noteEditorOpen=false;state.noteEditorMovieId=null;render()};
+window.saveReview=id=>{const section=document.querySelector(".review-section");if(!section)return;const text=(document.querySelector("#reviewText")?.value||"").trim();const rating=Number(section.dataset.rating||0);if(!rating&&!text)return;movieReviews[id]=movieReviews[id]||{};movieReviews[id][currentUser]={rating,review:text,userId:currentProfile?.id||identityIdForName(currentUser)||null,name:currentUser,avatar:currentAvatar()};try{localStorage.setItem("watchlist-movie-reviews",JSON.stringify(movieReviews));}catch(error){}
+const reviewKey=stableIdentityKey(currentUser);
+persistSharedPatch({movieReviews:{[id]:{[reviewKey]:movieReviews[id][currentUser]}}});
+render()};
 let tmdbHydrated=false;
 async function hydrateTmdbArtwork(){
   if(tmdbHydrated||!window.TMDB)return;
