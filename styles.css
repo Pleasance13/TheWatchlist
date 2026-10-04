@@ -332,7 +332,7 @@ button,input{font:inherit}button{color:inherit}.topbar{height:72px;padding:0 32p
 .person-movie .person-seen .people-review-copy{display:inline-flex;align-items:center;line-height:1.35}
 
 .person-movie .review-stars-inline .rating-star:last-child{margin-right:0}
-.person-interest.green{color:#9fd3aa}.person-interest.yellow{color:#d9c878}.person-interest.red{color:#cf8989}.person-seen{color:#9298a1}
+.person-interest.must{color:#c7a7ed}.person-interest.green{color:#9fd3aa}.person-interest.yellow{color:#d9c878}.person-interest.red{color:#cf8989}.person-seen{color:#9298a1}
 .person-empty{font-size:11px;color:#626871;padding:2px 0}
 @media(max-width:760px){.person-summary{padding:13px 14px}.person-details{padding:13px 14px 15px}.person-movie{align-items:flex-start}}
 
