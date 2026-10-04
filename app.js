@@ -615,12 +615,9 @@ async function persistSharedWatchlist(){
   if(sharedSyncApplying||currentUser==="Guest")return;
   return persistSharedPatch(sharedSnapshot());
 }
-function saveCaseAssets(sync=true){
+function saveCaseAssets(movieId=state.assetMovieId,sync=true){
   try{localStorage.setItem("watchlist-case-assets",JSON.stringify(savedCaseAssets));}catch(error){}
-  if(sync){
-    const id=state.assetMovieId;
-    if(id)persistSharedPatch({caseAssets:{[id]:savedCaseAssets[id]||{}}});
-  }
+  if(sync&&movieId)persistSharedPatch({caseAssets:{[movieId]:savedCaseAssets[movieId]||{}}});
 }
 function assetDraft(m){
   const a=caseAssets(m);
@@ -1080,19 +1077,39 @@ window.openAssetEditor=async id=>{
   if(!canEditCaseAssets()||state.nav!=="detail"||state.detail!==id)return;
   assetEditorDirty=false;
   state.assetMovieId=id;state.assetEditorOpen=true;state.assetLoading=true;state.assetError="";render();
-  const m=movies.find(x=>x.id===id);
+  const initialMovie=movies.find(x=>x.id===id);
   try{
-    if(!m?.tmdbId)throw new Error("This movie is not linked to TMDB.");
-    const data=await TMDB.details(m.tmdbId);
-    TMDB.apply(m,data);
-  }catch(error){state.assetError=error.message||"Could not load TMDB artwork."}
-  finally{state.assetLoading=false;render()}
+    if(!initialMovie?.tmdbId)throw new Error("This movie is not linked to TMDB.");
+    let cache={};
+    try{cache=JSON.parse(localStorage.getItem("watchlist-tmdb-asset-cache")||"{}")}catch(error){cache={}}
+    if(cache[initialMovie.tmdbId]){
+      const cachedMovie=movies.find(x=>x.id===id);
+      if(cachedMovie)TMDB.apply(cachedMovie,cache[initialMovie.tmdbId]);
+      render();
+    }
+    const data=await TMDB.details(initialMovie.tmdbId);
+    // A realtime update may have replaced the movie object while the request was
+    // in flight. Always apply the response to the current movie, never the stale
+    // object captured before the request.
+    const currentMovie=movies.find(x=>x.id===id);
+    if(currentMovie)TMDB.apply(currentMovie,data);
+    cache[initialMovie.tmdbId]=data;
+    try{localStorage.setItem("watchlist-tmdb-asset-cache",JSON.stringify(cache))}catch(error){}
+  }catch(error){
+    const currentMovie=movies.find(x=>x.id===id);
+    if(!currentMovie?.tmdbAssets?.logos?.length&&!currentMovie?.tmdbAssets?.posters?.length&&!currentMovie?.tmdbAssets?.backdrops?.length){
+      state.assetError=error.message||"Could not load TMDB artwork.";
+    }
+  }finally{
+    state.assetLoading=false;render()
+  }
 };
 window.closeAssetEditor=()=>{
   const shouldSync=assetEditorDirty;
+  const movieId=state.assetMovieId;
   assetEditorDirty=false;
   state.assetEditorOpen=false;state.assetMovieId=null;state.assetLoading=false;
-  if(shouldSync)saveCaseAssets(true);
+  if(shouldSync)saveCaseAssets(movieId,true);
   render();
 };
 window.chooseAsset=(type,encodedPath)=>{
