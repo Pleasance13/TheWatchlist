@@ -106,7 +106,7 @@
     const {data,error}=await client.auth.getSession();if(error)throw error;
     const refreshToken=data?.session?.provider_refresh_token||storedProviderRefreshToken();
     if(!refreshToken)return null;
-    const response=await fetch("/api/discord-token.js",{
+    const response=await fetch("/api/discord-token",{
       method:"POST",
       headers:{"Content-Type":"application/json"},
       body:JSON.stringify({refresh_token:refreshToken})
