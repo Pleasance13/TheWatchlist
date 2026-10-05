@@ -1070,6 +1070,7 @@ function bindMovieMiddleClick(){
   document.addEventListener("mousedown",event=>{
     if(event.button!==1)return;
     const target=event.target;
+    if(target.closest?.(".quick-votes"))return;
     const movieTarget=target.closest?.("[data-open-movie]");
     if(!movieTarget)return;
     const movieId=movieTarget.dataset.openMovie;
