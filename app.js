@@ -837,13 +837,19 @@ async function connectDiscordServer(guildId){
   await saveUserSettings();
   await loadServerContext();
 }
-async function chooseDiscordServer(){
+async function chooseDiscordServer(forceGuildRefresh=false){
   const picker=document.querySelector("#discord-server-picker");
   if(!picker)return;
-  picker.disabled=true;picker.innerHTML='<option>Loading servers…</option>';
+  picker.disabled=true;picker.innerHTML='<option>Loading…</option>';
   try{
+    const current=activeServer||await loadConnectedDiscordServer();
+    if(current&&!forceGuildRefresh){
+      picker.innerHTML='<option value="__CURRENT__">'+escapeHtml(current.guild_name||"Connected Discord server")+'</option><option value="__change__">Change Discord server…</option>';
+      picker.value="__CURRENT__";
+      picker.disabled=false;
+      return;
+    }
     const guilds=await getDiscordGuildsCached();
-    const current=await loadConnectedDiscordServer();
     const selected=activeServer||current;
     picker.innerHTML='<option value="">Select a Discord server…</option>'+guilds.sort((a,b)=>a.name.localeCompare(b.name)).map(g=>'<option value="'+escapeHtml(g.id)+'">'+escapeHtml(g.name)+'</option>').join("");
     if(selected)picker.value=selected.guild_id;
@@ -855,6 +861,11 @@ async function chooseDiscordServer(){
 }
 async function onDiscordServerSelected(select){
   if(!select.value)return;
+  if(select.value==="__change__"){
+    await chooseDiscordServer(true);
+    return;
+  }
+  if(select.value==="__CURRENT__")return;
   select.disabled=true;
   try{await connectDiscordServer(select.value)}
   catch(error){alert(error.message||"Could not connect this Discord server.");select.disabled=false}
