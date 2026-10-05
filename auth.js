@@ -56,8 +56,9 @@
   
   function paint(user,session=null){
     if(session?.provider_token){lastProviderToken=session.provider_token;storeProviderToken(session.provider_token)}
+    if(session?.provider_refresh_token)storeProviderRefreshToken(session.provider_refresh_token);
     else if(user&&!lastProviderToken)lastProviderToken=storedProviderToken();
-    if(!user){lastProviderToken=null;storeProviderToken(null)}
+    if(!user){lastProviderToken=null;storeProviderToken(null);storeProviderRefreshToken(null)}
     const meta=discordProfileData(user);
     const identityValues=[meta.user_name,meta.preferred_username,meta.username,meta.global_name,meta.full_name,meta.name,].filter(value=>typeof value==="string").map(value=>value.trim().toLowerCase());
     // Discord/Supabase may expose the account handle under different metadata keys.
@@ -88,7 +89,39 @@
     }catch(error){showError(error);button.disabled=false;}
   });
 
+  const providerRefreshTokenStorageKey="watchlist-discord-provider-refresh-token";
+  function storedProviderRefreshToken(){
+    try{return localStorage.getItem(providerRefreshTokenStorageKey)||null}catch(error){return null}
+  }
+  function storeProviderRefreshToken(token){
+    try{if(token)localStorage.setItem(providerRefreshTokenStorageKey,token);else localStorage.removeItem(providerRefreshTokenStorageKey)}catch(error){}
+  }
+  function captureProviderTokens(session){
+    if(session?.provider_refresh_token)storeProviderRefreshToken(session.provider_refresh_token);
+    if(session?.provider_token){lastProviderToken=session.provider_token;storeProviderToken(session.provider_token)}
+  }
+
+  async function refreshDiscordProviderToken(){
+    if(!client)throw new Error("Authentication is still loading. Please try again.");
+    const {data,error}=await client.auth.getSession();if(error)throw error;
+    const refreshToken=data?.session?.provider_refresh_token||storedProviderRefreshToken();
+    if(!refreshToken)return null;
+    const response=await fetch("/api/discord-token.js",{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({refresh_token:refreshToken})
+    });
+    const payload=await response.json().catch(()=>({}));
+    if(!response.ok||!payload.access_token)return null;
+    lastProviderToken=payload.access_token;
+    storeProviderToken(payload.access_token);
+    if(payload.refresh_token)storeProviderRefreshToken(payload.refresh_token);
+    return payload.access_token;
+  }
+
   async function refreshDiscordAccess(){
+    const refreshed=await refreshDiscordProviderToken();
+    if(refreshed)return refreshed;
     if(!client)throw new Error("Authentication is still loading. Please try again.");
     const {data,error}=await client.auth.getSession();if(error)throw error;
     if(!data?.session?.user)throw new Error("Please sign in with Discord first.");
@@ -102,12 +135,18 @@
     if(oauthError){sessionStorage.removeItem(reauthKey);throw oauthError}
     throw new Error("Refreshing Discord server access…");
   }
+
   window.WATCHLIST_FETCH_DISCORD_GUILDS=async function(){
     if(!client)throw new Error("Authentication is still loading. Please try again.");
     const {data,error}=await client.auth.getSession();if(error)throw error;
-    const token=data?.session?.provider_token||lastProviderToken||storedProviderToken();
+    let token=data?.session?.provider_token||lastProviderToken||storedProviderToken();
+    if(!token)token=await refreshDiscordProviderToken();
     if(!token)return refreshDiscordAccess();
-    const response=await fetch("https://discord.com/api/users/@me/guilds",{headers:{Authorization:"Bearer "+token}});
+    let response=await fetch("https://discord.com/api/users/@me/guilds",{headers:{Authorization:"Bearer "+token}});
+    if(response.status===401||response.status===403){
+      token=await refreshDiscordProviderToken();
+      if(token)response=await fetch("https://discord.com/api/users/@me/guilds",{headers:{Authorization:"Bearer "+token}});
+    }
     if(response.status===401||response.status===403){
       lastProviderToken=null;storeProviderToken(null);
       throw new Error("Discord server access has expired. Please sign in with Discord again to refresh server access.");
