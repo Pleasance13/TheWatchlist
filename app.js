@@ -150,7 +150,14 @@ function serializeAttendance(attendance={}){
 function deserializeAttendance(attendance={},profiles={},votes={}){
   const out={};
   Object.entries(attendance||{}).forEach(([movieId,names])=>{
-    out[movieId]=Array.isArray(names)?names.map(key=>identityDisplayName(key,profiles,votes)):names;
+    if(!Array.isArray(names)){out[movieId]=names;return}
+    // Resolve stored UUIDs back to canonical member names before they reach the UI,
+    // then dedupe by stable identity so an old UUID + the member's name cannot
+    // create an unremovable duplicate attendee.
+    const resolved=names.map(key=>identityDisplayName(key,profiles,votes)).filter(Boolean);
+    const unique=new Map();
+    resolved.forEach(name=>{const stable=stableIdentityKey(name);if(stable&&!unique.has(stable))unique.set(stable,name)});
+    out[movieId]=[...unique.values()];
   });
   return out;
 }
@@ -519,7 +526,9 @@ function sharedApply(data){
   }
   movieReviews=deserializeReviews(data.movieReviews&&typeof data.movieReviews==="object"?data.movieReviews:{},incomingProfiles,incomingVotes);
   watchedMovies=Array.isArray(data.watchedMovies)?[...data.watchedMovies]:[];
-  watchedAttendance=deserializeAttendance(data.watchedAttendance&&typeof data.watchedAttendance==="object"?data.watchedAttendance:{},incomingProfiles,incomingVotes);
+  // Use the merged identity maps here. Server membership data can know about a
+  // member before that member has appeared in the shared snapshot.
+  watchedAttendance=deserializeAttendance(data.watchedAttendance&&typeof data.watchedAttendance==="object"?data.watchedAttendance:{},userProfiles,votesByUser);
   removedMovieIds=Array.isArray(data.removedMovieIds)?[...data.removedMovieIds]:[];
   removedMovieAt=data.removedMovieAt&&typeof data.removedMovieAt==="object"?{...data.removedMovieAt}:{};
   savedCaseAssets=data.caseAssets&&typeof data.caseAssets==="object"?data.caseAssets:{};
