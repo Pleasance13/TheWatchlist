@@ -774,9 +774,13 @@ function isUpcomingMovie(m){
   const hasStreamingAvailability=Array.isArray(m.tmdbStreaming)&&m.tmdbStreaming.some(provider=>["flatrate","free","ads","rent","buy"].includes(provider.type));
   if(hasReleasedPostTheatricalDate||hasStreamingAvailability)return false;
   if(hasFuturePostTheatricalDate)return true;
-  // Once the theatrical release date has passed, don't keep an old movie in
-  // Upcoming merely because TMDB hasn't supplied post-theatrical data.
-  return false;
+  // A movie can remain in theaters for a while after its theatrical
+  // release, even when TMDB has not reported a digital/physical release yet.
+  // Keep that recent theatrical window in Upcoming, but don't let an old movie
+  // stay there indefinitely just because post-theatrical data is missing.
+  const theatricalWindowDays=120;
+  const daysSinceTheatrical=(now-releaseDate)/(1000*60*60*24);
+  return daysSinceTheatrical>=0&&daysSinceTheatrical<=theatricalWindowDays;
 }
 function upcomingSection(items){if(!items.length)return '';return '<section class="upcoming-section"><h2 class="upcoming-heading">Upcoming releases</h2>'+(state.view==='list'?listView(items,false,false):gridView(items,false,false))+'</section>'}
 function watchlist(){
