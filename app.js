@@ -1352,7 +1352,7 @@ window.confirmAttendance=async()=>{
     if(!client)throw new Error("Supabase client unavailable");
     const {error:groupError}=await client.rpc("watchlist_set_group_seen",{p_movie_id:String(id),p_user_ids:ids});
     if(groupError)throw groupError;
-    persistSharedPatch({movies:[{id,watched:true,watchedBy:attendees,setToRewatch:false,watchStateUpdatedAt}]});
+    persistSharedPatch({movies:[{id,watched:true,watchedBy:attendees,setToRewatch:false,watchStateUpdatedAt}],watchedMovies:[...watchedMovies],watchedAttendance:serializeAttendance(watchedAttendance)});
     loadGlobalSeen().then(()=>render());
   }catch(error){
     m.watched=previous.watched;m.watchedBy=previous.watchedBy;m.setToRewatch=previous.setToRewatch;m.watchStateUpdatedAt=previous.watchStateUpdatedAt;
