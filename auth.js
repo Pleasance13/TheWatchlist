@@ -148,8 +148,11 @@
       if(token)response=await fetch("https://discord.com/api/users/@me/guilds",{headers:{Authorization:"Bearer "+token}});
     }
     if(response.status===401||response.status===403){
+      let details="";
+      try{const body=await response.clone().json();if(body?.message)details=" — "+body.message;if(body?.code)details+=" (code "+body.code+")"}catch(error){}
+      console.warn("[Watchlist] Discord guild request rejected",{status:response.status,details});
       lastProviderToken=null;storeProviderToken(null);
-      throw new Error("Discord server access has expired. Please sign in with Discord again to refresh server access.");
+      throw new Error("Discord rejected server access (HTTP "+response.status+details+").");
     }
     if(!response.ok)throw new Error("Could not load your Discord servers (HTTP "+response.status+").");
     return response.json();
