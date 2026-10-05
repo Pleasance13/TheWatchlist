@@ -1069,9 +1069,10 @@ function bindMovieMiddleClick(){
   window.__watchlistMovieMiddleClickBound=true;
   document.addEventListener("mousedown",event=>{
     if(event.button!==1)return;
-    const movieElement=event.target.closest?.("[data-movie-id]");
-    if(!movieElement)return;
-    const movieId=movieElement.dataset.movieId;
+    const target=event.target;
+    const movieTarget=target.closest?.("[data-open-movie]");
+    if(!movieTarget)return;
+    const movieId=movieTarget.dataset.openMovie;
     if(!movieId)return;
     event.preventDefault();
     event.stopPropagation();
