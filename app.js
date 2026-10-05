@@ -313,7 +313,7 @@ function calculateMovieScore(m){
   const responses=Object.values(m.voterResponses||{});
   const responseScore=responses.reduce((sum,answer)=>sum+(voteWeights[String(answer||"").toLowerCase()]||0),0);
   // A small group-size bump rewards movies that attract broad positive interest.
-  const responseCountBump=positiveInterestCount(m)*0.25;
+  const responseCountBump=Math.max(0,positiveInterestCount(m)-3)*0.25;
   return (Number(baseScores[m.id])||0)+responseScore+responseCountBump;
 }
 movies.forEach(m=>{
