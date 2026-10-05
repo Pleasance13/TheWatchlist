@@ -774,9 +774,9 @@ function isUpcomingMovie(m){
   const hasStreamingAvailability=Array.isArray(m.tmdbStreaming)&&m.tmdbStreaming.some(provider=>["flatrate","free","ads","rent","buy"].includes(provider.type));
   if(hasReleasedPostTheatricalDate||hasStreamingAvailability)return false;
   if(hasFuturePostTheatricalDate)return true;
-  // A theatrically released movie with no post-theatrical release yet stays in
-  // Upcoming until TMDB reports a digital, physical, or streaming release.
-  return true;
+  // Once the theatrical release date has passed, don't keep an old movie in
+  // Upcoming merely because TMDB hasn't supplied post-theatrical data.
+  return false;
 }
 function upcomingSection(items){if(!items.length)return '';return '<section class="upcoming-section"><h2 class="upcoming-heading">Upcoming releases</h2>'+(state.view==='list'?listView(items,false,false):gridView(items,false,false))+'</section>'}
 function watchlist(){
