@@ -1355,22 +1355,26 @@ function watchVoiceChannelOptions(selectedId){
 function watchScheduleMarkup(m){
   const schedule=m.watchSchedule&&m.watchSchedule.scheduledAt?m.watchSchedule:null;
   const canSchedule=!!currentProfile?.id&&!m.watched;
+  const defaultNote=(m.title||"Movie")+(m.year?" ("+m.year+")":"")+" is starting now!";
   if(canSchedule&&activeServer?.guild_id)loadWatchVoiceChannels();
   return '<section class="watch-schedule-section"><div class="watch-schedule-head"><div><div class="eyebrow">WATCH DATE</div><h3>'+ (schedule?'Scheduled watch':'Schedule a watch') +'</h3></div>'+ (schedule?'<span class="watch-schedule-badge">Scheduled</span>':'') +'</div>'+
     (schedule?'<p class="watch-schedule-time"><strong>'+escapeHtml(formatWatchSchedule(schedule.scheduledAt))+'</strong><span>'+ (schedule.voiceChannelName?'Discord will announce this in <strong>'+escapeHtml(schedule.voiceChannelName)+'</strong> when the time arrives.':'Discord will announce this when the time arrives.') +'</span></p>' :
-      (canSchedule?'<div class="watch-schedule-form"><label>Date<input id="watchDate" type="date" min="'+new Date().toISOString().slice(0,10)+'"></label><label>Time<input id="watchTime" type="time"></label><label>Voice channel<select id="watchVoiceChannel">'+watchVoiceChannelOptions("")+'</select></label><button class="primary" onclick="scheduleMovieWatch(\''+m.id+'\')">Schedule watch</button></div>':'<p class="muted">Sign in to schedule a watch date.</p>')) +
-    (schedule&&canSchedule?'<div class="watch-schedule-actions"><button class="ghost" onclick="clearMovieWatchSchedule(\''+m.id+'\')">Clear watch date</button></div>':'')+'</section>';
+      (canSchedule?'<div class="watch-schedule-form"><label>Date<input id="watchDate" type="date" min="'+new Date().toISOString().slice(0,10)+'"></label><label>Time<input id="watchTime" type="time"></label><label>Voice channel<select id="watchVoiceChannel">'+watchVoiceChannelOptions("")+'</select></label><label>Note<span class="watch-schedule-note-count">100 character maximum</span><textarea id="watchNote" maxlength="100" rows="2">'+escapeHtml(defaultNote)+'</textarea></label><button class="primary" onclick="scheduleMovieWatch(\\''+m.id+'\\')">Schedule watch</button></div>':'<p class="muted">Sign in to schedule a watch date.</p>')) +
+    (schedule&&canSchedule?'<div class="watch-schedule-actions"><button class="ghost" onclick="clearMovieWatchSchedule(\\''+m.id+'\\')">Clear watch date</button></div>':'')+'</section>';
 }
 window.scheduleMovieWatch=async(id)=>{
   const m=movies.find(x=>x.id===id);if(!m||!currentProfile?.id)return;
   const date=document.querySelector("#watchDate")?.value,time=document.querySelector("#watchTime")?.value,voiceChannelId=document.querySelector("#watchVoiceChannel")?.value;
+  const defaultNote=(m.title||"Movie")+(m.year?" ("+m.year+")":"")+" is starting now!";
+  const noteInput=document.querySelector("#watchNote")?.value||defaultNote;
+  const note=noteInput.trim().slice(0,100)||defaultNote;
   if(!date||!time){alert("Choose a date and time first.");return}
   if(!voiceChannelId){alert("Choose a voice channel.");return}
   const voiceChannel=watchVoiceChannels.find(ch=>String(ch.id)===String(voiceChannelId));
   if(!voiceChannel){alert("Choose a valid public voice channel.");return}
   const iso=new Date(date+"T"+time).toISOString();
   if(new Date(iso)<=new Date()){alert("Choose a future date and time.");return}
-  m.watchSchedule={scheduledAt:iso,scheduledById:currentProfile.id,scheduledBy:currentUser,voiceChannelId:String(voiceChannel.id),voiceChannelName:voiceChannel.name,scheduledAnnouncementAt:null,announcedAt:null};
+  m.watchSchedule={scheduledAt:iso,scheduledById:currentProfile.id,scheduledBy:currentUser,voiceChannelId:String(voiceChannel.id),voiceChannelName:voiceChannel.name,note,scheduledAnnouncementAt:null,announcedAt:null};
   await persistSharedPatch({movies:[{id:m.id,watchSchedule:m.watchSchedule}]});
   render();
   const client=window.WATCHLIST_SUPABASE_CLIENT;
