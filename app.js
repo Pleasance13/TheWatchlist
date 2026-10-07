@@ -1327,8 +1327,58 @@ window.toggleSeen=async id=>{
     console.warn("Could not save seen state:",error.message||error);
   }
 };
-function watchScheduleMarkup(m){const schedule=m.watchSchedule&&m.watchSchedule.scheduledAt?m.watchSchedule:null;const canSchedule=!!currentProfile?.id&&!m.watched;return '<section class="watch-schedule-section"><div class="watch-schedule-head"><div><div class="eyebrow">WATCH DATE</div><h3>'+ (schedule?'Scheduled watch':'Schedule a watch') +'</h3></div>'+ (schedule?'<span class="watch-schedule-badge">Scheduled</span>':'') +'</div>'+ (schedule?'<p class="watch-schedule-time"><strong>'+escapeHtml(formatWatchSchedule(schedule.scheduledAt))+'</strong><span>Discord will announce this when the time arrives.</span></p>' : (canSchedule?'<div class="watch-schedule-form"><label>Date<input id="watchDate" type="date" min="'+new Date().toISOString().slice(0,10)+'"></label><label>Time<input id="watchTime" type="time"></label><button class="primary" onclick="scheduleMovieWatch(\''+m.id+'\')">Schedule watch</button></div>':'<p class="muted">Sign in to schedule a watch date.</p>')) + (schedule&&canSchedule?'<div class="watch-schedule-actions"><button class="ghost" onclick="clearMovieWatchSchedule(\''+m.id+'\')">Clear watch date</button></div>':'')+'</section>'}
-window.scheduleMovieWatch=async(id)=>{const m=movies.find(x=>x.id===id);if(!m||!currentProfile?.id)return;const date=document.querySelector("#watchDate")?.value,time=document.querySelector("#watchTime")?.value;if(!date||!time){alert("Choose a date and time first.");return}const iso=new Date(date+"T"+time).toISOString();if(new Date(iso)<=new Date()){alert("Choose a future date and time.");return}m.watchSchedule={scheduledAt:iso,scheduledById:currentProfile.id,scheduledBy:currentUser,scheduledAnnouncementAt:null,announcedAt:null};await persistSharedPatch({movies:[{id:m.id,watchSchedule:m.watchSchedule}]});render();const client=window.WATCHLIST_SUPABASE_CLIENT;if(client&&activeServer?.guild_id){const {error}=await client.functions.invoke("discord-watch-scheduler",{body:{action:"scheduled_announcement",sharedId:"server:"+activeServer.guild_id,movieId:String(m.id)}});if(error)console.warn("Could not send scheduled watch announcement:",error.message||error)}};
+let watchVoiceChannels=[];
+let watchVoiceChannelsLoading=false;
+let watchVoiceChannelsGuild="";
+async function loadWatchVoiceChannels(){
+  const guildId=activeServer?.guild_id;
+  const client=window.WATCHLIST_SUPABASE_CLIENT;
+  if(!guildId||!client||watchVoiceChannelsLoading||watchVoiceChannelsGuild===String(guildId))return;
+  watchVoiceChannelsLoading=true;
+  try{
+    const {data,error}=await client.functions.invoke("discord-watch-scheduler",{body:{action:"list_voice_channels",guildId:String(guildId)}});
+    if(error)throw error;
+    watchVoiceChannels=Array.isArray(data?.channels)?data.channels:[];
+    watchVoiceChannelsGuild=String(guildId);
+  }catch(error){
+    console.warn("Could not load Discord voice channels:",error.message||error);
+  }finally{
+    watchVoiceChannelsLoading=false;
+    if(typeof render==="function")render();
+  }
+}
+function watchVoiceChannelOptions(selectedId){
+  if(watchVoiceChannelsLoading)return '<option value="">Loading voice channels…</option>';
+  if(!watchVoiceChannels.length)return '<option value="">No public voice channels available</option>';
+  return '<option value="">Choose a voice channel…</option>'+watchVoiceChannels.map(ch=>'<option value="'+escapeHtml(ch.id)+'" '+(String(ch.id)===String(selectedId||"")?"selected":"")+'>'+escapeHtml(ch.name)+'</option>').join("");
+}
+function watchScheduleMarkup(m){
+  const schedule=m.watchSchedule&&m.watchSchedule.scheduledAt?m.watchSchedule:null;
+  const canSchedule=!!currentProfile?.id&&!m.watched;
+  if(canSchedule&&activeServer?.guild_id)loadWatchVoiceChannels();
+  return '<section class="watch-schedule-section"><div class="watch-schedule-head"><div><div class="eyebrow">WATCH DATE</div><h3>'+ (schedule?'Scheduled watch':'Schedule a watch') +'</h3></div>'+ (schedule?'<span class="watch-schedule-badge">Scheduled</span>':'') +'</div>'+
+    (schedule?'<p class="watch-schedule-time"><strong>'+escapeHtml(formatWatchSchedule(schedule.scheduledAt))+'</strong><span>'+ (schedule.voiceChannelName?'Discord will announce this in <strong>'+escapeHtml(schedule.voiceChannelName)+'</strong> when the time arrives.':'Discord will announce this when the time arrives.') +'</span></p>' :
+      (canSchedule?'<div class="watch-schedule-form"><label>Date<input id="watchDate" type="date" min="'+new Date().toISOString().slice(0,10)+'"></label><label>Time<input id="watchTime" type="time"></label><label>Voice channel<select id="watchVoiceChannel">'+watchVoiceChannelOptions("")+'</select></label><button class="primary" onclick="scheduleMovieWatch(\''+m.id+'\')">Schedule watch</button></div>':'<p class="muted">Sign in to schedule a watch date.</p>')) +
+    (schedule&&canSchedule?'<div class="watch-schedule-actions"><button class="ghost" onclick="clearMovieWatchSchedule(\''+m.id+'\')">Clear watch date</button></div>':'')+'</section>';
+}
+window.scheduleMovieWatch=async(id)=>{
+  const m=movies.find(x=>x.id===id);if(!m||!currentProfile?.id)return;
+  const date=document.querySelector("#watchDate")?.value,time=document.querySelector("#watchTime")?.value,voiceChannelId=document.querySelector("#watchVoiceChannel")?.value;
+  if(!date||!time){alert("Choose a date and time first.");return}
+  if(!voiceChannelId){alert("Choose a voice channel.");return}
+  const voiceChannel=watchVoiceChannels.find(ch=>String(ch.id)===String(voiceChannelId));
+  if(!voiceChannel){alert("Choose a valid public voice channel.");return}
+  const iso=new Date(date+"T"+time).toISOString();
+  if(new Date(iso)<=new Date()){alert("Choose a future date and time.");return}
+  m.watchSchedule={scheduledAt:iso,scheduledById:currentProfile.id,scheduledBy:currentUser,voiceChannelId:String(voiceChannel.id),voiceChannelName:voiceChannel.name,scheduledAnnouncementAt:null,announcedAt:null};
+  await persistSharedPatch({movies:[{id:m.id,watchSchedule:m.watchSchedule}]});
+  render();
+  const client=window.WATCHLIST_SUPABASE_CLIENT;
+  if(client&&activeServer?.guild_id){
+    const {error}=await client.functions.invoke("discord-watch-scheduler",{body:{action:"scheduled_announcement",sharedId:"server:"+activeServer.guild_id,movieId:String(m.id)}});
+    if(error)console.warn("Could not send scheduled watch announcement:",error.message||error)
+  }
+};
 window.clearMovieWatchSchedule=(id)=>{const m=movies.find(x=>x.id===id);if(!m)return;m.watchSchedule=null;persistSharedPatch({movies:[{id:m.id,watchSchedule:null}]});render()};
 window.openAttendance=id=>{
   const m=movies.find(x=>x.id===id);if(!m)return;
