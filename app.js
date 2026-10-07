@@ -1330,40 +1330,50 @@ window.toggleSeen=async id=>{
 let watchVoiceChannels=[];
 let watchVoiceChannelsLoading=false;
 let watchVoiceChannelsGuild="";
+let watchVoiceChannelsError="";
+let watchVoiceChannelOpen=false;
+let watchVoiceChannelSelected="";
 async function loadWatchVoiceChannels(){
   const guildId=activeServer?.guild_id;
   const client=window.WATCHLIST_SUPABASE_CLIENT;
-  if(!guildId||!client||watchVoiceChannelsLoading||watchVoiceChannelsGuild===String(guildId))return;
-  watchVoiceChannelsLoading=true;
+  if(!guildId||!client||watchVoiceChannelsLoading)return;
+  if(watchVoiceChannelsGuild===String(guildId)&&watchVoiceChannels.length)return;
+  watchVoiceChannelsLoading=true;watchVoiceChannelsError="";
+  if(typeof render==="function")render();
   try{
     const {data,error}=await client.functions.invoke("discord-watch-scheduler",{body:{action:"list_voice_channels",guildId:String(guildId)}});
     if(error)throw error;
+    if(data?.error)throw new Error(data.error);
     watchVoiceChannels=Array.isArray(data?.channels)?data.channels:[];
     watchVoiceChannelsGuild=String(guildId);
   }catch(error){
+    watchVoiceChannels=[];watchVoiceChannelsError=error?.message||"Could not load voice channels.";
     console.warn("Could not load Discord voice channels:",error.message||error);
-  }finally{
-    watchVoiceChannelsLoading=false;
-    if(typeof render==="function")render();
-  }
+  }finally{watchVoiceChannelsLoading=false;if(typeof render==="function")render()}
 }
-function watchVoiceChannelOptions(selectedId){
-  if(watchVoiceChannelsLoading)return '<option value="">Loading voice channels…</option>';
-  if(!watchVoiceChannels.length)return '<option value="">No public voice channels available</option>';
-  return '<option value="">Choose a voice channel…</option>'+watchVoiceChannels.map(ch=>'<option value="'+escapeHtml(ch.id)+'" '+(String(ch.id)===String(selectedId||"")?"selected":"")+'>'+escapeHtml(ch.name)+'</option>').join("");
+function watchVoiceChannelPicker(){
+  const selected=watchVoiceChannels.find(ch=>String(ch.id)===String(watchVoiceChannelSelected));
+  const label=selected?.name||"Choose a voice channel…";
+  let body="";
+  if(watchVoiceChannelsLoading)body='<div class="watch-voice-option muted">Loading voice channels…</div>';
+  else if(watchVoiceChannelsError)body='<div class="watch-voice-option muted">'+escapeHtml(watchVoiceChannelsError)+'</div>';
+  else if(!watchVoiceChannels.length)body='<div class="watch-voice-option muted">No public voice channels available.</div>';
+  else body=watchVoiceChannels.map(ch=>'<button type="button" class="watch-voice-option '+(String(ch.id)===String(watchVoiceChannelSelected)?"selected":"")+'" onclick="selectWatchVoiceChannel(\\''+escapeHtml(ch.id)+'\\',event)">'+escapeHtml(ch.name)+'</button>').join("");
+  return '<div class="watch-voice-picker"><button type="button" class="watch-voice-trigger" onclick="toggleWatchVoiceChannelPicker(event)"><span>'+escapeHtml(label)+'</span><span aria-hidden="true">⌄</span></button>'+(watchVoiceChannelOpen?'<div class="watch-voice-menu">'+body+'</div>':"")+'</div>';
 }
 function watchScheduleMarkup(m){
   const schedule=m.watchSchedule&&m.watchSchedule.scheduledAt?m.watchSchedule:null;
   const canSchedule=!!currentProfile?.id&&!m.watched;
-  if(canSchedule&&activeServer?.guild_id)loadWatchVoiceChannels();
   return '<section class="watch-schedule-section"><div class="watch-schedule-head"><div><div class="eyebrow">WATCH DATE</div><h3>'+ (schedule?'Scheduled watch':'Schedule a watch') +'</h3></div>'+ (schedule?'<span class="watch-schedule-badge">Scheduled</span>':'') +'</div>'+
     (schedule?'<p class="watch-schedule-time"><strong>'+escapeHtml(formatWatchSchedule(schedule.scheduledAt))+'</strong><span>'+ (schedule.voiceChannelName?'Discord will announce this in <strong>'+escapeHtml(schedule.voiceChannelName)+'</strong> when the time arrives.':'Discord will announce this when the time arrives.') +'</span></p>' :
       (canSchedule?'<div class="watch-schedule-form"><label>Date<input id="watchDate" type="date" min="'+new Date().toISOString().slice(0,10)+'"></label><label>Time<input id="watchTime" type="time"></label><label>Voice channel<select id="watchVoiceChannel">'+watchVoiceChannelOptions("")+'</select></label><button class="primary" onclick="scheduleMovieWatch(\''+m.id+'\')">Schedule watch</button></div>':'<p class="muted">Sign in to schedule a watch date.</p>')) +
     (schedule&&canSchedule?'<div class="watch-schedule-actions"><button class="ghost" onclick="clearMovieWatchSchedule(\''+m.id+'\')">Clear watch date</button></div>':'')+'</section>';
 }
+window.toggleWatchVoiceChannelPicker=(event)=>{event?.stopPropagation();watchVoiceChannelOpen=!watchVoiceChannelOpen;if(watchVoiceChannelOpen&&!watchVoiceChannels.length&&!watchVoiceChannelsLoading)loadWatchVoiceChannels();else render()};
+window.selectWatchVoiceChannel=(id,event)=>{event?.stopPropagation();watchVoiceChannelSelected=String(id);watchVoiceChannelOpen=false;render()};
 window.scheduleMovieWatch=async(id)=>{
   const m=movies.find(x=>x.id===id);if(!m||!currentProfile?.id)return;
-  const date=document.querySelector("#watchDate")?.value,time=document.querySelector("#watchTime")?.value,voiceChannelId=document.querySelector("#watchVoiceChannel")?.value;
+  const date=document.querySelector("#watchDate")?.value,time=document.querySelector("#watchTime")?.value,voiceChannelId=watchVoiceChannelSelected;
   if(!date||!time){alert("Choose a date and time first.");return}
   if(!voiceChannelId){alert("Choose a voice channel.");return}
   const voiceChannel=watchVoiceChannels.find(ch=>String(ch.id)===String(voiceChannelId));
