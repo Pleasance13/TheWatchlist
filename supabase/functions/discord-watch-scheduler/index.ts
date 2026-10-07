@@ -25,8 +25,28 @@ function qualifies(interest: unknown, threshold: unknown) {
 function discordId(user: any) {
   const meta = user?.user_metadata || {};
   const identity = (user?.identities || []).find((x: any) => x.provider === "discord")?.identity_data || {};
-  return String(identity.user_id || identity.id || meta.user_id || meta.discord_id || "");
+  return String(identity.user_id || identity.id || identity.provider_id || identity.sub || meta.user_id || meta.discord_id || "");
 }
+async function markScheduledAnnouncement(sharedId: string, movieId: string, announcedAt: string) {
+  const { error } = await supabase.rpc("watchlist_mark_watch_scheduled_announced", {
+    p_shared_id: sharedId, p_movie_id: movieId, p_announced_at: announcedAt,
+  });
+  if (error) throw error;
+}
+async function announceScheduledMovie(sharedId: string, movieId: string, userId: string) {
+  const { data: state, error: stateError } = await supabase.from("watchlist_shared_state").select("id,data").eq("id", sharedId).maybeSingle();
+  if (stateError) throw stateError;
+  if (!state) throw new Error("Watchlist server not found");
+  const movie = (Array.isArray(state.data?.movies) ? state.data.movies : []).find((m: any) => String(m.id) === movieId);
+  if (!movie?.watchSchedule?.scheduledAt) throw new Error("Movie is not scheduled");
+  if (String(movie.watchSchedule.scheduledById || "") !== userId) throw new Error("Only the person who scheduled the watch can announce it");
+  if (movie.watchSchedule.scheduledAnnouncementAt) return;
+  const when = Math.floor(new Date(movie.watchSchedule.scheduledAt).getTime() / 1000);
+  await sendDiscordMessage("🎬 **Movie Night: " + String(movie.title || "Watchlist movie") + "**\nScheduled for <t:" + when + ":F> (<t:" + when + ":R>).");
+  await markScheduledAnnouncement(sharedId, movieId, new Date().toISOString());
+}
+
+
 
 async function allUsers() {
   const users: any[] = [];
@@ -56,6 +76,23 @@ async function sendDiscordMessage(content: string) {
 
 Deno.serve(async (req) => {
   if (req.method !== "POST") return new Response("POST required", { status: 405 });
+  let requestBody: any = {};
+  try { requestBody = await req.json(); } catch (_) {}
+  const isScheduledAnnouncement = requestBody?.action === "scheduled_announcement";
+  if (isScheduledAnnouncement) {
+    const auth = req.headers.get("Authorization") || "";
+    const token = auth.startsWith("Bearer ") ? auth.slice(7) : "";
+    if (!token) return new Response("Unauthorized", { status: 401 });
+    const { data: authData, error: authError } = await supabase.auth.getUser(token);
+    if (authError || !authData.user) return new Response("Unauthorized", { status: 401 });
+    try {
+      await announceScheduledMovie(String(requestBody.sharedId || ""), String(requestBody.movieId || ""), authData.user.id);
+      return Response.json({ ok: true });
+    } catch (error) {
+      console.error("scheduled announcement failed", error);
+      return Response.json({ ok: false, error: error instanceof Error ? error.message : String(error) }, { status: 400 });
+    }
+  }
   if (WATCH_CRON_SECRET && req.headers.get("x-watch-cron-secret") !== WATCH_CRON_SECRET) {
     return new Response("Unauthorized", { status: 401 });
   }
