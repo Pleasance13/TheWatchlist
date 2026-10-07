@@ -1362,52 +1362,26 @@ async function loadWatchVoiceChannels(){
 
 function watchVoiceChannelPicker(){
   const selected=watchVoiceChannels.find(ch=>String(ch.id)===String(watchVoiceChannelSelected||""));
-  let label=selected?.name||"Choose a voice channel…";
-  let menu="";
-  if(watchVoiceChannelOpen){
-    if(watchVoiceChannelsLoading){
-      menu='<div class="watch-voice-option muted">Loading voice channels…</div>';
-    }else if(watchVoiceChannelsError){
-      menu='<div class="watch-voice-option muted">'+escapeHtml(watchVoiceChannelsError)+'</div><button type="button" class="watch-voice-option" onclick="loadWatchVoiceChannels()">Try again</button>';
-    }else if(!watchVoiceChannels.length){
-      menu='<div class="watch-voice-option muted">No public voice channels available</div>';
-    }else{
-      menu=watchVoiceChannels.map(ch=>'<button type="button" class="watch-voice-option '+(String(ch.id)===String(watchVoiceChannelSelected||"")?"selected":"")+'" onclick="selectWatchVoiceChannel(\\''+escapeHtml(ch.id)+'\\')">'+escapeHtml(ch.name)+'</button>').join("");
-    }
-  }
+  const label=selected?.name||"Choose a voice channel…";
   return '<div class="watch-voice-picker">'+
     '<button type="button" class="watch-voice-trigger" onclick="toggleWatchVoiceChannelPicker(event)" aria-haspopup="listbox" aria-expanded="'+(watchVoiceChannelOpen?"true":"false")+'"><span>'+escapeHtml(label)+'</span><span aria-hidden="true">⌄</span></button>'+
-    (watchVoiceChannelOpen?'<div class="watch-voice-menu" role="listbox">'+menu+'</div>':'')+
+    (watchVoiceChannelOpen?watchVoiceChannelMenu():'')+
     '</div><input id="watchVoiceChannel" type="hidden" value="'+escapeHtml(watchVoiceChannelSelected||"")+'">';
 }
-
-window.toggleWatchVoiceChannelPicker=async event=>{
-  event?.preventDefault?.();
-  watchVoiceChannelOpen=!watchVoiceChannelOpen;
-  if(watchVoiceChannelOpen && activeServer?.guild_id && watchVoiceChannelsGuild!==String(activeServer.guild_id)){
-    await loadWatchVoiceChannels();
-    return;
-  }
-  render();
-};
-
-window.selectWatchVoiceChannel=id=>{
-  const channel=watchVoiceChannels.find(ch=>String(ch.id)===String(id));
-  if(!channel)return;
-  watchVoiceChannelSelected=String(channel.id);
-  watchVoiceChannelOpen=false;
-  render();
-};
-
-function watchScheduleMarkup(m){
-  const schedule=m.watchSchedule&&m.watchSchedule.scheduledAt?m.watchSchedule:null;
-  const canSchedule=!!currentProfile?.id&&!m.watched;
-  if(schedule&&schedule.voiceChannelId)watchVoiceChannelSelected=String(schedule.voiceChannelId);
-  return '<section class="watch-schedule-section"><div class="watch-schedule-head"><div><div class="eyebrow">WATCH DATE</div><h3>'+ (schedule?'Scheduled watch':'Schedule a watch') +'</h3></div>'+ (schedule?'<span class="watch-schedule-badge">Scheduled</span>':'')+'</div>'+
-    (schedule?'<p class="watch-schedule-time"><strong>'+escapeHtml(formatWatchSchedule(schedule.scheduledAt))+'</strong><span>'+ (schedule.voiceChannelName?'Discord will announce this in <strong>'+escapeHtml(schedule.voiceChannelName)+'</strong> when the time arrives.':'Discord will announce this when the time arrives.')+'</span></p>':
-      (canSchedule?'<div class="watch-schedule-form"><label>Date<input id="watchDate" type="date" min="'+new Date().toISOString().slice(0,10)+'"></label><label>Time<input id="watchTime" type="time"></label><label>Voice channel'+watchVoiceChannelPicker()+'</label><button class="primary" onclick="scheduleMovieWatch(\\''+m.id+'\\')">Schedule watch</button></div>':'<p class="muted">Sign in to schedule a watch date.</p>'))+
-    (schedule&&canSchedule?'<div class="watch-schedule-actions"><button class="ghost" onclick="clearMovieWatchSchedule(\\''+m.id+'\\')">Clear watch date</button></div>':'')+'</section>';
+function watchVoiceChannelMenu(){
+  let menu="";
+  if(watchVoiceChannelsLoading)menu='<div class="watch-voice-option muted">Loading voice channels…</div>';
+  else if(watchVoiceChannelsError)menu='<div class="watch-voice-option muted">'+escapeHtml(watchVoiceChannelsError)+'</div><button type="button" class="watch-voice-option" onclick="loadWatchVoiceChannels()">Try again</button>';
+  else if(!watchVoiceChannels.length)menu='<div class="watch-voice-option muted">No public voice channels available</div>';
+  else menu=watchVoiceChannels.map(ch=>'<button type="button" class="watch-voice-option '+(String(ch.id)===String(watchVoiceChannelSelected||"")?"selected":"")+'" data-voice-channel="'+escapeHtml(ch.id)+'">'+escapeHtml(ch.name)+'</button>').join("");
+  return '<div class="watch-voice-menu" role="listbox" onclick="handleWatchVoiceChannelMenu(event)">'+menu+'</div>';
 }
+window.handleWatchVoiceChannelMenu=event=>{
+  const button=event.target?.closest?.("[data-voice-channel]");
+  if(!button)return;
+  selectWatchVoiceChannel(button.getAttribute("data-voice-channel"));
+};
+
 window.scheduleMovieWatch=async(id)=>{
   const m=movies.find(x=>x.id===id);if(!m||!currentProfile?.id)return;
   const date=document.querySelector("#watchDate")?.value,time=document.querySelector("#watchTime")?.value,voiceChannelId=document.querySelector("#watchVoiceChannel")?.value;
