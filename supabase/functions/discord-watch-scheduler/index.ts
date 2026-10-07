@@ -4,7 +4,7 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const DISCORD_BOT_TOKEN = Deno.env.get("DISCORD_BOT_TOKEN")!;
-const DISCORD_WATCH_CHANNEL_ID = Deno.env.get("DISCORD_WATCH_CHANNEL_ID")!;
+const DISCORD_WATCH_CHANNEL_ID = Deno.env.get("DISCORD_WATCH_CHANNEL_ID") || "1557490304460914799";
 const DISCORD_GUILD_ID = Deno.env.get("DISCORD_GUILD_ID") || "";
 const WATCH_CRON_SECRET = Deno.env.get("WATCH_CRON_SECRET") || "";
 
