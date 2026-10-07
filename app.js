@@ -1360,6 +1360,16 @@ async function loadWatchVoiceChannels(){
   }
 }
 
+function watchScheduleMarkup(m){
+  const schedule=m.watchSchedule&&m.watchSchedule.scheduledAt?m.watchSchedule:null;
+  const canSchedule=!!currentProfile?.id&&!m.watched;
+  if(schedule&&schedule.voiceChannelId)watchVoiceChannelSelected=String(schedule.voiceChannelId);
+  return '<section class="watch-schedule-section"><div class="watch-schedule-head"><div><div class="eyebrow">WATCH DATE</div><h3>'+ (schedule?'Scheduled watch':'Schedule a watch')+'</h3></div>'+ (schedule?'<span class="watch-schedule-badge">Scheduled</span>':'')+'</div>'+
+    (schedule?'<p class="watch-schedule-time"><strong>'+escapeHtml(formatWatchSchedule(schedule.scheduledAt))+'</strong><span>'+ (schedule.voiceChannelName?'Discord will announce this in <strong>'+escapeHtml(schedule.voiceChannelName)+'</strong> when the time arrives.':'Discord will announce this when the time arrives.')+'</span></p>':
+      (canSchedule?'<div class="watch-schedule-form"><label>Date<input id="watchDate" type="date" min="'+new Date().toISOString().slice(0,10)+'"></label><label>Time<input id="watchTime" type="time"></label><label>Voice channel'+watchVoiceChannelPicker()+'</label><button class="primary" onclick="scheduleMovieWatch(\\''+m.id+'\\')">Schedule watch</button></div>':'<p class="muted">Sign in to schedule a watch date.</p>'))+
+    (schedule&&canSchedule?'<div class="watch-schedule-actions"><button class="ghost" onclick="clearMovieWatchSchedule(\\''+m.id+'\\')">Clear watch date</button></div>':'')+'</section>';
+}
+
 function watchVoiceChannelPicker(){
   const selected=watchVoiceChannels.find(ch=>String(ch.id)===String(watchVoiceChannelSelected||""));
   const label=selected?.name||"Choose a voice channel…";
