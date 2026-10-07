@@ -28,12 +28,6 @@ function discordId(user: any) {
   return String(identity.user_id || identity.id || meta.user_id || meta.discord_id || "");
 }
 
-function displayName(user: any) {
-  const meta = user?.user_metadata || {};
-  const identity = (user?.identities || []).find((x: any) => x.provider === "discord")?.identity_data || {};
-  return identity.global_name || identity.username || meta.global_name || meta.username || meta.name || "Discord user";
-}
-
 async function allUsers() {
   const users: any[] = [];
   for (let page = 1; page <= 20; page++) {
@@ -85,6 +79,9 @@ Deno.serve(async (req) => {
       const guildId = String(state.id || "").slice(7);
       if (!guildId || (DISCORD_GUILD_ID && guildId !== DISCORD_GUILD_ID)) continue;
       const movies = Array.isArray(state.data?.movies) ? state.data.movies : [];
+      const votesByUser = state.data?.votesByUser && typeof state.data.votesByUser === "object"
+        ? state.data.votesByUser
+        : {};
 
       const { data: members, error: memberError } = await supabase
         .from("watchlist_server_memberships")
@@ -92,6 +89,7 @@ Deno.serve(async (req) => {
         .eq("guild_id", guildId);
       if (memberError) throw memberError;
       const memberIds = new Set((members || []).map((m) => String(m.user_id)));
+      if (!memberIds.size) continue;
 
       const { data: settingsRows, error: settingsError } = await supabase
         .from("watchlist_user_settings")
@@ -107,13 +105,12 @@ Deno.serve(async (req) => {
         if (Number.isNaN(scheduledAt.getTime()) || scheduledAt > now) continue;
 
         const mentions: string[] = [];
-        const responses = movie?.voterResponses && typeof movie.voterResponses === "object" ? movie.voterResponses : {};
-
         for (const userId of memberIds) {
           const user = userById.get(userId);
           if (!user) continue;
           const threshold = normalizeThreshold(settingsByUser.get(userId)?.discordWatchThreshold);
-          const interest = responses[userId] || responses[displayName(user)] || null;
+          const voteEntry = votesByUser[userId] || Object.values(votesByUser).find((entry: any) => String(entry?.id || "") === userId);
+          const interest = voteEntry?.votes?.[String(movie.id)] || null;
           if (!qualifies(interest, threshold)) continue;
           const id = discordId(user);
           if (id) mentions.push("<@" + id + ">");
