@@ -1847,3 +1847,11 @@ button,input{font:inherit}button{color:inherit}.topbar{height:72px;padding:0 32p
 .watch-schedule-form input{min-height:34px;box-sizing:border-box;padding:7px 9px;border:1px solid #3b4048;border-radius:7px;background:#20242a;color:#e8e9ec;font:inherit}
 .watch-schedule-actions{margin-top:10px}
 @media(max-width:760px){.discord-notification-setting{align-items:flex-start}.discord-notification-control{width:100%}.watch-schedule-form{align-items:stretch;flex-direction:column}.watch-schedule-form .primary{width:100%}}
+
+.watch-note-control{display:flex;align-items:center;gap:8px;min-height:34px}
+.watch-note-added{font-size:12px;color:var(--muted)}
+.watch-schedule-submit{margin-left:auto}
+.watch-note-modal{max-width:520px}
+.watch-note-label{display:grid;gap:6px;color:var(--muted);font-size:12px}
+.watch-note-label input{min-height:38px;box-sizing:border-box;padding:8px 10px;border:1px solid #3b4048;border-radius:7px;background:#20242a;color:#e8e9ec;font:inherit}
+@media(max-width:760px){.watch-schedule-submit{margin-left:0}.watch-note-control{justify-content:space-between}}
