@@ -1407,7 +1407,7 @@ function watchScheduleMarkup(m){
   const canSchedule=!!currentProfile?.id&&!m.watched;
   if(schedule&&schedule.voiceChannelId)watchVoiceChannelSelected=String(schedule.voiceChannelId);
   if(watchScheduleDraft.movieId!==String(m.id)){
-    watchScheduleDraft={movieId:String(m.id),date:"",time:"",note:(m.title||"Watchlist movie")+(m.year?" ("+m.year+")":"")+" is starting now!"};
+    watchScheduleDraft={movieId:String(m.id),date:"",time:"",note:""};
   }
   return '<section class="watch-schedule-section"><div class="watch-schedule-head"><div><div class="eyebrow">WATCH DATE</div><h3>'+ (schedule?'Scheduled watch':'Schedule a watch') +'</h3></div>'+ (schedule?'<span class="watch-schedule-badge">Scheduled</span>':'') +'</div>'+
     (schedule?'<p class="watch-schedule-time"><strong>'+escapeHtml(formatWatchSchedule(schedule.scheduledAt))+'</strong><span>'+ (schedule.voiceChannelName?'Discord will announce this in <strong>'+escapeHtml(schedule.voiceChannelName)+'</strong> when the time arrives.':'Discord will announce this when the time arrives.')+'</span></p>' :
@@ -1416,11 +1416,13 @@ function watchScheduleMarkup(m){
 }
 function watchNoteModal(){
   if(!watchNoteOpen)return "";
-  return '<div class="modal-backdrop open" onclick="if(event.target===this)closeWatchNote()"><section class="add-modal watch-note-modal" role="dialog" aria-modal="true"><div class="modal-head"><div><div class="eyebrow">WATCH ANNOUNCEMENT</div><h2>Add a note</h2></div><button class="modal-close" onclick="closeWatchNote()" aria-label="Close">×</button></div><label class="watch-note-label">Note<input id="watchNoteInput" type="text" maxlength="100" value="'+escapeHtml(watchScheduleDraft.note)+'" autofocus></label><p class="muted">This will be the main text of the starting-now Discord announcement. Maximum 100 characters.</p><div class="add-form-actions"><button class="ghost" onclick="closeWatchNote()">Cancel</button><button class="primary" onclick="saveWatchNote()">Save note</button></div></section></div>';
+  const movie=movies.find(x=>String(x.id)===String(watchScheduleDraft.movieId));
+  const movieLabel=(movie?.title||"Movie")+(movie?.year?" ("+movie.year+")":"");
+  return '<div class="modal-backdrop open" onclick="if(event.target===this)closeWatchNote()"><section class="add-modal watch-note-modal" role="dialog" aria-modal="true"><div class="modal-head"><div><div class="eyebrow">WATCH ANNOUNCEMENT</div><h2>Add a note</h2></div><button class="modal-close" onclick="closeWatchNote()" aria-label="Close">×</button></div><div class="watch-note-preview"><strong>'+escapeHtml(movieLabel)+'</strong> <input id="watchNoteInput" class="watch-note-inline-input" type="text" maxlength="100" value="'+escapeHtml(watchScheduleDraft.note)+'" placeholder="is starting now!" autofocus></div><p class="muted">Your note replaces “is starting now!” Maximum 100 characters.</p><div class="add-form-actions"><button class="ghost" onclick="closeWatchNote()">Cancel</button><button class="primary" onclick="saveWatchNote()">Save note</button></div></section></div>';
 }
 window.openWatchNote=event=>{event?.preventDefault?.();watchNoteOpen=true;render();};
 window.closeWatchNote=()=>{watchNoteOpen=false;render();};
-window.saveWatchNote=()=>{const input=document.querySelector("#watchNoteInput");const value=(input?.value||"").trim();if(!value){alert("Enter a note.");return}watchScheduleDraft.note=value.slice(0,100);watchNoteOpen=false;render();};
+window.saveWatchNote=()=>{const input=document.querySelector("#watchNoteInput");const value=(input?.value||"").trim();watchScheduleDraft.note=value.slice(0,100);watchNoteOpen=false;render();};
 window.scheduleMovieWatch=async(id)=>{
   const m=movies.find(x=>x.id===id);if(!m||!currentProfile?.id)return;
   const date=watchScheduleDraft.date||document.querySelector("#watchDate")?.value,time=watchScheduleDraft.time||document.querySelector("#watchTime")?.value,voiceChannelId=document.querySelector("#watchVoiceChannel")?.value,note=(watchScheduleDraft.note||"").trim();
