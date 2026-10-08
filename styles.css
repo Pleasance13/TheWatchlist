@@ -1832,7 +1832,7 @@ button,input{font:inherit}button{color:inherit}.topbar{height:72px;padding:0 32p
 .discord-notification-control select:focus{border-color:#6b717b}
 .watch-voice-picker{position:relative;min-width:190px}
 .watch-voice-trigger{min-height:34px;box-sizing:border-box;padding:7px 9px;border:1px solid #3b4048;border-radius:7px;background:#20242a;color:#e8e9ec;font:inherit;display:flex;align-items:center;justify-content:space-between;gap:18px;cursor:pointer;width:100%;text-align:left}
-.watch-voice-menu{position:absolute;z-index:30;top:calc(100% + 5px);left:0;right:0;max-height:220px;overflow:auto;padding:5px;border:1px solid #3b4048;border-radius:8px;background:var(--panel);box-shadow:0 10px 24px rgba(0,0,0,.28)}
+.watch-voice-menu{position:absolute;z-index:30;bottom:calc(100% + 5px);left:0;right:0;max-height:220px;overflow:auto;padding:5px;border:1px solid #3b4048;border-radius:8px;background:var(--panel);box-shadow:0 10px 24px rgba(0,0,0,.28)}
 .watch-voice-option{display:block;width:100%;padding:8px 9px;border:0;border-radius:5px;background:transparent;color:var(--text);font:inherit;text-align:left;cursor:pointer}
 .watch-voice-option:hover,.watch-voice-option.selected{background:#2a3038}
 .watch-voice-option.muted{cursor:default;color:var(--muted)}
