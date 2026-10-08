@@ -1855,3 +1855,7 @@ button,input{font:inherit}button{color:inherit}.topbar{height:72px;padding:0 32p
 .watch-note-label{display:grid;gap:6px;color:var(--muted);font-size:12px}
 .watch-note-label input{min-height:38px;box-sizing:border-box;padding:8px 10px;border:1px solid #3b4048;border-radius:7px;background:#20242a;color:#e8e9ec;font:inherit}
 @media(max-width:760px){.watch-schedule-submit{margin-left:0}.watch-note-control{justify-content:space-between}}
+
+.watch-note-preview{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:12px 0;font-size:16px}
+.watch-note-inline-input{min-width:220px;flex:1;min-height:36px;box-sizing:border-box;padding:7px 9px;border:1px solid #3b4048;border-radius:7px;background:#20242a;color:#e8e9ec;font:inherit}
+.watch-note-inline-input::placeholder{color:var(--muted);font-style:italic}
