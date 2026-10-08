@@ -179,11 +179,16 @@ window.watchlistAuthIdentityChanged=function(profile){
 let removedMovieIds=[];let removedMovieAt={};try{removedMovieIds=JSON.parse(localStorage.getItem("watchlist-removed-movies")||"[]")}catch(error){removedMovieIds=[]}for(let i=movies.length-1;i>=0;i--){if(removedMovieIds.includes(movies[i].id))movies.splice(i,1)}
 let serverUsers=[];
 const displaySettingKeys=["showSynopsis","showRatings","showNote","showTrailer","showCast","showStreamingLinks"];
-const defaultUserSettings={showSynopsis:true,showRatings:true,showNote:true,showTrailer:true,showCast:true,showStreamingLinks:true,contentWarningsEnabled:true,warningCategories:[],view:"list",posterSize:2,activeServer:null};
+const defaultUserSettings={showSynopsis:true,showRatings:true,showNote:true,showTrailer:true,showCast:true,showStreamingLinks:true,contentWarningsEnabled:true,warningCategories:[],view:"list",posterSize:2,activeServer:null,discordWatchThreshold:"watch"};
+function normalizeDiscordWatchThreshold(value){return ["must","interested","watch","none"].includes(String(value||""))?String(value):"watch"}
+function discordWatchThresholdLabel(value){return ({must:"Must Watch",interested:"Interested",watch:"I’d Watch",none:"Never"})[normalizeDiscordWatchThreshold(value)]||"I’d Watch"}
+function discordInterestQualifies(interest,threshold){const rank={must:4,interested:3,watch:2,no:0};const answer=String(interest||"").toLowerCase();const minimum=normalizeDiscordWatchThreshold(threshold);return minimum!=="none"&&(rank[answer]||0)>=(rank[minimum]||0)}
+function formatWatchSchedule(iso){if(!iso)return "";const date=new Date(iso);if(Number.isNaN(date.getTime()))return "";return date.toLocaleString([], {weekday:"short",month:"short",day:"numeric",hour:"numeric",minute:"2-digit"})}
+function scheduleTimestamp(iso){const date=new Date(iso);return Number.isNaN(date.getTime())?null:Math.floor(date.getTime()/1000)}
 async function saveUserSettings(){
   if(currentUser==="Guest")return;
   const client=window.WATCHLIST_SUPABASE_CLIENT;if(!client)return;
-  const data={showSynopsis:Boolean(state.showSynopsis),showRatings:Boolean(state.showRatings),showNote:Boolean(state.showNote),showTrailer:Boolean(state.showTrailer),showCast:Boolean(state.showCast),showStreamingLinks:Boolean(state.showStreamingLinks),contentWarningsEnabled:Boolean(contentWarningsEnabled),warningCategories:[...savedWarningCategories],view:state.view==="grid"?"grid":"list",posterSize:Math.max(1,Math.min(4,Math.round(Number(state.posterSize)||2))),activeServer:activeServer?{guild_id:activeServer.guild_id,guild_name:activeServer.guild_name,guild_icon_url:activeServer.guild_icon_url||null}:null};
+  const data={showSynopsis:Boolean(state.showSynopsis),showRatings:Boolean(state.showRatings),showNote:Boolean(state.showNote),showTrailer:Boolean(state.showTrailer),showCast:Boolean(state.showCast),showStreamingLinks:Boolean(state.showStreamingLinks),contentWarningsEnabled:Boolean(contentWarningsEnabled),warningCategories:[...savedWarningCategories],view:state.view==="grid"?"grid":"list",posterSize:Math.max(1,Math.min(4,Math.round(Number(state.posterSize)||2))),activeServer:activeServer?{guild_id:activeServer.guild_id,guild_name:activeServer.guild_name,guild_icon_url:activeServer.guild_icon_url||null}:null,discordWatchThreshold:normalizeDiscordWatchThreshold(state.discordWatchThreshold)};
   const {error}=await client.from("watchlist_user_settings").upsert({user_id:currentProfile?.id,data,updated_at:new Date().toISOString()});
   if(error)console.warn("Could not save user settings:",error.message||error);
 }
@@ -198,7 +203,7 @@ async function loadUserSettings(){
   savedWarningCategories=Array.isArray(saved.warningCategories)?saved.warningCategories:[];
   state.view=saved.view==="grid"?"grid":"list";
   state.posterSize=Math.max(1,Math.min(4,Math.round(Number(saved.posterSize)||2)));
-  activeServer=saved.activeServer&&saved.activeServer.guild_id?{guild_id:saved.activeServer.guild_id,guild_name:saved.activeServer.guild_name||"",guild_icon_url:saved.activeServer.guild_icon_url||null}:null;
+  activeServer=saved.activeServer&&saved.activeServer.guild_id?{guild_id:saved.activeServer.guild_id,guild_name:saved.activeServer.guild_name||"",guild_icon_url:saved.activeServer.guild_icon_url||null}:null; state.discordWatchThreshold=normalizeDiscordWatchThreshold(saved.discordWatchThreshold);
   try{if(activeServer)localStorage.setItem("watchlist-active-server",JSON.stringify(activeServer));else localStorage.removeItem("watchlist-active-server")}catch(error){}
   try{localStorage.setItem("watchlist-warning-categories",JSON.stringify(savedWarningCategories));localStorage.setItem("watchlist-content-warnings-enabled",String(contentWarningsEnabled));localStorage.setItem("watchlist-display-settings",JSON.stringify(Object.fromEntries(displaySettingKeys.map(key=>[key,state[key]]))));}catch(error){}
 } const warningGroups=[{name:"Violence & gore",categories:["Violence","Gore","Blood","Torture","Body horror","Dismemberment","Weapons","War"]},{name:"Animals",categories:["Animal death","Animal cruelty","Animal injury","Harm to animals"]},{name:"Sexual content",categories:["Sexual content","Nudity","Sexual assault","Rape","Sexual exploitation"]},{name:"Death & self-harm",categories:["Death","Child death","Suicide","Self-harm","Suicide/self-harm"]},{name:"Other disturbing content",categories:["Drug use","Drug overdose","Child abuse","Disturbing imagery","Medical trauma","Abduction/kidnapping","Psychological distress"]}]; const warningCategories=warningGroups.flatMap(group=>group.categories); let savedWarningCategories=[]; try{savedWarningCategories=JSON.parse(localStorage.getItem("watchlist-warning-categories")||"[]")}catch(error){savedWarningCategories=[]}let contentWarningsEnabled=true;try{const savedContentWarnings=localStorage.getItem("watchlist-content-warnings-enabled");if(savedContentWarnings!==null)contentWarningsEnabled=savedContentWarnings==="true"}catch(error){}let savedDisplaySettings={};try{const parsedDisplaySettings=JSON.parse(localStorage.getItem("watchlist-display-settings")||"{}");displaySettingKeys.forEach(key=>{if(typeof parsedDisplaySettings[key]==="boolean")savedDisplaySettings[key]=parsedDisplaySettings[key]})}catch(error){savedDisplaySettings={}}
@@ -234,7 +239,7 @@ function navigateRoute(nav,detail=null,{replace=false}={}){
   state.detail=detail;
   render();
 }
-const state={nav:"watchlist",view:"list",search:"",filter:"all",posterSize:2,showSynopsis:true,showRatings:false,showNote:true,showTrailer:false,showCast:true,showStreamingLinks:true,...savedDisplaySettings,detail:null,detailSections:{cast:true,streaming:true,trailer:true},showFilters:false,genreFilters:[],yearFrom:"",yearTo:"",interestUsers:[],interestLevel:"",seenMode:"seen",seenUsers:[],rewatchStatus:"",watchedWith:"",suggestedBy:"",votes:stateVotesPlaceholder||{},removeMovieId:null,addMovieOpen:false,addMovieQuery:"",addMovieResults:[],addMovieVisibleCount:8,addMovieSelection:null,addMovieLoading:false,addMovieError:"",attendanceOpen:false,attendanceMovieId:null,attendanceSelected:[],assetEditorOpen:false,assetMovieId:null,assetLoading:false,assetError:"",assetSections:{frontLogo:true,detailLogo:true,frontImage:true,backStill:true},assetLanguageGroups:{},assetPreviewFlipped:false,noteEditorOpen:false,noteEditorMovieId:null,watchlistSort:"server",historySort:"alpha",watchlistSortDir:"desc",historySortDir:"asc"};
+const state={nav:"watchlist",view:"list",search:"",filter:"all",posterSize:2,showSynopsis:true,showRatings:false,showNote:true,showTrailer:false,showCast:true,showStreamingLinks:true,...savedDisplaySettings,discordWatchThreshold:"watch",detail:null,detailSections:{cast:true,streaming:true,trailer:true},showFilters:false,genreFilters:[],yearFrom:"",yearTo:"",interestUsers:[],interestLevel:"",seenMode:"seen",seenUsers:[],rewatchStatus:"",watchedWith:"",suggestedBy:"",votes:stateVotesPlaceholder||{},removeMovieId:null,addMovieOpen:false,addMovieQuery:"",addMovieResults:[],addMovieVisibleCount:8,addMovieSelection:null,addMovieLoading:false,addMovieError:"",attendanceOpen:false,attendanceMovieId:null,attendanceSelected:[],assetEditorOpen:false,assetMovieId:null,assetLoading:false,assetError:"",assetSections:{frontLogo:true,detailLogo:true,frontImage:true,backStill:true},assetLanguageGroups:{},assetPreviewFlipped:false,noteEditorOpen:false,noteEditorMovieId:null,watchlistSort:"server",historySort:"alpha",watchlistSortDir:"desc",historySortDir:"asc"};
 const FILTER_STATE_KEY_PREFIX="watchlist-filter-state-v1:";
 const FILTER_STATE_FIELDS=["search","filter","genreFilters","yearFrom","yearTo","interestUsers","interestLevel","seenMode","seenUsers","rewatchStatus","suggestedBy"];
 const HISTORY_FILTER_FIELDS=["search","filter","genreFilters","yearFrom","yearTo","seenMode","seenUsers","suggestedBy"];
@@ -885,7 +890,8 @@ async function onDiscordServerSelected(select){
   catch(error){alert(error.message||"Could not connect this Discord server.");select.disabled=false}
 }
 
-function settings(){let rows=[["Show synopsis","Show movie synopses on cards and details.","showSynopsis"],["Show RT/IMDb scores","Show Rotten Tomatoes and IMDb scores when available.","showRatings"],["Show suggester's note","Show personal notes attached to suggestions on Details screens.","showNote"],["Show cast","Show cast photos and names on movie details.","showCast"],["Show streaming links","Show streaming availability and provider links on movie details.","showStreamingLinks"],["Show trailers","Allow trailers to appear in details.","showTrailer"]];return `<div class="hero"><div><div class="eyebrow">YOUR PREFERENCES</div><h1>Settings</h1><p class="sub">Control how much pre-watch information The Watchlist shows you.</p></div></div><div class="settings">${rows.map(([a,b,k])=>`<div class="setting"><div><strong>${a}</strong><span>${b}</span></div><button class="toggle ${state[k]?"on":""}" onclick="toggleSetting('${k}')" aria-label="Toggle ${a}"></button></div>`).join("")}<div class="setting warning-settings"><div class="warning-settings-header"><div><strong>Content warnings</strong><span>Choose which warning categories you want surfaced.</span></div><button class="toggle ${contentWarningsEnabled?"on":""}" onclick="toggleContentWarnings()" aria-label="Toggle content warnings" aria-pressed="${contentWarningsEnabled}"></button></div><div class="warning-category-controls"><details class="warning-category-picker"><summary>Choose categories <span class="warning-picker-count">${savedWarningCategories.length} selected</span><span class="tmdb-section-chevron warning-picker-chevron" aria-hidden="true"><svg viewBox="0 0 20 20" focusable="false"><path d="M5 10h10"/><path class="warning-chevron-vertical" d="M10 5v10"/></svg></span></summary><div class="warning-category-groups">${warningGroups.map(group=>'<details class="warning-category-group"><summary>'+escapeHtml(group.name)+'<span class="tmdb-section-chevron warning-picker-chevron" aria-hidden="true"><svg viewBox="0 0 20 20" focusable="false"><path d="M5 10h10"/><path class="warning-chevron-vertical" d="M10 5v10"/></svg></span></summary><div class="warning-category-options"><div class="warning-group-actions"><button type="button" onclick="setWarningGroup(&quot;'+group.name+'&quot;,true)">Check all</button><button type="button" onclick="setWarningGroup(&quot;'+group.name+'&quot;,false)">Uncheck all</button></div>'+group.categories.map(category=>'<label class="warning-category-option"><input type="checkbox" '+(savedWarningCategories.includes(category.toLowerCase())?'checked':'')+' onchange="toggleWarningCategory(\&quot;'+category+'\&quot;,this.checked)"><span>'+escapeHtml(category)+'</span></label>').join("")+'</div></details>').join("")}<p class="warning-picker-help">Each heading expands to a scrollable list of individual warning categories with toggles.</p></div></details></div></div><div class="setting discord-server-setting"><div><strong>Discord server</strong><span>Connect The Watchlist to a Discord server you belong to.</span></div><div class="discord-server-control"><select id="discord-server-picker" onchange="onDiscordServerSelected(this)"><option value="">Loading…</option></select></div></div></div>`}
+function settings(){let rows=[["Show synopsis","Show movie synopses on cards and details.","showSynopsis"],["Show RT/IMDb scores","Show Rotten Tomatoes and IMDb scores when available.","showRatings"],["Show suggester's note","Show personal notes attached to suggestions on Details screens.","showNote"],["Show cast","Show cast photos and names on movie details.","showCast"],["Show streaming links","Show streaming availability and provider links on movie details.","showStreamingLinks"],["Show trailers","Allow trailers to appear in details.","showTrailer"]];return `<div class="hero"><div><div class="eyebrow">YOUR PREFERENCES</div><h1>Settings</h1><p class="sub">Control how much pre-watch information The Watchlist shows you.</p></div></div><div class="settings">${rows.map(([a,b,k])=>`<div class="setting"><div><strong>${a}</strong><span>${b}</span></div><button class="toggle ${state[k]?"on":""}" onclick="toggleSetting('${k}')" aria-label="Toggle ${a}"></button></div>`).join("")}<div class="setting discord-notification-setting"><div><strong>Discord watch notifications</strong><span>Ping you when a movie is scheduled and your interest meets this minimum.</span></div><div class="discord-notification-control"><select onchange="setDiscordWatchThreshold(this.value)" aria-label="Discord watch notification threshold"><option value="must" ${state.discordWatchThreshold==="must"?"selected":""}>Must Watch</option><option value="interested" ${state.discordWatchThreshold==="interested"?"selected":""}>Interested or higher</option><option value="watch" ${state.discordWatchThreshold==="watch"?"selected":""}>I’d Watch or higher</option><option value="none" ${state.discordWatchThreshold==="none"?"selected":""}>Never notify me</option></select></div></div><div class="setting warning-settings"><div class="warning-settings-header"><div><strong>Content warnings</strong><span>Choose which warning categories you want surfaced.</span></div><button class="toggle ${contentWarningsEnabled?"on":""}" onclick="toggleContentWarnings()" aria-label="Toggle content warnings" aria-pressed="${contentWarningsEnabled}"></button></div><div class="warning-category-controls"><details class="warning-category-picker"><summary>Choose categories <span class="warning-picker-count">${savedWarningCategories.length} selected</span><span class="tmdb-section-chevron warning-picker-chevron" aria-hidden="true"><svg viewBox="0 0 20 20" focusable="false"><path d="M5 10h10"/><path class="warning-chevron-vertical" d="M10 5v10"/></svg></span></summary><div class="warning-category-groups">${warningGroups.map(group=>'<details class="warning-category-group"><summary>'+escapeHtml(group.name)+'<span class="tmdb-section-chevron warning-picker-chevron" aria-hidden="true"><svg viewBox="0 0 20 20" focusable="false"><path d="M5 10h10"/><path class="warning-chevron-vertical" d="M10 5v10"/></svg></span></summary><div class="warning-category-options"><div class="warning-group-actions"><button type="button" onclick="setWarningGroup(&quot;'+group.name+'&quot;,true)">Check all</button><button type="button" onclick="setWarningGroup(&quot;'+group.name+'&quot;,false)">Uncheck all</button></div>'+group.categories.map(category=>'<label class="warning-category-option"><input type="checkbox" '+(savedWarningCategories.includes(category.toLowerCase())?'checked':'')+' onchange="toggleWarningCategory(\&quot;'+category+'\&quot;,this.checked)"><span>'+escapeHtml(category)+'</span></label>').join("")+'</div></details>').join("")}<p class="warning-picker-help">Each heading expands to a scrollable list of individual warning categories with toggles.</p></div></details></div></div><div class="setting discord-server-setting"><div><strong>Discord server</strong><span>Connect The Watchlist to a Discord server you belong to.</span></div><div class="discord-server-control"><select id="discord-server-picker" onchange="onDiscordServerSelected(this)"><option value="">Loading…</option></select></div></div></div>`}
+window.setDiscordWatchThreshold=value=>{state.discordWatchThreshold=normalizeDiscordWatchThreshold(value);saveUserSettings();render()};
 window.toggleContentWarnings=()=>{contentWarningsEnabled=!contentWarningsEnabled;try{localStorage.setItem("watchlist-content-warnings-enabled",String(contentWarningsEnabled))}catch(error){}saveUserSettings();render()};
 function peopleRatingStars(value){const rating=Math.max(0,Math.min(5,Number(value)||0));let html='<span class="review-stars people-review-stars">';for(let i=0;i<5;i++){const fill=Math.round(Math.max(0,Math.min(1,rating-i))*2)/2;html+='<span class="rating-star"><span class="star-base">★</span><span class="star-fill" style="--people-star-fill:'+(fill*100)+'%;width:'+(fill*100)+'%">★</span></span>'}return html+'</span>'}
 function ratingStars(value,interactive=false,inline=false){const rating=Math.max(0,Math.min(5,Number(value)||0));const wrapper=inline?'span':'div';let html='<'+wrapper+' class="review-stars'+(interactive?' interactive':'')+(inline?' review-stars-inline':'')+'">';for(let i=0;i<5;i++){const fill=Math.round(Math.max(0,Math.min(1,rating-i))*2)/2;const pct=fill*100;const tag=interactive?'button':'span';const attrs=interactive?' class="rating-star" onclick="setReviewRating(event,'+i+')"':' class="rating-star"';html+='<'+tag+attrs+'><span class="star-gradient" style="--star-fill:'+pct+'%">★</span></'+tag+'>'}return html+'</'+wrapper+'>'}
@@ -924,7 +930,7 @@ function detail(){
     ${state.showSynopsis?`<section class="detail-synopsis-section"><h3>Synopsis</h3><p class="detail-synopsis">${m.synopsis}</p></section>`:""}
     ${tmdbDetailsSections(m)}
     ${suggestionNoteMarkup(m)}
-    ${m.watched?`<div class="history-actions"><button class="watched-together-button" onclick="editWatchedBy(\'${m.id}\')">✎ Edit who watched</button><button class="watched-together-button" onclick="watchAgain(\'${m.id}\')">↻ Watch again</button></div>`:`<div class="detail-movie-actions"><button class="watched-together-button" onclick="markWatchedTogether(\'${m.id}\',false)">✓ Mark watched together</button><button class="remove-movie-button" onclick="openRemoveMovie(\'${m.id}\')">Remove ✕</button></div>`}
+    ${m.watched?`<div class="history-actions"><button class="watched-together-button" onclick="editWatchedBy(\'${m.id}\')">✎ Edit who watched</button><button class="watched-together-button" onclick="watchAgain(\'${m.id}\')">↻ Watch again</button></div>`:`<div class="detail-movie-actions"><button class="watched-together-button" onclick="markWatchedTogether(\'${m.id}\',false)">✓ Mark watched together</button><button class="remove-movie-button" onclick="openRemoveMovie(\'${m.id}\')">Remove ✕</button></div>`}${watchScheduleMarkup(m)}
     ${movieReviewsSection(m)}
    </div>
  </section>`;
@@ -1091,7 +1097,7 @@ function bindMovieMiddleClick(){
   },true);
 }
 
-function render(){bindMovieMiddleClick();const openFilterIds=[...document.querySelectorAll(".filter-dropdown[open][data-filter-id]")].map(el=>el.dataset.filterId);const signedIn=!!window.WATCHLIST_AUTHENTICATED;const content=signedIn?(state.nav==="watchlist"?watchlist():state.nav==="history"?history():state.nav==="people"?people():state.nav==="settings"?settings():detail()):'<section class="empty-state signed-out-message"><h2>Sign in with Discord to start tracking your watchlist.</h2></section>';app.innerHTML=header()+`<main class="content${signedIn?"":" signed-out-content"}">${content}</main>`+addMovieModal()+attendanceModal()+assetEditor()+removeMovieModal()+suggestionNoteEditorModal();openFilterIds.forEach(id=>{const el=[...document.querySelectorAll(".filter-dropdown[data-filter-id]")].find(x=>x.dataset.filterId===id);if(el)el.open=true});bindLiveInputs();bindVhsTilt();requestAnimationFrame(syncHeaderPrism);if(state.nav==="settings"&&window.WATCHLIST_AUTHENTICATED){requestAnimationFrame(()=>{const picker=document.querySelector("#discord-server-picker");if(picker&&picker.dataset.loaded!=="true"){picker.dataset.loaded="loading";chooseDiscordServer().then(()=>{picker.dataset.loaded="true"}).catch(()=>{picker.dataset.loaded="error"})}})}if(!window.__watchlistPrismResize){window.__watchlistPrismResize=true;window.addEventListener("resize",()=>requestAnimationFrame(syncHeaderPrism));window.addEventListener("scroll",()=>requestAnimationFrame(syncHeaderPrism),{passive:true});}}
+function render(){bindMovieMiddleClick();const openFilterIds=[...document.querySelectorAll(".filter-dropdown[open][data-filter-id]")].map(el=>el.dataset.filterId);const signedIn=!!window.WATCHLIST_AUTHENTICATED;const content=signedIn?(state.nav==="watchlist"?watchlist():state.nav==="history"?history():state.nav==="people"?people():state.nav==="settings"?settings():detail()):'<section class="empty-state signed-out-message"><h2>Sign in with Discord to start tracking your watchlist.</h2></section>';app.innerHTML=header()+`<main class="content${signedIn?"":" signed-out-content"}">${content}</main>`+addMovieModal()+attendanceModal()+assetEditor()+removeMovieModal()+suggestionNoteEditorModal()+watchNoteModal();openFilterIds.forEach(id=>{const el=[...document.querySelectorAll(".filter-dropdown[data-filter-id]")].find(x=>x.dataset.filterId===id);if(el)el.open=true});bindLiveInputs();bindVhsTilt();requestAnimationFrame(syncHeaderPrism);if(state.nav==="settings"&&window.WATCHLIST_AUTHENTICATED){requestAnimationFrame(()=>{const picker=document.querySelector("#discord-server-picker");if(picker&&picker.dataset.loaded!=="true"){picker.dataset.loaded="loading";chooseDiscordServer().then(()=>{picker.dataset.loaded="true"}).catch(()=>{picker.dataset.loaded="error"})}})}if(!window.__watchlistPrismResize){window.__watchlistPrismResize=true;window.addEventListener("resize",()=>requestAnimationFrame(syncHeaderPrism));window.addEventListener("scroll",()=>requestAnimationFrame(syncHeaderPrism),{passive:true});}}
 let addMovieSearchTimer=null;let addMovieSearchRequest=0;
 function bindLiveInputs(){let s=document.querySelector("#search");if(s)s.addEventListener("input",e=>{state.search=e.target.value;savePersistentFilterState();updateListOnly()});let r=document.querySelector("#sizeRange");if(r)r.addEventListener("input",e=>setPosterSize(e.target.value));let a=document.querySelector("#addMovieSearch");if(a)a.addEventListener("input",e=>{state.addMovieQuery=e.target.value;clearTimeout(addMovieSearchTimer);const query=e.target.value.trim();if(!query){state.addMovieResults=[];state.addMovieError="";document.querySelector("#addMovieResults").innerHTML=addMovieResults();return}addMovieSearchTimer=setTimeout(()=>searchAddMovies(query),300)})}
 function updateListOnly(){let main=document.querySelector(".content");if(!main)return;let active=document.activeElement===document.querySelector("#search");let pos=document.querySelector("#search")?.selectionStart;const page=state.nav==="history"?history():state.nav==="watchlist"?watchlist():null;if(page===null){render();return}main.innerHTML=page;bindLiveInputs();bindVhsTilt();let s=document.querySelector("#search");if(active&&s){s.focus();s.setSelectionRange(pos,pos)}}
@@ -1322,6 +1328,122 @@ window.toggleSeen=async id=>{
     console.warn("Could not save seen state:",error.message||error);
   }
 };
+let watchScheduleDraft={movieId:"",date:"",time:"",note:""};
+let watchNoteOpen=false;
+let watchVoiceChannels=[];
+let watchVoiceChannelsLoading=false;
+let watchVoiceChannelsGuild="";
+let watchVoiceChannelsError="";
+let watchVoiceChannelOpen=false;
+let watchVoiceChannelSelected="";
+
+async function loadWatchVoiceChannels(){
+  const guildId=activeServer?.guild_id;
+  const client=window.WATCHLIST_SUPABASE_CLIENT;
+  if(!guildId||!client||watchVoiceChannelsLoading)return;
+  if(watchVoiceChannelsGuild===String(guildId))return;
+  watchVoiceChannelsLoading=true;
+  watchVoiceChannelsError="";
+  render();
+  try{
+    const {data,error}=await client.functions.invoke("discord-watch-scheduler",{body:{action:"list_voice_channels",guildId:String(guildId)}});
+    if(error)throw error;
+    if(data?.ok===false)throw new Error(data.error||"Could not load voice channels.");
+    watchVoiceChannels=Array.isArray(data?.channels)?data.channels:[];
+    watchVoiceChannelsGuild=String(guildId);
+  }catch(error){
+    watchVoiceChannelsError=error?.message||String(error);
+    console.warn("Could not load Discord voice channels:",watchVoiceChannelsError);
+  }finally{
+    watchVoiceChannelsLoading=false;
+    render();
+  }
+}
+
+function watchVoiceChannelPicker(){
+  const selected=watchVoiceChannels.find(ch=>String(ch.id)===String(watchVoiceChannelSelected||""));
+  const label=selected?.name||"Choose a voice channel…";
+  let menu="";
+  if(watchVoiceChannelOpen){
+    if(watchVoiceChannelsLoading){
+      menu='<div class="watch-voice-option muted">Loading voice channels…</div>';
+    }else if(watchVoiceChannelsError){
+      menu='<div class="watch-voice-option muted">'+escapeHtml(watchVoiceChannelsError)+'</div><button type="button" class="watch-voice-option" onclick="loadWatchVoiceChannels()">Try again</button>';
+    }else if(!watchVoiceChannels.length){
+      menu='<div class="watch-voice-option muted">No public voice channels available</div>';
+    }else{
+      menu=watchVoiceChannels.map(ch=>'<button type="button" class="watch-voice-option '+(String(ch.id)===String(watchVoiceChannelSelected||"")?"selected":"")+'" data-watch-voice-id="'+escapeHtml(String(ch.id))+'">'+escapeHtml(ch.name)+'</button>').join("");
+    }
+  }
+  return '<div class="watch-voice-picker">'+
+    '<button type="button" class="watch-voice-trigger" onclick="toggleWatchVoiceChannelPicker(event)" aria-haspopup="listbox" aria-expanded="'+(watchVoiceChannelOpen?"true":"false")+'"><span>'+escapeHtml(label)+'</span><span aria-hidden="true">⌄</span></button>'+
+    (watchVoiceChannelOpen?'<div class="watch-voice-menu" role="listbox" onclick="handleWatchVoiceChannelMenu(event)">'+menu+'</div>':'')+
+    '</div><input id="watchVoiceChannel" type="hidden" value="'+escapeHtml(watchVoiceChannelSelected||"")+'">';
+}
+
+window.toggleWatchVoiceChannelPicker=async event=>{
+  event?.preventDefault?.();
+  watchVoiceChannelOpen=!watchVoiceChannelOpen;
+  if(watchVoiceChannelOpen&&!watchVoiceChannelsGuild&&activeServer?.guild_id){
+    render();
+    await loadWatchVoiceChannels();
+    return;
+  }
+  render();
+};
+
+window.handleWatchVoiceChannelMenu=event=>{
+  const button=event.target?.closest?.("[data-watch-voice-id]");
+  if(!button)return;
+  const id=button.getAttribute("data-watch-voice-id");
+  const channel=watchVoiceChannels.find(ch=>String(ch.id)===String(id));
+  if(!channel)return;
+  watchVoiceChannelSelected=String(channel.id);
+  watchVoiceChannelOpen=false;
+  render();
+};
+
+function watchScheduleMarkup(m){
+  const schedule=m.watchSchedule&&m.watchSchedule.scheduledAt?m.watchSchedule:null;
+  const canSchedule=!!currentProfile?.id&&!m.watched;
+  if(schedule&&schedule.voiceChannelId)watchVoiceChannelSelected=String(schedule.voiceChannelId);
+  if(watchScheduleDraft.movieId!==String(m.id)){
+    watchScheduleDraft={movieId:String(m.id),date:"",time:"",note:""};
+  }
+  return '<section class="watch-schedule-section"><div class="watch-schedule-head"><div><div class="eyebrow">WATCH DATE</div><h3>'+ (schedule?'Scheduled watch':'Schedule a watch') +'</h3></div>'+ (schedule?'<span class="watch-schedule-badge">Scheduled</span>':'') +'</div>'+
+    (schedule?'<p class="watch-schedule-time"><strong>'+escapeHtml(formatWatchSchedule(schedule.scheduledAt))+'</strong><span>'+ (schedule.voiceChannelName?'Discord will announce this in <strong>'+escapeHtml(schedule.voiceChannelName)+'</strong> when the time arrives.':'Discord will announce this when the time arrives.')+'</span></p>' :
+      (canSchedule?'<div class="watch-schedule-form"><label>Date<input id="watchDate" type="date" min="'+(()=>{const d=new Date();d.setMinutes(d.getMinutes()-d.getTimezoneOffset());return d.toISOString().slice(0,10)})()+'" value="'+escapeHtml(watchScheduleDraft.date)+'" oninput="watchScheduleDraft.date=this.value"></label><label>Time<input id="watchTime" type="time" value="'+escapeHtml(watchScheduleDraft.time)+'" oninput="watchScheduleDraft.time=this.value"></label><label>Voice channel'+watchVoiceChannelPicker()+'</label><div class="watch-note-control">'+(watchScheduleDraft.note?'<span class="watch-note-added">Note added</span>':'')+'<button type="button" class="ghost" onclick="openWatchNote(event)">'+(watchScheduleDraft.note?'Edit note':'Add note')+'</button></div><button class="primary watch-schedule-submit" onclick="scheduleMovieWatch(\''+m.id+'\')">Schedule watch</button></div>':'<p class="muted">Sign in to schedule a watch date.</p>')) +
+    (schedule&&canSchedule?'<div class="watch-schedule-actions"><button class="ghost" onclick="clearMovieWatchSchedule(\''+m.id+'\')">Clear watch date</button></div>':'')+'</section>';
+}
+function watchNoteModal(){
+  if(!watchNoteOpen)return "";
+  const movie=movies.find(x=>String(x.id)===String(watchScheduleDraft.movieId));
+  const movieLabel=(movie?.title||"Movie")+(movie?.year?" ("+movie.year+")":"");
+  return '<div class="modal-backdrop open" onclick="if(event.target===this)closeWatchNote()"><section class="add-modal watch-note-modal" role="dialog" aria-modal="true"><div class="modal-head"><div><div class="eyebrow">WATCH ANNOUNCEMENT</div><h2>Add a note</h2></div><button class="modal-close" onclick="closeWatchNote()" aria-label="Close">×</button></div><div class="watch-note-preview"><strong>'+escapeHtml(movieLabel)+'</strong> <input id="watchNoteInput" class="watch-note-inline-input" type="text" maxlength="100" value="'+escapeHtml(watchScheduleDraft.note)+'" placeholder="is starting now!" autofocus></div><p class="muted">Your note replaces “is starting now!” Maximum 100 characters.</p><div class="add-form-actions"><button class="ghost" onclick="closeWatchNote()">Cancel</button><button class="primary" onclick="saveWatchNote()">Save note</button></div></section></div>';
+}
+window.openWatchNote=event=>{event?.preventDefault?.();watchNoteOpen=true;render();};
+window.closeWatchNote=()=>{watchNoteOpen=false;render();};
+window.saveWatchNote=()=>{const input=document.querySelector("#watchNoteInput");const value=(input?.value||"").trim();watchScheduleDraft.note=value.slice(0,100);watchNoteOpen=false;render();};
+window.scheduleMovieWatch=async(id)=>{
+  const m=movies.find(x=>x.id===id);if(!m||!currentProfile?.id)return;
+  const date=watchScheduleDraft.date||document.querySelector("#watchDate")?.value,time=watchScheduleDraft.time||document.querySelector("#watchTime")?.value,voiceChannelId=document.querySelector("#watchVoiceChannel")?.value,note=(watchScheduleDraft.note||"").trim();
+  if(!date||!time){alert("Choose a date and time first.");return}
+  if(!voiceChannelId){alert("Choose a voice channel.");return}
+  const voiceChannel=watchVoiceChannels.find(ch=>String(ch.id)===String(voiceChannelId));
+  if(!voiceChannel){alert("Choose a valid public voice channel.");return}
+  const iso=new Date(date+"T"+time).toISOString();
+  const watchlistUrl=new URL(routeUrl("detail",m.id),window.location.origin).href;
+  if(new Date(iso)<=new Date()){alert("Choose a future date and time.");return}
+  m.watchSchedule={scheduledAt:iso,scheduledById:currentProfile.id,scheduledBy:currentUser,voiceChannelId:String(voiceChannel.id),voiceChannelName:voiceChannel.name,note:note.slice(0,100),watchlistUrl,scheduledAnnouncementAt:null,announcedAt:null};
+  await persistSharedPatch({movies:[{id:m.id,watchSchedule:m.watchSchedule}]});
+  render();
+  const client=window.WATCHLIST_SUPABASE_CLIENT;
+  if(client&&activeServer?.guild_id){
+    const {error}=await client.functions.invoke("discord-watch-scheduler",{body:{action:"scheduled_announcement",sharedId:"server:"+activeServer.guild_id,movieId:String(m.id)}});
+    if(error)console.warn("Could not send scheduled watch announcement:",error.message||error)
+  }
+};
+window.clearMovieWatchSchedule=(id)=>{const m=movies.find(x=>x.id===id);if(!m)return;m.watchSchedule=null;persistSharedPatch({movies:[{id:m.id,watchSchedule:null}]});render()};
 window.openAttendance=id=>{
   const m=movies.find(x=>x.id===id);if(!m)return;
   state.attendanceMovieId=id;
