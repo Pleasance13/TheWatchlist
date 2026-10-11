@@ -1862,3 +1862,11 @@ button,input{font:inherit}button{color:inherit}.topbar{height:72px;padding:0 32p
 
 .watch-note-control .ghost{min-height:34px;box-sizing:border-box;padding:7px 12px}
 .watch-note-control{align-items:end}
+
+.pagination-controls{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:14px 0;padding:10px 0;color:var(--muted);font-size:13px}
+.pagination-controls label{display:flex;align-items:center;gap:8px}
+.pagination-controls select{min-height:32px;padding:5px 8px;border:1px solid var(--border,#3b4048);border-radius:7px;background:var(--panel,#20242a);color:inherit;font:inherit}
+.pagination-buttons{display:flex;align-items:center;gap:10px}
+.pagination-buttons button{min-height:32px;padding:5px 10px}
+.pagination-buttons button:disabled{opacity:.45;cursor:not-allowed}
+@media(max-width:600px){.pagination-controls{align-items:flex-start}.pagination-count{order:3;width:100%}.pagination-buttons{margin-left:auto}}
