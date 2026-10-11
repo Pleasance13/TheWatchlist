@@ -74,8 +74,11 @@ async function sendDiscordMessage(content: string) {
   if (!response.ok) throw new Error("Discord API " + response.status + ": " + await response.text());
 }
 
+const WATCH_SCHEDULER_ENABLED = false; // Re-enable only when the scheduling feature is redesigned.
+
 Deno.serve(async (req) => {
   if (req.method !== "POST") return new Response("POST required", { status: 405 });
+  if (!WATCH_SCHEDULER_ENABLED) return new Response("Watch scheduling is temporarily disabled", { status: 503 });
   let requestBody: any = {};
   try { requestBody = await req.json(); } catch (_) {}
   const isScheduledAnnouncement = requestBody?.action === "scheduled_announcement";
