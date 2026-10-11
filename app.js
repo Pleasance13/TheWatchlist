@@ -1328,6 +1328,7 @@ window.toggleSeen=async id=>{
     console.warn("Could not save seen state:",error.message||error);
   }
 };
+const WATCH_SCHEDULER_ENABLED=false; // Keep the scheduler code available, but disable it until redesigned.
 let watchScheduleDraft={movieId:"",date:"",time:"",note:""};
 let watchNoteOpen=false;
 let watchVoiceChannels=[];
@@ -1338,6 +1339,7 @@ let watchVoiceChannelOpen=false;
 let watchVoiceChannelSelected="";
 
 async function loadWatchVoiceChannels(){
+  if(!WATCH_SCHEDULER_ENABLED)return;
   const guildId=activeServer?.guild_id;
   const client=window.WATCHLIST_SUPABASE_CLIENT;
   if(!guildId||!client||watchVoiceChannelsLoading)return;
@@ -1404,6 +1406,7 @@ window.handleWatchVoiceChannelMenu=event=>{
 };
 
 function watchScheduleMarkup(m){
+  if(!WATCH_SCHEDULER_ENABLED)return "";
   const schedule=m.watchSchedule&&m.watchSchedule.scheduledAt?m.watchSchedule:null;
   const canSchedule=!!currentProfile?.id&&!m.watched;
   if(schedule&&schedule.voiceChannelId)watchVoiceChannelSelected=String(schedule.voiceChannelId);
@@ -1425,6 +1428,7 @@ window.openWatchNote=event=>{event?.preventDefault?.();watchNoteOpen=true;render
 window.closeWatchNote=()=>{watchNoteOpen=false;render();};
 window.saveWatchNote=()=>{const input=document.querySelector("#watchNoteInput");const value=(input?.value||"").trim();watchScheduleDraft.note=value.slice(0,100);watchNoteOpen=false;render();};
 window.scheduleMovieWatch=async(id)=>{
+  if(!WATCH_SCHEDULER_ENABLED)return;
   const m=movies.find(x=>x.id===id);if(!m||!currentProfile?.id)return;
   const date=watchScheduleDraft.date||document.querySelector("#watchDate")?.value,time=watchScheduleDraft.time||document.querySelector("#watchTime")?.value,voiceChannelId=document.querySelector("#watchVoiceChannel")?.value,note=(watchScheduleDraft.note||"").trim();
   if(!date||!time){alert("Choose a date and time first.");return}
@@ -1443,7 +1447,7 @@ window.scheduleMovieWatch=async(id)=>{
     if(error)console.warn("Could not send scheduled watch announcement:",error.message||error)
   }
 };
-window.clearMovieWatchSchedule=(id)=>{const m=movies.find(x=>x.id===id);if(!m)return;m.watchSchedule=null;persistSharedPatch({movies:[{id:m.id,watchSchedule:null}]});render()};
+window.clearMovieWatchSchedule=(id)=>{if(!WATCH_SCHEDULER_ENABLED)return;const m=movies.find(x=>x.id===id);if(!m)return;m.watchSchedule=null;persistSharedPatch({movies:[{id:m.id,watchSchedule:null}]});render()};
 window.openAttendance=id=>{
   const m=movies.find(x=>x.id===id);if(!m)return;
   state.attendanceMovieId=id;
