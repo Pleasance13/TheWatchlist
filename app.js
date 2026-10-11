@@ -174,7 +174,7 @@ window.watchlistAuthIdentityChanged=function(profile){
   if(currentUser!=="Guest"){userProfiles[userKey(currentUser)]={id:currentProfile?.id||null,name:currentUser,avatar:currentProfile?.avatar||""};try{localStorage.setItem("watchlist-user-profiles",JSON.stringify(userProfiles))}catch(error){}}
   if(currentUser!=="Guest"){activeServer=null;loadUserSettings().then(()=>loadServerContext()).catch(error=>console.warn("Could not load user settings:",error.message||error));}
   state.votes=currentUser==="Guest"?{}:(votesByUser[stableIdentityKey(currentUser)]?.votes||votesByUser[userKey(currentUser)]?.votes||{});
-  if(typeof render==="function")render();
+  if(typeof render==="function"){try{render()}catch(error){console.error("[Watchlist] Render after authentication failed:",error);requestAnimationFrame(()=>{try{render()}catch(retryError){console.error("[Watchlist] Retry render after authentication failed:",retryError)}})}}
 };
 let removedMovieIds=[];let removedMovieAt={};try{removedMovieIds=JSON.parse(localStorage.getItem("watchlist-removed-movies")||"[]")}catch(error){removedMovieIds=[]}for(let i=movies.length-1;i>=0;i--){if(removedMovieIds.includes(movies[i].id))movies.splice(i,1)}
 let serverUsers=[];
@@ -809,7 +809,7 @@ window.setMoviePageSize=value=>{const n=Number(value);if(![50,100,200].includes(
 window.changeMoviePage=(nav,page)=>{const key=nav==="history"?"historyPage":"watchlistPage";state[key]=Math.max(1,Number(page)||1);syncPaginationUrl(false);render();syncPaginationUrl(true);window.scrollTo({top:0,behavior:"auto"})};
 window.syncPaginationUrl=(replace=false)=>{const target=routeUrl(state.nav,state.detail);if(window.location.pathname+window.location.search!==target){if(replace)window.history.replaceState(null,document.title,target);else window.history.pushState(null,document.title,target)}};
 window.resetMoviePages=()=>{state.watchlistPage=1;state.historyPage=1;syncPaginationUrl(true)};
-document.addEventListener("click",event=>{const target=event.target;const button=target&&typeof target.closest==="function"?target.closest("[data-page-nav]"):null;if(!button||button.disabled)return;event.preventDefault();changeMoviePage(button.dataset.pageNav,button.dataset.page)},true);
+if(!window.__watchlistPaginationClickBound){window.__watchlistPaginationClickBound=true;document.addEventListener("click",event=>{const target=event.target;const button=target&&typeof target.closest==="function"?target.closest("[data-page-nav]"):null;if(!button||button.disabled)return;event.preventDefault();changeMoviePage(button.dataset.pageNav,button.dataset.page)})}
 function watchlist(){
  const base=movies.filter(m=>!m.watched&&((m.title+' '+m.genre).toLowerCase().includes(state.search.toLowerCase())));
  const a=applyAdvancedFilters(base);const released=sortMovies(a.filter(m=>!isUpcomingMovie(m)),false);const upcoming=sortMovies(a.filter(isUpcomingMovie),false);
