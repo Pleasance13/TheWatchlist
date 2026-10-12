@@ -187,8 +187,8 @@
       if(event === "SIGNED_IN") {
         const currentUrl=new URL(window.location.href);
         // The popup shares Supabase's persisted session with the opener; notify it and close.
-        if(currentUrl.searchParams.get("watchlist_oauth_popup")==="1"&&window.opener){
-          try{window.opener.postMessage({type:"watchlist-discord-auth-complete"},"*")}catch(error){}
+        if(currentUrl.searchParams.get("watchlist_oauth_popup")==="1"){
+          if(window.opener){try{window.opener.postMessage({type:"watchlist-discord-auth-complete"},"*")}catch(error){}}
           window.close();
           return;
         }
