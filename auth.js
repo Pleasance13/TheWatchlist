@@ -55,8 +55,7 @@
   }
   
   function paint(user,session=null){
-    if(session?.provider_token){lastProviderToken=session.provider_token;storeProviderToken(session.provider_token)}
-    if(session?.provider_refresh_token)storeProviderRefreshToken(session.provider_refresh_token);
+    if(session?.provider_token&&!lastProviderToken){lastProviderToken=session.provider_token;storeProviderToken(session.provider_token)}
     else if(user&&!lastProviderToken)lastProviderToken=storedProviderToken();
     if(!user){lastProviderToken=null;storeProviderToken(null);storeProviderRefreshToken(null)}
     const meta=discordProfileData(user);
@@ -121,7 +120,9 @@
   async function refreshDiscordProviderToken(){
     if(!client)throw new Error("Authentication is still loading. Please try again.");
     const {data,error}=await client.auth.getSession();if(error)throw error;
-    const refreshToken=data?.session?.provider_refresh_token||storedProviderRefreshToken();
+    // Discord rotates refresh tokens. The latest token returned by our endpoint is canonical;
+    // the provider_refresh_token still present in the Supabase session can be stale.
+    const refreshToken=storedProviderRefreshToken()||data?.session?.provider_refresh_token;
     if(!refreshToken)return null;
     const response=await fetch("/api/discord-token",{
       method:"POST",
@@ -148,15 +149,29 @@
       throw new Error("Discord server access could not be restored. Please sign in with Discord again.");
     }
     sessionStorage.setItem(reauthKey,"1");
-    const {error:oauthError}=await client.auth.signInWithOAuth({provider:"discord",options:{redirectTo:window.location.origin+window.location.pathname+window.location.search,scopes:"identify guilds"}});
-    if(oauthError){sessionStorage.removeItem(reauthKey);throw oauthError}
+    // Try the same popup flow as manual sign-in. Browsers may block this popup
+    // because refresh happens after an async request, so retain redirect as fallback.
+    const authPopup=window.open("about:blank","watchlist-discord-auth","popup=yes,width=520,height=720,resizable=yes,scrollbars=yes");
+    const popupUrl=new URL(window.location.href);
+    popupUrl.searchParams.set("watchlist_oauth_popup","1");
+    const popupOptions={redirectTo:popupUrl.origin+popupUrl.pathname+popupUrl.search,scopes:"identify guilds",skipBrowserRedirect:true};
+    if(authPopup){
+      const {data:oauthData,error:oauthError}=await client.auth.signInWithOAuth({provider:"discord",options:popupOptions});
+      if(oauthError){authPopup.close();sessionStorage.removeItem(reauthKey);throw oauthError}
+      if(!oauthData?.url){authPopup.close();sessionStorage.removeItem(reauthKey);throw new Error("Discord did not return an authorization URL.")}
+      authPopup.location.href=oauthData.url;
+    }else{
+      const {error:oauthError}=await client.auth.signInWithOAuth({provider:"discord",options:{redirectTo:window.location.origin+window.location.pathname+window.location.search,scopes:"identify guilds"}});
+      if(oauthError){sessionStorage.removeItem(reauthKey);throw oauthError}
+    }
     throw new Error("Refreshing Discord server access…");
   }
 
   window.WATCHLIST_FETCH_DISCORD_GUILDS=async function(){
     if(!client)throw new Error("Authentication is still loading. Please try again.");
     const {data,error}=await client.auth.getSession();if(error)throw error;
-    let token=data?.session?.provider_token||lastProviderToken||storedProviderToken();
+    // Prefer the freshest token from an earlier refresh, not a stale provider token in the Supabase session.
+    let token=lastProviderToken||storedProviderToken()||data?.session?.provider_token;
     if(!token)token=await refreshDiscordProviderToken();
     if(!token)return refreshDiscordAccess();
     let response=await fetch("https://discord.com/api/users/@me/guilds",{headers:{Authorization:"Bearer "+token}});
@@ -182,6 +197,11 @@
     
     client.auth.onAuthStateChange((event, session)=>{
       paint(session?.user || null,session);
+      // A fresh OAuth sign-in supersedes any provider tokens cached from an earlier session.
+      if(event==="SIGNED_IN"){
+        if(session?.provider_token){lastProviderToken=session.provider_token;storeProviderToken(session.provider_token)}
+        if(session?.provider_refresh_token)storeProviderRefreshToken(session.provider_refresh_token);
+      }
       
       // Clean up the URL hash parameters once successfully signed in so they don't linger in the browser address bar
       if(event === "SIGNED_IN") {
