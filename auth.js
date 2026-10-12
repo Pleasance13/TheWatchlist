@@ -55,7 +55,7 @@
   }
   
   function paint(user,session=null){
-    if(session?.provider_token){lastProviderToken=session.provider_token;storeProviderToken(session.provider_token)}
+    if(session?.provider_token&&!lastProviderToken){lastProviderToken=session.provider_token;storeProviderToken(session.provider_token)}
     else if(user&&!lastProviderToken)lastProviderToken=storedProviderToken();
     if(!user){lastProviderToken=null;storeProviderToken(null);storeProviderRefreshToken(null)}
     const meta=discordProfileData(user);
@@ -197,8 +197,11 @@
     
     client.auth.onAuthStateChange((event, session)=>{
       paint(session?.user || null,session);
-      // A fresh OAuth sign-in is the right time to replace the stored provider refresh token.
-      if(event==="SIGNED_IN"&&session?.provider_refresh_token)storeProviderRefreshToken(session.provider_refresh_token);
+      // A fresh OAuth sign-in supersedes any provider tokens cached from an earlier session.
+      if(event==="SIGNED_IN"){
+        if(session?.provider_token){lastProviderToken=session.provider_token;storeProviderToken(session.provider_token)}
+        if(session?.provider_refresh_token)storeProviderRefreshToken(session.provider_refresh_token);
+      }
       
       // Clean up the URL hash parameters once successfully signed in so they don't linger in the browser address bar
       if(event === "SIGNED_IN") {
