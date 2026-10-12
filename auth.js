@@ -78,15 +78,32 @@
   document.addEventListener("click",async event=>{
     const button=event.target.closest("[data-watchlist-auth]");if(!button)return;
     button.disabled=true;
+    // Open synchronously from the click so browsers don't treat the auth window as a popup.
+    let authPopup=null;
+    if(button.dataset.watchlistAuth==="signin"){
+      authPopup=window.open("about:blank","watchlist-discord-auth","popup=yes,width=520,height=720,resizable=yes,scrollbars=yes");
+    }
     try{
       if(!client)client=await loadClient().then(lib=>lib.createClient(config.url,config.publishableKey,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}}));
       if(button.dataset.watchlistAuth==="signin"){
-        const {error}=await client.auth.signInWithOAuth({provider:"discord",options:{redirectTo:window.location.origin+window.location.pathname,scopes:"identify guilds"}});
-        if(error)throw error;
+        const callbackUrl=new URL(window.location.href);
+        callbackUrl.searchParams.set("watchlist_oauth_popup","1");
+        const options={redirectTo:callbackUrl.origin+callbackUrl.pathname+callbackUrl.search,scopes:"identify guilds"};
+        if(authPopup){
+          options.skipBrowserRedirect=true;
+          const {data,error}=await client.auth.signInWithOAuth({provider:"discord",options});
+          if(error)throw error;
+          if(!data?.url)throw new Error("Discord did not return an authorization URL.");
+          authPopup.location.href=data.url;
+        }else{
+          // Preserve a working sign-in path if the browser blocks popups.
+          const {error}=await client.auth.signInWithOAuth({provider:"discord",options:{redirectTo:window.location.origin+window.location.pathname,scopes:"identify guilds"}});
+          if(error)throw error;
+        }
       }else{
         const {error}=await client.auth.signOut();if(error)throw error;if(typeof window.watchlistClearFilterPersistence==="function")window.watchlistClearFilterPersistence();paint(null);
       }
-    }catch(error){showError(error);button.disabled=false;}
+    }catch(error){if(authPopup&&!authPopup.closed)authPopup.close();showError(error);button.disabled=false;}
   });
 
   const providerRefreshTokenStorageKey="watchlist-discord-provider-refresh-token";
@@ -169,6 +186,12 @@
       // Clean up the URL hash parameters once successfully signed in so they don't linger in the browser address bar
       if(event === "SIGNED_IN") {
         const currentUrl=new URL(window.location.href);
+        // The popup shares Supabase's persisted session with the opener; notify it and close.
+        if(currentUrl.searchParams.get("watchlist_oauth_popup")==="1"&&window.opener){
+          try{window.opener.postMessage({type:"watchlist-discord-auth-complete"},"*")}catch(error){}
+          window.close();
+          return;
+        }
         currentUrl.hash="";
         // OAuth returns to the app entry point. Replace it so browser Back starts
         // with in-app navigation rather than the transient Discord callback URL.
