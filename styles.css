@@ -1882,3 +1882,11 @@ button,input{font:inherit}button{color:inherit}.topbar{height:72px;padding:0 32p
 .pagination-icon-button svg{pointer-events:none}
 .pagination-icon-button{position:relative;z-index:1;cursor:pointer}
 .pagination-buttons{position:relative;z-index:1}
+
+
+/* Keep the primary navigation centered independently of the signed-in user control. */
+.topbar{position:sticky!important;}
+.topbar>.nav{position:absolute!important;left:50%!important;top:50%!important;transform:translate(-50%,-50%)!important;margin:0!important;}
+@media(max-width:760px){
+  .topbar>.nav{left:50%!important;}
+}
