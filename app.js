@@ -1166,7 +1166,24 @@ window.openAssetEditor=async id=>{
     // in flight. Always apply the response to the current movie, never the stale
     // object captured before the request.
     const currentMovie=movies.find(x=>x.id===id);
-    if(currentMovie)TMDB.apply(currentMovie,data);
+    if(currentMovie){
+      const previous={releaseDate:currentMovie.releaseDate||null,year:currentMovie.year,digital:currentMovie.tmdbDigitalReleaseDate||currentMovie.digitalReleaseDate||null,physical:currentMovie.tmdbPhysicalReleaseDate||currentMovie.physicalReleaseDate||null};
+      TMDB.apply(currentMovie,data);
+      const changed=(currentMovie.releaseDate||null)!==previous.releaseDate||
+        Number(currentMovie.year)!==Number(previous.year)||
+        (currentMovie.tmdbDigitalReleaseDate||null)!==previous.digital||
+        (currentMovie.tmdbPhysicalReleaseDate||null)!==previous.physical;
+      // Detail/asset refreshes are often the freshest TMDB lookup this movie
+      // receives. Persist release metadata so a later shared snapshot doesn't
+      // restore the stale Upcoming classification.
+      if(changed){
+        await persistSharedPatch({movies:[{
+          id:currentMovie.id,releaseDate:currentMovie.releaseDate||null,year:currentMovie.year||null,
+          tmdbDigitalReleaseDate:currentMovie.tmdbDigitalReleaseDate||null,
+          tmdbPhysicalReleaseDate:currentMovie.tmdbPhysicalReleaseDate||null
+        }]});
+      }
+    }
     cache[initialMovie.tmdbId]=data;
     try{localStorage.setItem("watchlist-tmdb-asset-cache",JSON.stringify(cache))}catch(error){}
   }catch(error){
