@@ -1546,20 +1546,13 @@ async function hydrateTmdbArtwork(){
   if(tmdbHydrated||!window.TMDB)return;
   tmdbHydrated=true;
   let cache={};try{cache=JSON.parse(localStorage.getItem("watchlist-tmdb-preload-cache")||"{}")}catch(error){cache={}}
-  const now=Date.now(),refreshAfter=24*60*60*1000;
   const seeded=movies.filter(movie=>!movie.id.startsWith("tmdb-"));
   let appliedCache=false;
-  const needsRefresh=[];
-  seeded.forEach(movie=>{
-    const entry=cache[movie.id];
-    const details=entry&&entry.details?entry.details:entry;
-    if(details){TMDB.apply(movie,details);appliedCache=true}
-    if(!entry||!entry.details||!Number.isFinite(Number(entry.fetchedAt))||now-Number(entry.fetchedAt)>=refreshAfter)needsRefresh.push(movie);
-  });
-  // Use cached details for the first paint and only recheck release metadata once
-  // per day per browser, rather than making TMDB calls on every page load.
+  seeded.forEach(movie=>{if(cache[movie.id]){TMDB.apply(movie,cache[movie.id]);appliedCache=true}});
+  // Keep the existing refresh behavior on app load; the scheduled daily refresh
+  // is additive and must not replace these normal detail fetches.
   if(appliedCache)render();
-  const matches=await Promise.all(needsRefresh.map(async movie=>{
+  const matches=await Promise.all(seeded.map(async movie=>{
     try{const search=await TMDB.search(movie.title);const results=search.results||[];return {movie,match:results.find(r=>Number(r.year)===Number(movie.year))||results[0]||null}}
     catch(error){console.warn("TMDB search hydration skipped for "+movie.title,error.message);return {movie,match:null}}
   }));
@@ -1567,8 +1560,7 @@ async function hydrateTmdbArtwork(){
     try{
       const previousReleaseDate=movie.releaseDate||null,previousYear=movie.year;
       const details=await TMDB.details(match.tmdbId);
-      TMDB.apply(movie,details);
-      cache[movie.id]={details,fetchedAt:Date.now()};
+      TMDB.apply(movie,details);cache[movie.id]=details;
       if((movie.releaseDate||null)!==previousReleaseDate||Number(movie.year)!==Number(previousYear)){
         persistSharedPatch({movies:[{id:movie.id,releaseDate:movie.releaseDate||null,year:movie.year||null}]});
       }
