@@ -10,11 +10,23 @@ function getToken() {
   return process.env.TMDB_READ_ACCESS_TOKEN || process.env.TMDB_API_KEY || "";
 }
 
+function isRecentOrFutureDate(value, today) {
+  if (!value) return false;
+  const date = new Date(value + "T00:00:00Z");
+  return !Number.isNaN(date.getTime()) && date >= new Date(today.getTime() - 30 * DAY_MS);
+}
+
 function upcoming(movie, today) {
-  const date = movie?.releaseDate ? new Date(movie.releaseDate + "T00:00:00Z") : null;
-  // Include recently released titles too, so a release-date correction on the
-  // release day (or shortly after) is not skipped by the scheduled run.
-  if (date && !Number.isNaN(date.getTime())) return date >= new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
+  // Refresh around theatrical, digital, or physical release windows. Checking
+  // all three matters when the theatrical date is old but a digital date is new.
+  if (
+    isRecentOrFutureDate(movie?.releaseDate, today) ||
+    isRecentOrFutureDate(movie?.tmdbDigitalReleaseDate, today) ||
+    isRecentOrFutureDate(movie?.tmdbPhysicalReleaseDate, today)
+  ) return true;
+
+  // Keep current/future-year movies eligible even when their stored theatrical
+  // date is stale, so the job can discover a newly announced digital release.
   const year = Number(movie?.year);
   return !Number.isFinite(year) || !year || year >= today.getUTCFullYear();
 }
@@ -28,15 +40,24 @@ async function tmdbReleaseDetails(id, token) {
   const data = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(`TMDB request failed (${response.status}).`);
 
-  // Match the release-date semantics used by the app: TMDB's main movie
-  // release date is the canonical date used to classify Upcoming releases.
+  const usReleases = (data.release_dates?.results || [])
+    .find(country => country.iso_3166_1 === "US")?.release_dates || [];
+  const firstReleaseDateOfType = type => usReleases
+    .filter(release => release.type === type && release.release_date)
+    .map(release => release.release_date.slice(0, 10))
+    .sort()[0] || null;
+
+  // Match the app's US post-theatrical metadata: TMDB type 4 is digital and
+  // type 5 is physical. These dates determine when a title leaves Upcoming.
   const releaseDate = data.release_date || null;
   return {
     tmdbId: data.id,
     releaseDate,
-    year: releaseDate && /^\d{4}/.test(releaseDate)
+    year: releaseDate && /^\\d{4}/.test(releaseDate)
       ? Number(releaseDate.slice(0, 4))
-      : (data.release_date ? Number(data.release_date.slice(0, 4)) : null)
+      : (data.release_date ? Number(data.release_date.slice(0, 4)) : null),
+    digitalReleaseDate: firstReleaseDateOfType(4),
+    physicalReleaseDate: firstReleaseDateOfType(5)
   };
 }
 
@@ -93,9 +114,16 @@ export default async function handler(req, res) {
             ...movie,
             tmdbId: fresh.tmdbId,
             ...(fresh.releaseDate ? { releaseDate: fresh.releaseDate } : {}),
-            ...(fresh.year ? { year: fresh.year } : {})
+            ...(fresh.year ? { year: fresh.year } : {}),
+            tmdbDigitalReleaseDate: fresh.digitalReleaseDate,
+            tmdbPhysicalReleaseDate: fresh.physicalReleaseDate
           };
-          if ((updated.releaseDate || null) !== (movie.releaseDate || null) || Number(updated.year) !== Number(movie.year)) changed = true;
+          if (
+            (updated.releaseDate || null) !== (movie.releaseDate || null) ||
+            Number(updated.year) !== Number(movie.year) ||
+            (updated.tmdbDigitalReleaseDate || null) !== (movie.tmdbDigitalReleaseDate || null) ||
+            (updated.tmdbPhysicalReleaseDate || null) !== (movie.tmdbPhysicalReleaseDate || null)
+          ) changed = true;
           nextMovies.push(updated);
         } catch (error) {
           console.warn("Daily TMDB release refresh skipped for", movie.title, error.message || error);
