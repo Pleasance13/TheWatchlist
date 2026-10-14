@@ -659,7 +659,7 @@ function voterEntries(m){const byName=new Map();Object.entries(m.voterResponses|
 function escapeHtml(value){return String(value??"").replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]))}
 function responseLabel(k){return ({must:"Must Watch",interested:"Interested",watch:"I'd Watch",no:"Not Interested"})[k]||"No response"}
 function responseDescription(k){return ({must:"Don't watch without me, please!",interested:"I want to be included for this one.",watch:"If I'm around I'll join, but don't wait up for me.",no:"No need to include me."})[k]||""}
-function rankOf(m){const ranked=movies.filter(x=>!x.watched&&!isUpcomingMovie(x)).slice().sort((a,b)=>b.score-a.score);const n=ranked.findIndex(x=>x.id===m.id);return n>=0?n+1:"—"}
+function rankOf(m){const ranked=movies.filter(x=>!x.watched&&!isUpcomingMovie(x)).slice().sort((a,b)=>compareServerInterest(b,a));const n=ranked.findIndex(x=>x.id===m.id);return n>=0?n+1:"—"}
 function rankSticker(rank,extraClass=""){if(!Number.isFinite(Number(rank))||Number(rank)<1||Number(rank)>5)return "";const n=Number(rank);return `<span class="rank-sticker rank-sticker-${n} ${extraClass}" aria-label="Rank #${n}" style="--sticker-index:${n-1}"><span class="rank-sticker-number">#${n}</span>${n===1?'<span class="rank-sticker-shine" aria-hidden="true"></span>':""}</span>`}
 function header(){return `<header class="topbar"><div class="header-prism" aria-hidden="true"><img src="thewatchlist-prism.svg" alt=""></div><button class="brand" onclick="location.href=routeUrl('watchlist');return false" aria-label="Go to Watchlist"><img class="brand-logo" src="thewatchlist-logo.svg" alt="The Watchlist"></button><nav class="nav">${["watchlist","history","people","settings"].map(x=>`<button class="${state.nav===x?"active":""}" onclick="location.href=routeUrl('${x}');return false"><span>${x[0].toUpperCase()+x.slice(1)}</span></button>`).join("")}</nav>${window.watchlistAuthControlMarkup?window.watchlistAuthControlMarkup():""}</header>`}function genreList(){return [...new Set(movies.flatMap(m=>(m.genre||"").split(/\s*[·,/&]\s*/).map(x=>x.trim()).filter(Boolean)))].sort()}
 function filterActive(key){const v=state[key];return Array.isArray(v)?v.length>0:Boolean(v)}
@@ -785,8 +785,8 @@ function isUpcomingMovie(m){
   const releaseDate=m.releaseDate?new Date(m.releaseDate):null;
   if(!releaseDate||Number.isNaN(releaseDate.getTime()))return !Number(m.year)||!Number.isFinite(Number(m.year))||Number(m.year)>now.getFullYear();
   if(releaseDate>now)return true;
-  const digitalDate=m.tmdbDigitalReleaseDate?new Date(m.tmdbDigitalReleaseDate):null;
-  const physicalDate=m.tmdbPhysicalReleaseDate?new Date(m.tmdbPhysicalReleaseDate):null;
+  const digitalDate=(m.tmdbDigitalReleaseDate||m.digitalReleaseDate)?new Date(m.tmdbDigitalReleaseDate||m.digitalReleaseDate):null;
+  const physicalDate=(m.tmdbPhysicalReleaseDate||m.physicalReleaseDate)?new Date(m.tmdbPhysicalReleaseDate||m.physicalReleaseDate):null;
   const hasReleasedPostTheatricalDate=[digitalDate,physicalDate].some(date=>date&&!Number.isNaN(date.getTime())&&date<=now);
   const hasFuturePostTheatricalDate=[digitalDate,physicalDate].some(date=>date&&!Number.isNaN(date.getTime())&&date>now);
   const hasStreamingAvailability=Array.isArray(m.tmdbStreaming)&&m.tmdbStreaming.some(provider=>["flatrate","free","ads","rent","buy"].includes(provider.type));
@@ -1166,7 +1166,24 @@ window.openAssetEditor=async id=>{
     // in flight. Always apply the response to the current movie, never the stale
     // object captured before the request.
     const currentMovie=movies.find(x=>x.id===id);
-    if(currentMovie)TMDB.apply(currentMovie,data);
+    if(currentMovie){
+      const previous={releaseDate:currentMovie.releaseDate||null,year:currentMovie.year,digital:currentMovie.tmdbDigitalReleaseDate||null,physical:currentMovie.tmdbPhysicalReleaseDate||null};
+      TMDB.apply(currentMovie,data);
+      const changed=(currentMovie.releaseDate||null)!==previous.releaseDate||
+        Number(currentMovie.year)!==Number(previous.year)||
+        (currentMovie.tmdbDigitalReleaseDate||null)!==previous.digital||
+        (currentMovie.tmdbPhysicalReleaseDate||null)!==previous.physical;
+      // Detail/asset refreshes are often the freshest TMDB lookup this movie
+      // receives. Persist release metadata so a later shared snapshot doesn't
+      // restore the stale Upcoming classification.
+      if(changed){
+        await persistSharedPatch({movies:[{
+          id:currentMovie.id,releaseDate:currentMovie.releaseDate||null,year:currentMovie.year||null,
+          tmdbDigitalReleaseDate:currentMovie.tmdbDigitalReleaseDate||null,
+          tmdbPhysicalReleaseDate:currentMovie.tmdbPhysicalReleaseDate||null
+        }]});
+      }
+    }
     cache[initialMovie.tmdbId]=data;
     try{localStorage.setItem("watchlist-tmdb-asset-cache",JSON.stringify(cache))}catch(error){}
   }catch(error){
@@ -1545,21 +1562,68 @@ let tmdbHydrated=false;
 async function hydrateTmdbArtwork(){
   if(tmdbHydrated||!window.TMDB)return;
   tmdbHydrated=true;
-  let cache={};try{cache=JSON.parse(localStorage.getItem("watchlist-tmdb-preload-cache")||"{}")}catch(error){cache={}}
-  const seeded=movies.filter(movie=>!movie.id.startsWith("tmdb-"));
+  let storedCache={};try{storedCache=JSON.parse(localStorage.getItem("watchlist-tmdb-preload-cache")||"{}")}catch(error){storedCache={}}
+  const cache={},now=Date.now(),DAY_MS=24*60*60*1000;
   let appliedCache=false;
-  seeded.forEach(movie=>{if(cache[movie.id]){TMDB.apply(movie,cache[movie.id]);appliedCache=true}});
-  // Paint cached artwork immediately instead of waiting for every network refresh.
+  const candidates=movies.filter(movie=>{
+    const id=Number(movie.tmdbId||String(movie.id||"").match(/^tmdb-(\d+)$/)?.[1]);
+    if(!Number.isFinite(id)||id<=0)return false;
+    const release=movie.releaseDate?new Date(movie.releaseDate+"T00:00:00Z"):null;
+    const currentYear=new Date().getUTCFullYear();
+    // Refresh only movies that can plausibly change Upcoming classification:
+    // unreleased titles and theatrical releases from the last 120 days.
+    const digital=(movie.tmdbDigitalReleaseDate||movie.digitalReleaseDate)?new Date((movie.tmdbDigitalReleaseDate||movie.digitalReleaseDate)+"T00:00:00Z"):null;
+    const physical=(movie.tmdbPhysicalReleaseDate||movie.physicalReleaseDate)?new Date((movie.tmdbPhysicalReleaseDate||movie.physicalReleaseDate)+"T00:00:00Z"):null;
+    const postTheatricalRelevant=[digital,physical].some(date=>date&&!Number.isNaN(date.getTime())&&date.getTime()>=now-30*DAY_MS);
+    return !release||Number.isNaN(release.getTime())||release>new Date()||
+      (now-release.getTime()<=120*DAY_MS&&now>=release.getTime())||
+      postTheatricalRelevant||(!Number(movie.year)||Number(movie.year)>=currentYear);
+  });
+  const needsRefresh=[];
+  candidates.forEach(movie=>{
+    const entry=storedCache[movie.id];
+    const data=entry&&entry.data?entry.data:entry;
+    const fetchedAt=entry&&entry.data?Number(entry.fetchedAt)||0:0;
+    if(data){TMDB.apply(movie,data);appliedCache=true}
+    // Older cache entries have no timestamp; use them once without forcing a
+    // deployment-wide refetch, then refresh them after the normal 24h window.
+    if(data&&fetchedAt===0){
+      cache[movie.id]={data,fetchedAt:now};
+    }else if(data&&now-fetchedAt<DAY_MS){
+      cache[movie.id]={data,fetchedAt};
+    }else{
+      needsRefresh.push(movie);
+      if(data)cache[movie.id]={data,fetchedAt};
+    }
+  });
   if(appliedCache)render();
-  const matches=await Promise.all(seeded.map(async movie=>{
-    try{const search=await TMDB.search(movie.title);const results=search.results||[];return {movie,match:results.find(r=>Number(r.year)===Number(movie.year))||results[0]||null}}
-    catch(error){console.warn("TMDB search hydration skipped for "+movie.title,error.message);return {movie,match:null}}
-  }));
-  await Promise.all(matches.filter(x=>x.match?.tmdbId).map(async ({movie,match})=>{
-    try{const details=await TMDB.details(match.tmdbId);TMDB.apply(movie,details);cache[movie.id]=details;render();if(state.showRatings)loadExternalRatings(movie)}
-    catch(error){console.warn("TMDB hydration skipped for "+movie.title,error.message)}
-  }));
-  try{localStorage.setItem("watchlist-tmdb-preload-cache",JSON.stringify(cache))}catch(error){}
+  const changedMovies=[];
+  // Small batches prevent an app load from flooding our own endpoint or TMDB.
+  for(let i=0;i<needsRefresh.length;i+=3){
+    await Promise.all(needsRefresh.slice(i,i+3).map(async movie=>{
+      const tmdbId=Number(movie.tmdbId||String(movie.id||"").match(/^tmdb-(\d+)$/)?.[1]);
+      try{
+        const previous={releaseDate:movie.releaseDate||null,year:movie.year,digital:movie.tmdbDigitalReleaseDate||null,physical:movie.tmdbPhysicalReleaseDate||null};
+        const details=await TMDB.details(tmdbId);
+        TMDB.apply(movie,details);
+        cache[movie.id]={data:details,fetchedAt:Date.now()};
+        const changed=(movie.releaseDate||null)!==previous.releaseDate||
+          Number(movie.year)!==Number(previous.year)||
+          (movie.tmdbDigitalReleaseDate||null)!==previous.digital||
+          (movie.tmdbPhysicalReleaseDate||null)!==previous.physical;
+        if(changed){
+          changedMovies.push({
+            id:movie.id,releaseDate:movie.releaseDate||null,year:movie.year||null,
+            tmdbDigitalReleaseDate:movie.tmdbDigitalReleaseDate||null,
+            tmdbPhysicalReleaseDate:movie.tmdbPhysicalReleaseDate||null
+          });
+        }
+        render();if(state.showRatings)loadExternalRatings(movie);
+      }catch(error){console.warn("TMDB hydration skipped for "+movie.title,error.message)}
+    }));
+  }
+  if(changedMovies.length)await persistSharedPatch({movies:changedMovies});
+  try{localStorage.setItem("watchlist-tmdb-preload-cache",JSON.stringify({...storedCache,...cache}))}catch(error){}
   render();
 }
 window.toggleWarningCategory=(category,checked)=>{const key=String(category).toLowerCase();savedWarningCategories=checked?[...new Set([...savedWarningCategories,key])]:savedWarningCategories.filter(x=>x!==key);try{localStorage.setItem("watchlist-warning-categories",JSON.stringify(savedWarningCategories))}catch(error){}saveUserSettings();document.querySelectorAll(".warning-picker-count").forEach(el=>el.textContent=savedWarningCategories.length+" selected")};

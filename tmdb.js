@@ -73,7 +73,11 @@ const TMDB = {
     };
 
     if (data.title) movie.title = data.title;
+    // Release metadata drives the Upcoming releases classification, so keep
+    // the canonical date/year in sync whenever fresh TMDB details are applied.
+    if (data.releaseDate) movie.releaseDate = data.releaseDate;
     if (data.year) movie.year = data.year;
+    else if (data.releaseDate && /^\d{4}/.test(data.releaseDate)) movie.year = Number(data.releaseDate.slice(0, 4));
     if (data.genre?.length) movie.genre = data.genre.join(" · ");
     if (data.director?.length) movie.director = data.director.join(", ");
     if (data.runtime) movie.runtime = formatRuntime(data.runtime);
