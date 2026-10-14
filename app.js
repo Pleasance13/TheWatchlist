@@ -785,8 +785,8 @@ function isUpcomingMovie(m){
   const releaseDate=m.releaseDate?new Date(m.releaseDate):null;
   if(!releaseDate||Number.isNaN(releaseDate.getTime()))return !Number(m.year)||!Number.isFinite(Number(m.year))||Number(m.year)>now.getFullYear();
   if(releaseDate>now)return true;
-  const digitalDate=m.tmdbDigitalReleaseDate?new Date(m.tmdbDigitalReleaseDate):null;
-  const physicalDate=m.tmdbPhysicalReleaseDate?new Date(m.tmdbPhysicalReleaseDate):null;
+  const digitalDate=(m.tmdbDigitalReleaseDate||m.digitalReleaseDate)?new Date(m.tmdbDigitalReleaseDate||m.digitalReleaseDate):null;
+  const physicalDate=(m.tmdbPhysicalReleaseDate||m.physicalReleaseDate)?new Date(m.tmdbPhysicalReleaseDate||m.physicalReleaseDate):null;
   const hasReleasedPostTheatricalDate=[digitalDate,physicalDate].some(date=>date&&!Number.isNaN(date.getTime())&&date<=now);
   const hasFuturePostTheatricalDate=[digitalDate,physicalDate].some(date=>date&&!Number.isNaN(date.getTime())&&date>now);
   const hasStreamingAvailability=Array.isArray(m.tmdbStreaming)&&m.tmdbStreaming.some(provider=>["flatrate","free","ads","rent","buy"].includes(provider.type));
@@ -1167,7 +1167,7 @@ window.openAssetEditor=async id=>{
     // object captured before the request.
     const currentMovie=movies.find(x=>x.id===id);
     if(currentMovie){
-      const previous={releaseDate:currentMovie.releaseDate||null,year:currentMovie.year,digital:currentMovie.tmdbDigitalReleaseDate||currentMovie.digitalReleaseDate||null,physical:currentMovie.tmdbPhysicalReleaseDate||currentMovie.physicalReleaseDate||null};
+      const previous={releaseDate:currentMovie.releaseDate||null,year:currentMovie.year,digital:currentMovie.tmdbDigitalReleaseDate||null,physical:currentMovie.tmdbPhysicalReleaseDate||null};
       TMDB.apply(currentMovie,data);
       const changed=(currentMovie.releaseDate||null)!==previous.releaseDate||
         Number(currentMovie.year)!==Number(previous.year)||
@@ -1572,8 +1572,8 @@ async function hydrateTmdbArtwork(){
     const currentYear=new Date().getUTCFullYear();
     // Refresh only movies that can plausibly change Upcoming classification:
     // unreleased titles and theatrical releases from the last 120 days.
-    const digital=movie.tmdbDigitalReleaseDate?new Date(movie.tmdbDigitalReleaseDate+"T00:00:00Z"):null;
-    const physical=movie.tmdbPhysicalReleaseDate?new Date(movie.tmdbPhysicalReleaseDate+"T00:00:00Z"):null;
+    const digital=(movie.tmdbDigitalReleaseDate||movie.digitalReleaseDate)?new Date((movie.tmdbDigitalReleaseDate||movie.digitalReleaseDate)+"T00:00:00Z"):null;
+    const physical=(movie.tmdbPhysicalReleaseDate||movie.physicalReleaseDate)?new Date((movie.tmdbPhysicalReleaseDate||movie.physicalReleaseDate)+"T00:00:00Z"):null;
     const postTheatricalRelevant=[digital,physical].some(date=>date&&!Number.isNaN(date.getTime())&&date.getTime()>=now-30*DAY_MS);
     return !release||Number.isNaN(release.getTime())||release>new Date()||
       (now-release.getTime()<=120*DAY_MS&&now>=release.getTime())||
