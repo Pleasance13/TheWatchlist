@@ -1555,9 +1555,12 @@ async function hydrateTmdbArtwork(){
     const currentYear=new Date().getUTCFullYear();
     // Refresh only movies that can plausibly change Upcoming classification:
     // unreleased titles and theatrical releases from the last 120 days.
+    const digital=movie.tmdbDigitalReleaseDate?new Date(movie.tmdbDigitalReleaseDate+"T00:00:00Z"):null;
+    const physical=movie.tmdbPhysicalReleaseDate?new Date(movie.tmdbPhysicalReleaseDate+"T00:00:00Z"):null;
+    const postTheatricalRelevant=[digital,physical].some(date=>date&&!Number.isNaN(date.getTime())&&date.getTime()>=now-30*DAY_MS);
     return !release||Number.isNaN(release.getTime())||release>new Date()||
       (now-release.getTime()<=120*DAY_MS&&now>=release.getTime())||
-      (!Number(movie.year)||Number(movie.year)>=currentYear);
+      postTheatricalRelevant||(!Number(movie.year)||Number(movie.year)>=currentYear);
   });
   const needsRefresh=[];
   candidates.forEach(movie=>{
@@ -1577,6 +1580,7 @@ async function hydrateTmdbArtwork(){
     }
   });
   if(appliedCache)render();
+  const changedMovies=[];
   // Small batches prevent an app load from flooding our own endpoint or TMDB.
   for(let i=0;i<needsRefresh.length;i+=3){
     await Promise.all(needsRefresh.slice(i,i+3).map(async movie=>{
@@ -1591,16 +1595,17 @@ async function hydrateTmdbArtwork(){
           (movie.tmdbDigitalReleaseDate||null)!==previous.digital||
           (movie.tmdbPhysicalReleaseDate||null)!==previous.physical;
         if(changed){
-          await persistSharedPatch({movies:[{
+          changedMovies.push({
             id:movie.id,releaseDate:movie.releaseDate||null,year:movie.year||null,
             tmdbDigitalReleaseDate:movie.tmdbDigitalReleaseDate||null,
             tmdbPhysicalReleaseDate:movie.tmdbPhysicalReleaseDate||null
-          }]});
+          });
         }
         render();if(state.showRatings)loadExternalRatings(movie);
       }catch(error){console.warn("TMDB hydration skipped for "+movie.title,error.message)}
     }));
   }
+  if(changedMovies.length)await persistSharedPatch({movies:changedMovies});
   try{localStorage.setItem("watchlist-tmdb-preload-cache",JSON.stringify({...storedCache,...cache}))}catch(error){}
   render();
 }
