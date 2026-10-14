@@ -12,9 +12,11 @@ function getToken() {
 
 function upcoming(movie, today) {
   const date = movie?.releaseDate ? new Date(movie.releaseDate + "T00:00:00Z") : null;
-  if (date && !Number.isNaN(date.getTime())) return date > today;
+  // Include recently released titles too, so a release-date correction on the
+  // release day (or shortly after) is not skipped by the scheduled run.
+  if (date && !Number.isNaN(date.getTime())) return date >= new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
   const year = Number(movie?.year);
-  return !Number.isFinite(year) || !year || year > today.getUTCFullYear();
+  return !Number.isFinite(year) || !year || year >= today.getUTCFullYear();
 }
 
 async function tmdbReleaseDetails(id, token) {
