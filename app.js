@@ -1545,29 +1545,63 @@ let tmdbHydrated=false;
 async function hydrateTmdbArtwork(){
   if(tmdbHydrated||!window.TMDB)return;
   tmdbHydrated=true;
-  let cache={};try{cache=JSON.parse(localStorage.getItem("watchlist-tmdb-preload-cache")||"{}")}catch(error){cache={}}
-  const seeded=movies.filter(movie=>!movie.id.startsWith("tmdb-"));
+  let storedCache={};try{storedCache=JSON.parse(localStorage.getItem("watchlist-tmdb-preload-cache")||"{}")}catch(error){storedCache={}}
+  const cache={},now=Date.now(),DAY_MS=24*60*60*1000;
   let appliedCache=false;
-  seeded.forEach(movie=>{if(cache[movie.id]){TMDB.apply(movie,cache[movie.id]);appliedCache=true}});
-  // Keep the existing refresh behavior on app load; the scheduled daily refresh
-  // is additive and must not replace these normal detail fetches.
+  const candidates=movies.filter(movie=>{
+    const id=Number(movie.tmdbId||String(movie.id||"").match(/^tmdb-(\d+)$/)?.[1]);
+    if(!Number.isFinite(id)||id<=0)return false;
+    const release=movie.releaseDate?new Date(movie.releaseDate+"T00:00:00Z"):null;
+    const currentYear=new Date().getUTCFullYear();
+    // Refresh only movies that can plausibly change Upcoming classification:
+    // unreleased titles and theatrical releases from the last 120 days.
+    return !release||Number.isNaN(release.getTime())||release>new Date()||
+      (now-release.getTime()<=120*DAY_MS&&now>=release.getTime())||
+      (!Number(movie.year)||Number(movie.year)>=currentYear);
+  });
+  const needsRefresh=[];
+  candidates.forEach(movie=>{
+    const entry=storedCache[movie.id];
+    const data=entry&&entry.data?entry.data:entry;
+    const fetchedAt=entry&&entry.data?Number(entry.fetchedAt)||0:0;
+    if(data){TMDB.apply(movie,data);appliedCache=true}
+    // Older cache entries have no timestamp; use them once without forcing a
+    // deployment-wide refetch, then refresh them after the normal 24h window.
+    if(data&&fetchedAt===0){
+      cache[movie.id]={data,fetchedAt:now};
+    }else if(data&&now-fetchedAt<DAY_MS){
+      cache[movie.id]={data,fetchedAt};
+    }else{
+      needsRefresh.push(movie);
+      if(data)cache[movie.id]={data,fetchedAt};
+    }
+  });
   if(appliedCache)render();
-  const matches=await Promise.all(seeded.map(async movie=>{
-    try{const search=await TMDB.search(movie.title);const results=search.results||[];return {movie,match:results.find(r=>Number(r.year)===Number(movie.year))||results[0]||null}}
-    catch(error){console.warn("TMDB search hydration skipped for "+movie.title,error.message);return {movie,match:null}}
-  }));
-  await Promise.all(matches.filter(x=>x.match?.tmdbId).map(async ({movie,match})=>{
-    try{
-      const previousReleaseDate=movie.releaseDate||null,previousYear=movie.year;
-      const details=await TMDB.details(match.tmdbId);
-      TMDB.apply(movie,details);cache[movie.id]=details;
-      if((movie.releaseDate||null)!==previousReleaseDate||Number(movie.year)!==Number(previousYear)){
-        persistSharedPatch({movies:[{id:movie.id,releaseDate:movie.releaseDate||null,year:movie.year||null}]});
-      }
-      render();if(state.showRatings)loadExternalRatings(movie);
-    }catch(error){console.warn("TMDB hydration skipped for "+movie.title,error.message)}
-  }));
-  try{localStorage.setItem("watchlist-tmdb-preload-cache",JSON.stringify(cache))}catch(error){}
+  // Small batches prevent an app load from flooding our own endpoint or TMDB.
+  for(let i=0;i<needsRefresh.length;i+=3){
+    await Promise.all(needsRefresh.slice(i,i+3).map(async movie=>{
+      const tmdbId=Number(movie.tmdbId||String(movie.id||"").match(/^tmdb-(\d+)$/)?.[1]);
+      try{
+        const previous={releaseDate:movie.releaseDate||null,year:movie.year,digital:movie.tmdbDigitalReleaseDate||null,physical:movie.tmdbPhysicalReleaseDate||null};
+        const details=await TMDB.details(tmdbId);
+        TMDB.apply(movie,details);
+        cache[movie.id]={data:details,fetchedAt:Date.now()};
+        const changed=(movie.releaseDate||null)!==previous.releaseDate||
+          Number(movie.year)!==Number(previous.year)||
+          (movie.tmdbDigitalReleaseDate||null)!==previous.digital||
+          (movie.tmdbPhysicalReleaseDate||null)!==previous.physical;
+        if(changed){
+          await persistSharedPatch({movies:[{
+            id:movie.id,releaseDate:movie.releaseDate||null,year:movie.year||null,
+            tmdbDigitalReleaseDate:movie.tmdbDigitalReleaseDate||null,
+            tmdbPhysicalReleaseDate:movie.tmdbPhysicalReleaseDate||null
+          }]});
+        }
+        render();if(state.showRatings)loadExternalRatings(movie);
+      }catch(error){console.warn("TMDB hydration skipped for "+movie.title,error.message)}
+    }));
+  }
+  try{localStorage.setItem("watchlist-tmdb-preload-cache",JSON.stringify({...storedCache,...cache}))}catch(error){}
   render();
 }
 window.toggleWarningCategory=(category,checked)=>{const key=String(category).toLowerCase();savedWarningCategories=checked?[...new Set([...savedWarningCategories,key])]:savedWarningCategories.filter(x=>x!==key);try{localStorage.setItem("watchlist-warning-categories",JSON.stringify(savedWarningCategories))}catch(error){}saveUserSettings();document.querySelectorAll(".warning-picker-count").forEach(el=>el.textContent=savedWarningCategories.length+" selected")};
