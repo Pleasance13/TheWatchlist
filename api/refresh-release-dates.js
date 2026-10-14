@@ -53,7 +53,7 @@ async function tmdbReleaseDetails(id, token) {
   return {
     tmdbId: data.id,
     releaseDate,
-    year: releaseDate && /^\\d{4}/.test(releaseDate)
+    year: releaseDate && /^\d{4}/.test(releaseDate)
       ? Number(releaseDate.slice(0, 4))
       : (data.release_date ? Number(data.release_date.slice(0, 4)) : null),
     digitalReleaseDate: firstReleaseDateOfType(4),
