@@ -1,3 +1,4 @@
+const UUID_RE=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 function normalizeWarningLabel(value){
   return String(value||"").trim().toLowerCase().replace(/\s+/g," ")
     .split(" ").map(word=>word.split(/([/-])/).map(part=>part==="/"||part==="-"?part:part?part[0].toUpperCase()+part.slice(1):"").join("")).join(" ");
@@ -281,8 +282,11 @@ function applyFilterState(nav,data){
     const value=source[key]!==undefined?source[key]:defaults[key];
     state[key]=Array.isArray(value)?[...value]:value;
   });
-  if(typeof state.suggestedBy==="string")state.suggestedBy=state.suggestedBy?[state.suggestedBy]:[];
-  if(!Array.isArray(state.suggestedByExclude))state.suggestedByExclude=[];
+  // Suggester filters hold account IDs only. Filters saved earlier held display names,
+  // so anything that isn't an ID is dropped rather than left matching nothing.
+  const onlyIds=v=>Array.isArray(v)?v.filter(x=>UUID_RE.test(String(x))):[];
+  state.suggestedBy=onlyIds(state.suggestedBy);
+  state.suggestedByExclude=onlyIds(state.suggestedByExclude);
   if(!Array.isArray(state.genreExclude))state.genreExclude=[];
   state.genreMode=state.genreMode==="all"?"all":"any";
   if(nav==="watchlist"){
@@ -670,15 +674,23 @@ function filterActive(key){const v=state[key];return Array.isArray(v)?v.length>0
 function filterChip(label,key){return filterActive(key)?`<button class="filter-clear" title="Clear ${label}" aria-label="Clear ${label}" onclick="clearOneFilter('${key}')">×</button>`:""}
 function userOptions(users,selected,placeholder){return `<option value="">${placeholder}</option>${users.map(p=>`<option value="${p}" ${selected===p?"selected":""}>${p===currentUser?p+" (you)":p}</option>`).join("")}`}
 function movieGenreList(m){return String(m.genre||"").split(/\s*[·,/&]\s*/).map(x=>x.trim()).filter(Boolean)}
-function movieSuggester(m){return m.suggestedBy||m.addedBy||(m.note?"Josh":"")}
+function movieSuggesterId(m){
+  const id=m.suggestedById||m.addedById||"";
+  return UUID_RE.test(String(id))?String(id):"";
+}
+function suggesterLabel(id){
+  const name=identityDisplayName(id,userProfiles,votesByUser);
+  const label=name&&name!==id?name:"Unknown member";
+  return id===currentProfile?.id?label+" (you)":label;
+}
 const PLUS_ICON='<svg class="ifb-icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 3v10M3 8h10"/></svg>';
 const MINUS_ICON='<svg class="ifb-icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h10"/></svg>';
 function includeExcludeList(items,inc,exc,handler,scrollKey,labelFn=x=>x){
   return '<div class="filter-options ifb-options" data-scroll-key="'+scrollKey+'">'+items.map(v=>{
-    const i=inc.includes(v),e=exc.includes(v),name=escapeHtml(v);
-    return '<div class="ifb-row" data-value="'+name+'"><span class="ifb-name">'+escapeHtml(labelFn(v))+'</span><span class="ifb-buttons">'+
-      '<button type="button" class="ifb-btn ifb-include'+(i?' on':'')+'" title="Include" aria-label="Include '+name+'" aria-pressed="'+i+'" onclick="'+handler+'(this.closest(\'.ifb-row\').dataset.value,\'include\')">'+PLUS_ICON+'</button>'+
-      '<button type="button" class="ifb-btn ifb-exclude'+(e?' on':'')+'" title="Exclude" aria-label="Exclude '+name+'" aria-pressed="'+e+'" onclick="'+handler+'(this.closest(\'.ifb-row\').dataset.value,\'exclude\')">'+MINUS_ICON+'</button></span></div>';
+    const i=inc.includes(v),e=exc.includes(v),val=escapeHtml(v),label=escapeHtml(labelFn(v));
+    return '<div class="ifb-row" data-value="'+val+'"><span class="ifb-name">'+label+'</span><span class="ifb-buttons">'+
+      '<button type="button" class="ifb-btn ifb-include'+(i?' on':'')+'" title="Include" aria-label="Include '+label+'" aria-pressed="'+i+'" onclick="'+handler+'(this.closest(\'.ifb-row\').dataset.value,\'include\')">'+PLUS_ICON+'</button>'+
+      '<button type="button" class="ifb-btn ifb-exclude'+(e?' on':'')+'" title="Exclude" aria-label="Exclude '+label+'" aria-pressed="'+e+'" onclick="'+handler+'(this.closest(\'.ifb-row\').dataset.value,\'exclude\')">'+MINUS_ICON+'</button></span></div>';
   }).join("")+'</div>';
 }
 function bothFilterChip(label,key,excludeKey){
@@ -692,13 +704,12 @@ function toggleIncludeExclude(includeKey,excludeKey,value,mode){
   resetMoviePages();savePersistentFilterState();render();
 }
 window.setGenreState=(g,mode)=>toggleIncludeExclude("genreFilters","genreExclude",g,mode);
-window.setSuggestedByState=(n,mode)=>toggleIncludeExclude("suggestedBy","suggestedByExclude",n,mode);
+window.setSuggestedByState=(id,mode)=>toggleIncludeExclude("suggestedBy","suggestedByExclude",id,mode);
 window.setGenreMode=mode=>{state.genreMode=mode==="all"?"all":"any";resetMoviePages();savePersistentFilterState();render()};
 function advancedFilterPanel(historyMode=false){
  if(!state.showFilters)return "";
  const genres=genreList(),years=movies.map(m=>Number(m.year)).filter(y=>Number.isFinite(y)&&y>0),minYear=years.length?Math.min(...years):1888,maxYear=years.length?Math.max(...years):new Date().getFullYear();
- const suggesters=[...new Set(movies.map(m=>m.suggestedBy||m.addedBy||(m.note?"Josh":"")).filter(Boolean))].sort();
- const canonicalIdentity=name=>{const key=userKey(name),profile=userProfiles[key],id=profile?.id||votesByUser[key]?.id;if(id){const member=serverUsers.find(n=>userProfiles[userKey(n)]?.id===id);if(member)return member;const known=Object.values(userProfiles).find(p=>p?.id===id&&p.name);if(known?.name)return known.name}const avatar=profile?.avatar||votesByUser[key]?.avatar;if(avatar){const match=serverUsers.find(n=>n!==name&&(userProfiles[userKey(n)]?.avatar===avatar||votesByUser[userKey(n)]?.avatar===avatar));if(match)return match;if(currentProfile?.avatar===avatar)return currentUser}return name};
+ const suggesters=[...new Set(movies.map(movieSuggesterId).filter(Boolean))].sort((a,b)=>suggesterLabel(a).localeCompare(suggesterLabel(b),undefined,{sensitivity:"base"})); const canonicalIdentity=name=>{const key=userKey(name),profile=userProfiles[key],id=profile?.id||votesByUser[key]?.id;if(id){const member=serverUsers.find(n=>userProfiles[userKey(n)]?.id===id);if(member)return member;const known=Object.values(userProfiles).find(p=>p?.id===id&&p.name);if(known?.name)return known.name}const avatar=profile?.avatar||votesByUser[key]?.avatar;if(avatar){const match=serverUsers.find(n=>n!==name&&(userProfiles[userKey(n)]?.avatar===avatar||votesByUser[userKey(n)]?.avatar===avatar));if(match)return match;if(currentProfile?.avatar===avatar)return currentUser}return name};
  const seenUsers=[...new Set([...movies.flatMap(m=>m.seen||[]),...serverUsers].map(canonicalIdentity))].filter(Boolean).sort((a,b)=>a===currentUser?-1:b===currentUser?1:a.localeCompare(b));
  const selected=state.genreFilters||[];
  const yearFromValue=Number(state.yearFrom)||minYear,yearToValue=Number(state.yearTo)||maxYear,yearFromPct=(yearFromValue-minYear)/(maxYear-minYear||1)*100,yearToPct=(yearToValue-minYear)/(maxYear-minYear||1)*100,yearTrack=`linear-gradient(to right,#555b65 0%,#555b65 ${yearFromPct}%,#aeb4be ${yearFromPct}%,#aeb4be ${yearToPct}%,#555b65 ${yearToPct}%,#555b65 100%)`;
@@ -708,8 +719,7 @@ function advancedFilterPanel(historyMode=false){
  <button class="filter-all filter-option-button" onclick="closeFilterDropdowns();clearAllFilters()">All movies</button>
  <div class="filter-control"><details class="filter-dropdown" data-filter-id="genre"><summary>Genre(s) ${selected.length?`<span class="filter-count">${selected.length}</span>`:""}</summary><div class="filter-menu"><div class="filter-options">${multi(genres,selected,"toggleGenre")}</div></div></details>${filterChip("Genre(s)","genreFilters")}</div>
  <div class="filter-control"><details class="filter-dropdown" data-filter-id="year"><summary>Release year (range)</summary><div class="filter-menu year-range-menu"><div class="year-range-values"><span>From: <b id="year-from-label">${state.yearFrom||minYear}</b></span><span>To: <b id="year-to-label">${state.yearTo||maxYear}</b></span></div><div class="dual-range" style="--range-fill:${yearTrack}"><input aria-label="From year" type="range" min="${minYear}" max="${maxYear}" step="1" value="${state.yearFrom||minYear}" oninput="previewYearRange('from',this)" onchange="setYear('from',this.value)"><input aria-label="To year" type="range" min="${minYear}" max="${maxYear}" step="1" value="${state.yearTo||maxYear}" oninput="previewYearRange('to',this)" onchange="setYear('to',this.value)"></div><small>Available years: ${minYear}–${maxYear}</small></div></details>${filterActive("yearFrom")||filterActive("yearTo")?'<button class="filter-clear" title="Clear release year range" aria-label="Clear release year range" onclick="clearOneFilter(\'yearFrom\')">×</button>':""}</div>
- <div class="filter-control"><details class="filter-dropdown" data-filter-id="suggested"><summary>Suggested by</summary><div class="filter-menu"><select class="filter-select" onchange="setSuggestedBy(this.value)">${userOptions(suggesters,state.suggestedBy,"Any user")}</select></div></details>${filterChip("Suggested by","suggestedBy")}</div>
- ${historyMode?"":`<div class="filter-control"><details class="filter-dropdown" data-filter-id="interest"><summary>Interest level</summary><div class="filter-menu"><div class="filter-two-col"><label>User(s)<details class="filter-dropdown filter-nested" data-filter-id="interest-users"><summary>${state.interestUsers.length?state.interestUsers.length+" selected":"Choose users"}</summary><div class="filter-options">${multi(serverUsers,state.interestUsers,"toggleInterestUser")}</div></details></label><label>Interest<select onchange="setInterestLevel(this.value)"><option value="">Choose level</option>${interestOptions.map(([v,l])=>`<option value="${v}" ${state.interestLevel===v?"selected":""}>${l}</option>`).join("")}</select></label></div></div></details>${filterActive("interestUsers")||filterActive("interestLevel")?'<button class="filter-clear" title="Clear interest filters" aria-label="Clear interest filters" onclick="clearOneFilter(\'interestUsers\')">×</button>':""}</div>
+ <div class="filter-control"><details class="filter-dropdown" data-filter-id="suggested"><summary>Suggested by ${((state.suggestedBy||[]).length+(state.suggestedByExclude||[]).length)?`<span class="filter-count">${(state.suggestedBy||[]).length+(state.suggestedByExclude||[]).length}</span>`:""}</summary><div class="filter-menu">${includeExcludeList(suggesters,state.suggestedBy||[],state.suggestedByExclude||[],"setSuggestedByState","suggested",suggesterLabel)}</div></details>${bothFilterChip("Suggested by","suggestedBy","suggestedByExclude")}</div> ${historyMode?"":`<div class="filter-control"><details class="filter-dropdown" data-filter-id="interest"><summary>Interest level</summary><div class="filter-menu"><div class="filter-two-col"><label>User(s)<details class="filter-dropdown filter-nested" data-filter-id="interest-users"><summary>${state.interestUsers.length?state.interestUsers.length+" selected":"Choose users"}</summary><div class="filter-options">${multi(serverUsers,state.interestUsers,"toggleInterestUser")}</div></details></label><label>Interest<select onchange="setInterestLevel(this.value)"><option value="">Choose level</option>${interestOptions.map(([v,l])=>`<option value="${v}" ${state.interestLevel===v?"selected":""}>${l}</option>`).join("")}</select></label></div></div></details>${filterActive("interestUsers")||filterActive("interestLevel")?'<button class="filter-clear" title="Clear interest filters" aria-label="Clear interest filters" onclick="clearOneFilter(\'interestUsers\')">×</button>':""}</div>
  `}<div class="filter-control"><details class="filter-dropdown" data-filter-id="seen"><summary>Seen by</summary><div class="filter-menu"><div class="filter-two-col seen-filter-fields"><label>Seen status<select onchange="setSeenMode(this.value)"><option value="seen" ${state.seenMode==="seen"?"selected":""}>Seen by</option><option value="not" ${state.seenMode==="not"?"selected":""}>Not seen by</option></select></label><label>User(s)<details class="filter-dropdown filter-nested" data-filter-id="seen-users"><summary>${state.seenUsers.length?state.seenUsers.length+" selected":"Choose users"}</summary><div class="filter-options">${multi(seenUsers,state.seenUsers,"toggleSeenUser")}</div></details></label></div></div></details>${filterActive("seenUsers")||state.seenMode==="not"?'<button class="filter-clear" title="Clear seen filters" aria-label="Clear seen filters" onclick="clearOneFilter(\'seenUsers\')">×</button>':""}</div>
  ${historyMode?"":`<div class="filter-control"><details class="filter-dropdown" data-filter-id="rewatch"><summary>Set for rewatch</summary><div class="filter-menu"><select class="filter-select rewatch-select" aria-label="Set for rewatch" onchange="setRewatchStatus(this.value)"><option value="" ${!state.rewatchStatus?"selected":""}>Choose status</option><option value="yes" ${state.rewatchStatus==="yes"?"selected":""}>Yes</option><option value="no" ${state.rewatchStatus==="no"?"selected":""}>No</option></select></div></details>${filterChip("Set to rewatch","rewatchStatus")}</div>`}
  </div>`
@@ -813,7 +823,7 @@ function applyAdvancedFilters(items,historyMode=false){
  if(state.seenUsers?.length)a=a.filter(m=>{const seen=state.seenUsers.map(p=>(m.seen||[]).includes(p));return state.seenMode==="not"?seen.every(v=>!v):seen.every(Boolean)});
  if(!historyMode&&state.rewatchStatus)a=a.filter(m=>Boolean(m.setToRewatch)=== (state.rewatchStatus==="yes"));
  const sInc=state.suggestedBy||[],sExc=state.suggestedByExclude||[];
- if(sInc.length||sExc.length)a=a.filter(m=>{const s=movieSuggester(m);if(sExc.includes(s))return false;return !sInc.length||sInc.includes(s)});
+ if(sInc.length||sExc.length)a=a.filter(m=>{const s=movieSuggesterId(m);if(s&&sExc.includes(s))return false;return !sInc.length||sInc.includes(s)});
  return a;
 }
 
