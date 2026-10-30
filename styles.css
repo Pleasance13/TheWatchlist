@@ -1907,3 +1907,14 @@ button,input{font:inherit}button{color:inherit}.topbar{height:72px;padding:0 32p
 .ifb-mode-btn+.ifb-mode-btn{border-left:1px solid var(--line2)}
 .ifb-mode-btn.on{background:#d7d2c7;color:#17191c}
 .filter-menu .ifb-hint{margin:0 0 8px;font-size:10px;color:var(--muted)}
+
+/* Suggester divider in list view */
+.ring.none{border-color:#5a5f68}
+.stack-divider{
+  flex:0 0 1px;
+  width:1px;
+  height:27px;              /* same height as the avatars, not the full row */
+  align-self:center;
+  margin:0 15px 0 8px;      /* the extra 7px offsets the next ring's -7px overlap */
+  background:var(--line2);
+}
