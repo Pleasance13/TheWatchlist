@@ -913,9 +913,9 @@ async function connectDiscordServer(guildId){
   await saveUserSettings();
   await loadServerContext();
 }
-async function chooseDiscordServer(forceGuildRefresh=false){
+async function chooseDiscordServer(forceGuildRefresh=false,authPopup=null){
   const picker=document.querySelector("#discord-server-picker");
-  if(!picker)return;
+  if(!picker){if(authPopup&&!authPopup.closed)authPopup.close();return}
   picker.disabled=true;picker.innerHTML='<option>Loading…</option>';
   try{
     const current=activeServer||await loadConnectedDiscordServer();
@@ -933,12 +933,26 @@ async function chooseDiscordServer(forceGuildRefresh=false){
   }catch(error){
     picker.innerHTML='<option value="">Could not load servers</option>';picker.disabled=false;
     alert(error.message||"Could not load your Discord servers.");
+  }finally{
+    // If no reauthorization consumed this pre-opened window, close it rather
+    // than leaving an empty popup behind after a successful token refresh.
+    if(authPopup&&!authPopup.closed&&window.WATCHLIST_DISCORD_AUTH_POPUP===authPopup){
+      window.WATCHLIST_DISCORD_AUTH_POPUP=null;
+      authPopup.close();
+    }
   }
 }
 async function onDiscordServerSelected(select){
   if(!select.value)return;
   if(select.value==="__change__"){
-    await chooseDiscordServer(true);
+    // Open synchronously during the user's selection so OAuth can reuse this
+    // window later, after asynchronous server/token checks finish.
+    const authPopup=window.open("about:blank","watchlist-discord-auth","popup=yes,width=520,height=720,resizable=yes,scrollbars=yes");
+    if(authPopup){
+      try{authPopup.document.write('<!doctype html><title>Connecting to Discord</title><body style="margin:0;background:#17191c;color:#e8e4da;font:14px system-ui;display:grid;place-items:center;height:100vh"><p>Checking Discord access…</p></body>');authPopup.document.close()}catch(error){}
+      window.WATCHLIST_DISCORD_AUTH_POPUP=authPopup;
+    }
+    await chooseDiscordServer(true,authPopup);
     return;
   }
   if(select.value==="__CURRENT__")return;

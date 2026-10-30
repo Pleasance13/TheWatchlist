@@ -149,9 +149,11 @@
       throw new Error("Discord server access could not be restored. Please sign in with Discord again.");
     }
     sessionStorage.setItem(reauthKey,"1");
-    // Try the same popup flow as manual sign-in. Browsers may block this popup
-    // because refresh happens after an async request, so retain redirect as fallback.
-    const authPopup=window.open("about:blank","watchlist-discord-auth","popup=yes,width=520,height=720,resizable=yes,scrollbars=yes");
+    // The Settings server picker opens a popup synchronously from the user's
+    // selection. Reuse it here so OAuth isn't blocked after these async refreshes.
+    // Other automatic callers may not have a user-initiated popup, so keep redirect as fallback.
+    const authPopup=window.WATCHLIST_DISCORD_AUTH_POPUP||window.open("about:blank","watchlist-discord-auth","popup=yes,width=520,height=720,resizable=yes,scrollbars=yes");
+    window.WATCHLIST_DISCORD_AUTH_POPUP=null;
     const popupUrl=new URL(window.location.href);
     popupUrl.searchParams.set("watchlist_oauth_popup","1");
     const popupOptions={redirectTo:popupUrl.origin+popupUrl.pathname+popupUrl.search,scopes:"identify guilds",skipBrowserRedirect:true};
