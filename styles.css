@@ -1890,3 +1890,20 @@ button,input{font:inherit}button{color:inherit}.topbar{height:72px;padding:0 32p
 @media(max-width:760px){
   .topbar>.nav{left:50%!important;}
 }
+
+
+/* Include/exclude filter lists (Genre, Suggested by) */
+.filter-panel .ifb-options{gap:4px!important;min-width:230px}
+.ifb-row{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:3px 2px}
+.ifb-name{font-size:12px;color:var(--text);min-width:0;text-align:left;white-space:normal}
+.ifb-buttons{display:inline-flex;gap:5px;flex:0 0 auto}
+.ifb-btn{width:24px;height:24px;padding:0;display:grid;place-items:center;border:1px solid var(--line2);border-radius:6px;background:var(--panel2);color:var(--muted);cursor:pointer;transition:background .15s,border-color .15s,color .15s}
+.ifb-btn:hover{color:var(--text);border-color:#5b616b}
+.ifb-icon{display:block;width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;pointer-events:none}
+.ifb-include.on{border-color:#476d51;color:#9fd3aa;background:rgba(121,197,139,.12)}
+.ifb-exclude.on{border-color:#704747;color:#cf8989;background:rgba(209,122,122,.12)}
+.ifb-mode{display:inline-flex;width:100%;margin-bottom:6px;border:1px solid var(--line2);border-radius:7px;overflow:hidden}
+.ifb-mode-btn{flex:1;padding:6px 10px;border:0;background:var(--panel2);color:var(--muted);font:inherit;font-size:11px;font-weight:650;cursor:pointer}
+.ifb-mode-btn+.ifb-mode-btn{border-left:1px solid var(--line2)}
+.ifb-mode-btn.on{background:#d7d2c7;color:#17191c}
+.filter-menu .ifb-hint{margin:0 0 8px;font-size:10px;color:var(--muted)}
