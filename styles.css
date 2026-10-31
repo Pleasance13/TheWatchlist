@@ -1918,3 +1918,18 @@ button,input{font:inherit}button{color:inherit}.topbar{height:72px;padding:0 32p
   margin:0 15px 0 8px;      /* the extra 7px offsets the next ring's -7px overlap */
   background:var(--line2);
 }
+
+/* Streaming country picker */
+.region-picker{position:relative;flex:0 0 auto;width:220px}
+.region-picker>summary{list-style:none;display:flex;align-items:center;gap:9px;min-height:34px;box-sizing:border-box;padding:7px 30px 7px 10px;border:1px solid #3b4048;border-radius:7px;background:#20242a;color:#e8e9ec;font-size:12px;cursor:pointer;position:relative}
+.region-picker>summary::-webkit-details-marker{display:none}
+.region-picker>summary:after{content:"";position:absolute;right:11px;top:50%;width:6px;height:6px;border-right:1.5px solid #aeb4be;border-bottom:1.5px solid #aeb4be;transform:translateY(-70%) rotate(45deg)}
+.region-picker[open]>summary{border-color:#6b717b}
+.region-picker[open]>summary:after{transform:translateY(-25%) rotate(225deg)}
+.region-menu{position:absolute;z-index:200;top:calc(100% + 5px);right:0;width:260px;max-height:300px;overflow-y:auto;padding:5px;border:1px solid var(--line2);border-radius:8px;background:var(--panel);box-shadow:var(--shadow)}
+.region-option{display:flex;align-items:center;gap:10px;width:100%;padding:7px 9px;border:0;border-radius:5px;background:transparent;color:var(--text);font:inherit;font-size:12px;text-align:left;cursor:pointer}
+.region-option:hover,.region-option.selected{background:#2a3038}
+.region-flag{width:20px;height:15px;object-fit:cover;border-radius:2px;flex:0 0 20px;box-shadow:0 0 0 1px rgba(255,255,255,.12)}
+/* Undo the generic ".setting span" styling inside the picker */
+.region-picker span{display:inline;margin:0;color:inherit;font-size:inherit}
+@media(max-width:760px){.region-picker{width:min(220px,100%)}}

@@ -94,6 +94,9 @@ function serializeMovieIdentities(movie){
   if(Array.isArray(copy.watchedBy))copy.watchedBy=copy.watchedBy.map(name=>stableIdentityKey(name));
   // Ratings loading/error state is transient UI state and must never be persisted.
   delete copy.seen;
+  delete copy.tmdbStreaming;
+  delete copy.tmdbStreamingLink;
+  delete copy.tmdbStreamingRegion;
   delete copy.ratingsLoading;
   delete copy.ratingsError;
   return copy;
@@ -189,7 +192,7 @@ function scheduleTimestamp(iso){const date=new Date(iso);return Number.isNaN(dat
 async function saveUserSettings(){
   if(currentUser==="Guest")return;
   const client=window.WATCHLIST_SUPABASE_CLIENT;if(!client)return;
-  const data={showSynopsis:Boolean(state.showSynopsis),showRatings:Boolean(state.showRatings),showNote:Boolean(state.showNote),showTrailer:Boolean(state.showTrailer),showCast:Boolean(state.showCast),showStreamingLinks:Boolean(state.showStreamingLinks),contentWarningsEnabled:Boolean(contentWarningsEnabled),warningCategories:[...savedWarningCategories],view:state.view==="grid"?"grid":"list",posterSize:Math.max(1,Math.min(4,Math.round(Number(state.posterSize)||2))),activeServer:activeServer?{guild_id:activeServer.guild_id,guild_name:activeServer.guild_name,guild_icon_url:activeServer.guild_icon_url||null}:null,discordWatchThreshold:normalizeDiscordWatchThreshold(state.discordWatchThreshold)};
+  const data={showSynopsis:Boolean(state.showSynopsis),showRatings:Boolean(state.showRatings),showNote:Boolean(state.showNote),showTrailer:Boolean(state.showTrailer),showCast:Boolean(state.showCast),showStreamingLinks:Boolean(state.showStreamingLinks),contentWarningsEnabled:Boolean(contentWarningsEnabled),warningCategories:[...savedWarningCategories],view:state.view==="grid"?"grid":"list",posterSize:Math.max(1,Math.min(4,Math.round(Number(state.posterSize)||2))),activeServer:activeServer?{guild_id:activeServer.guild_id,guild_name:activeServer.guild_name,guild_icon_url:activeServer.guild_icon_url||null}:null,streamingRegion:normalizeStreamingRegion(state.streamingRegion),discordWatchThreshold:normalizeDiscordWatchThreshold(state.discordWatchThreshold)};
   const {error}=await client.from("watchlist_user_settings").upsert({user_id:currentProfile?.id,data,updated_at:new Date().toISOString()});
   if(error)console.warn("Could not save user settings:",error.message||error);
 }
@@ -203,6 +206,7 @@ async function loadUserSettings(){
   contentWarningsEnabled=typeof saved.contentWarningsEnabled==="boolean"?saved.contentWarningsEnabled:true;
   savedWarningCategories=Array.isArray(saved.warningCategories)?saved.warningCategories:[];
   state.view=saved.view==="grid"?"grid":"list";
+  if(saved.streamingRegion)applyStreamingRegion(saved.streamingRegion);
   state.posterSize=Math.max(1,Math.min(4,Math.round(Number(saved.posterSize)||2)));
   activeServer=saved.activeServer&&saved.activeServer.guild_id?{guild_id:saved.activeServer.guild_id,guild_name:saved.activeServer.guild_name||"",guild_icon_url:saved.activeServer.guild_icon_url||null}:null; state.discordWatchThreshold=normalizeDiscordWatchThreshold(saved.discordWatchThreshold);
   try{if(activeServer)localStorage.setItem("watchlist-active-server",JSON.stringify(activeServer));else localStorage.removeItem("watchlist-active-server")}catch(error){}
@@ -243,6 +247,11 @@ function navigateRoute(nav,detail=null,{replace=false}={}){
   render();
 }
 const state={nav:"watchlist",view:"list",search:"",filter:"all",posterSize:2,posterPageSize:(()=>{try{const n=Number(localStorage.getItem("watchlist-page-size"));return [25,50,100,200].includes(n)?n:50}catch(error){return 50}})(),watchlistPage:1,historyPage:1,showSynopsis:true,showRatings:false,showNote:true,showTrailer:false,showCast:true,showStreamingLinks:true,...savedDisplaySettings,discordWatchThreshold:"watch",detail:null,detailSections:{cast:true,streaming:true,trailer:true},showFilters:false,genreFilters:[],yearFrom:"",yearTo:"",interestUsers:[],interestLevel:"",seenMode:"seen",seenUsers:[],rewatchStatus:"",watchedWith:"",suggestedBy:[],suggestedByExclude:[],genreExclude:[],genreMode:"any",votes:stateVotesPlaceholder||{},removeMovieId:null,addMovieOpen:false,addMovieQuery:"",addMovieResults:[],addMovieVisibleCount:8,addMovieSelection:null,addMovieLoading:false,addMovieError:"",attendanceOpen:false,attendanceMovieId:null,attendanceSelected:[],assetEditorOpen:false,assetMovieId:null,assetLoading:false,assetError:"",assetSections:{frontLogo:true,detailLogo:true,frontImage:true,backStill:true},assetLanguageGroups:{},assetPreviewFlipped:false,noteEditorOpen:false,noteEditorMovieId:null,watchlistSort:"server",historySort:"alpha",watchlistSortDir:"desc",historySortDir:"asc"};
+const STREAMING_REGION_CODES="AE AL AR AT AU BA BB BE BG BO BR BS CA CH CL CO CR CZ DE DK DO EC EE EG ES FI FR GB GR GT HK HN HR HU ID IE IL IN IT JM JP KR LT LV MX MY NL NO NZ PE PH PL PT PY RO RS RU SA SE SG SI SK SV TH TR TW UA US UY VE ZA".split(" ");
+function normalizeStreamingRegion(value){const code=String(value||"").toUpperCase();return STREAMING_REGION_CODES.includes(code)?code:"US"}
+state.streamingRegion="US";
+try{state.streamingRegion=normalizeStreamingRegion(localStorage.getItem("watchlist-streaming-region"))}catch(error){}
+window.WATCHLIST_STREAMING_REGION=state.streamingRegion;
 const FILTER_STATE_KEY_PREFIX="watchlist-filter-state-v1:";
 const FILTER_STATE_FIELDS=["search","filter","genreFilters","genreExclude","genreMode","yearFrom","yearTo","interestUsers","interestLevel","seenMode","seenUsers","rewatchStatus","suggestedBy","suggestedByExclude"];
 const HISTORY_FILTER_FIELDS=["search","filter","genreFilters","genreExclude","genreMode","yearFrom","yearTo","seenMode","seenUsers","suggestedBy","suggestedByExclude"];
@@ -534,6 +543,9 @@ function sharedApply(data){
       // detail/artwork view is open.
       ["tmdbAssets","tmdbCast","tmdbStreaming","tmdbStreamingRegion","tmdbTrailer","tmdbDetailsLoaded","imdbRating","rottenTomatoesRating","ratingsLoaded","ratingsLoading","ratingsError"].forEach(key=>{
         if(decoded[key]===undefined&&previous?.[key]!==undefined)decoded[key]=previous[key];
+      });
+      ["tmdbStreaming","tmdbStreamingLink","tmdbStreamingRegion"].forEach(key=>{
+        if(previous&&previous[key]!==undefined)decoded[key]=previous[key];
       });
       const optimisticSeen=pendingSeenMovies.has(decoded.id)
         ? (previous?.seen||[])
@@ -979,14 +991,41 @@ async function onDiscordServerSelected(select){
   catch(error){alert(error.message||"Could not connect this Discord server.");select.disabled=false}
 }
 
-function settings(){let rows=[["Show synopsis","Show movie synopses on cards and details.","showSynopsis"],["Show RT/IMDb scores","Show Rotten Tomatoes and IMDb scores when available.","showRatings"],["Show suggester's note","Show personal notes attached to suggestions on Details screens.","showNote"],["Show cast","Show cast photos and names on movie details.","showCast"],["Show streaming links","Show streaming availability and provider links on movie details.","showStreamingLinks"],["Show trailers","Allow trailers to appear in details.","showTrailer"]];return `<div class="hero"><div><div class="eyebrow">YOUR PREFERENCES</div><h1>Settings</h1><p class="sub">Control how much pre-watch information The Watchlist shows you.</p></div></div><div class="settings">${rows.map(([a,b,k])=>`<div class="setting"><div><strong>${a}</strong><span>${b}</span></div><button class="toggle ${state[k]?"on":""}" onclick="toggleSetting('${k}')" aria-label="Toggle ${a}"></button></div>`).join("")}<div class="setting warning-settings"><div class="warning-settings-header"><div><strong>Content warnings</strong><span>Choose which warning categories you want surfaced.</span></div><button class="toggle ${contentWarningsEnabled?"on":""}" onclick="toggleContentWarnings()" aria-label="Toggle content warnings" aria-pressed="${contentWarningsEnabled}"></button></div><div class="warning-category-controls"><details class="warning-category-picker"><summary>Choose categories <span class="warning-picker-count">${savedWarningCategories.length} selected</span><span class="tmdb-section-chevron warning-picker-chevron" aria-hidden="true"><svg viewBox="0 0 20 20" focusable="false"><path d="M5 10h10"/><path class="warning-chevron-vertical" d="M10 5v10"/></svg></span></summary><div class="warning-category-groups">${warningGroups.map(group=>'<details class="warning-category-group"><summary>'+escapeHtml(group.name)+'<span class="tmdb-section-chevron warning-picker-chevron" aria-hidden="true"><svg viewBox="0 0 20 20" focusable="false"><path d="M5 10h10"/><path class="warning-chevron-vertical" d="M10 5v10"/></svg></span></summary><div class="warning-category-options"><div class="warning-group-actions"><button type="button" onclick="setWarningGroup(&quot;'+group.name+'&quot;,true)">Check all</button><button type="button" onclick="setWarningGroup(&quot;'+group.name+'&quot;,false)">Uncheck all</button></div>'+group.categories.map(category=>'<label class="warning-category-option"><input type="checkbox" '+(savedWarningCategories.includes(category.toLowerCase())?'checked':'')+' onchange="toggleWarningCategory(\&quot;'+category+'\&quot;,this.checked)"><span>'+escapeHtml(category)+'</span></label>').join("")+'</div></details>').join("")}<p class="warning-picker-help">Each heading expands to a scrollable list of individual warning categories with toggles.</p></div></details></div></div><div class="setting discord-server-setting"><div><strong>Discord server</strong><span>Connect The Watchlist to a Discord server you belong to.</span></div><div class="discord-server-control"><select id="discord-server-picker" onchange="onDiscordServerSelected(this)"><option value="">Loading…</option></select></div></div></div>`}
+function regionName(code){try{return new Intl.DisplayNames(["en"],{type:"region"}).of(code)||code}catch(error){return code}}
+function regionFlag(code){return '<img class="region-flag" src="https://flagcdn.com/w40/'+code.toLowerCase()+'.png" alt="" width="20" height="15" loading="lazy">'}
+function streamingRegionPicker(){
+  const current=state.streamingRegion;
+  const options=STREAMING_REGION_CODES.map(c=>[c,regionName(c)]).sort((a,b)=>a[1].localeCompare(b[1]));
+  return '<details class="region-picker"><summary>'+regionFlag(current)+'<span>'+escapeHtml(regionName(current))+'</span></summary><div class="region-menu">'+options.map(([code,name])=>'<button type="button" class="region-option'+(code===current?' selected':'')+'" onclick="setStreamingRegion(\''+code+'\')">'+regionFlag(code)+'<span>'+escapeHtml(name)+'</span></button>').join("")+'</div></details>';
+}
+function applyStreamingRegion(value){
+  const code=normalizeStreamingRegion(value);
+  const changed=code!==state.streamingRegion;
+  state.streamingRegion=code;
+  window.WATCHLIST_STREAMING_REGION=code;
+  try{localStorage.setItem("watchlist-streaming-region",code)}catch(error){}
+  if(changed){
+    detailTmdbRefreshed.clear();
+    try{localStorage.removeItem("watchlist-tmdb-preload-cache");localStorage.removeItem("watchlist-tmdb-asset-cache")}catch(error){}
+    tmdbHydrated=false;
+  }
+  return changed;
+}
+window.setStreamingRegion=code=>{
+  if(applyStreamingRegion(code)){saveUserSettings();render();hydrateTmdbArtwork()}
+  else render();
+};
+if(!window.__regionPickerBound){window.__regionPickerBound=true;document.addEventListener("click",e=>{document.querySelectorAll(".region-picker[open]").forEach(el=>{if(!el.contains(e.target))el.open=false})})}
+
+function settings(){let rows=[["Show synopsis","Show movie synopses on cards and details.","showSynopsis"],["Show RT/IMDb scores","Show Rotten Tomatoes and IMDb scores when available.","showRatings"],["Show suggester's note","Show personal notes attached to suggestions on Details screens.","showNote"],["Show cast","Show cast photos and names on movie details.","showCast"],["Show streaming links","Show streaming availability and provider links on movie details.","showStreamingLinks"],["Show trailers","Allow trailers to appear in details.","showTrailer"]];return `<div class="hero"><div><div class="eyebrow">YOUR PREFERENCES</div><h1>Settings</h1><p class="sub">Control how much pre-watch information The Watchlist shows you.</p></div></div><div class="settings">${rows.map(([a,b,k])=>`<div class="setting"><div><strong>${a}</strong><span>${b}</span></div><button class="toggle ${state[k]?"on":""}" onclick="toggleSetting('${k}')" aria-label="Toggle ${a}"></button></div>`).join("")}<div class="setting warning-settings"><div class="warning-settings-header"><div><strong>Content warnings</strong><span>Choose which warning categories you want surfaced.</span></div><button class="toggle ${contentWarningsEnabled?"on":""}" onclick="toggleContentWarnings()" aria-label="Toggle content warnings" aria-pressed="${contentWarningsEnabled}"></button></div><div class="warning-category-controls"><details class="warning-category-picker"><summary>Choose categories <span class="warning-picker-count">${savedWarningCategories.length} selected</span><span class="tmdb-section-chevron warning-picker-chevron" aria-hidden="true"><svg viewBox="0 0 20 20" focusable="false"><path d="M5 10h10"/><path class="warning-chevron-vertical" d="M10 5v10"/></svg></span></summary><div class="warning-category-groups">${warningGroups.map(group=>'<details class="warning-category-group"><summary>'+escapeHtml(group.name)+'<span class="tmdb-section-chevron warning-picker-chevron" aria-hidden="true"><svg viewBox="0 0 20 20" focusable="false"><path d="M5 10h10"/><path class="warning-chevron-vertical" d="M10 5v10"/></svg></span></summary><div class="warning-category-options"><div class="warning-group-actions"><button type="button" onclick="setWarningGroup(&quot;'+group.name+'&quot;,true)">Check all</button><button type="button" onclick="setWarningGroup(&quot;'+group.name+'&quot;,false)">Uncheck all</button></div>'+group.categories.map(category=>'<label class="warning-category-option"><input type="checkbox" '+(savedWarningCategories.includes(category.toLowerCase())?'checked':'')+' onchange="toggleWarningCategory(\&quot;'+category+'\&quot;,this.checked)"><span>'+escapeHtml(category)+'</span></label>').join("")+'</div></details>').join("")}<p class="warning-picker-help">Each heading expands to a scrollable list of individual warning categories with toggles.</p></div></details></div></div><div class="setting streaming-region-setting"><div><strong>Streaming country</strong><span>Choose which country's streaming availability shows under Where to watch.</span></div>${streamingRegionPicker()}</div><div class="setting discord-server-setting"><div><strong>Discord server</strong><span>Connect The Watchlist to a Discord server you belong to.</span></div><div class="discord-server-control"><select id="discord-server-picker" onchange="onDiscordServerSelected(this)"><option value="">Loading…</option></select></div></div></div>`}
 window.setDiscordWatchThreshold=value=>{return}; // Notifications are disabled while watch scheduling is unavailable.
 window.toggleContentWarnings=()=>{contentWarningsEnabled=!contentWarningsEnabled;try{localStorage.setItem("watchlist-content-warnings-enabled",String(contentWarningsEnabled))}catch(error){}saveUserSettings();render()};
 function peopleRatingStars(value){const rating=Math.max(0,Math.min(5,Number(value)||0));let html='<span class="review-stars people-review-stars">';for(let i=0;i<5;i++){const fill=Math.round(Math.max(0,Math.min(1,rating-i))*2)/2;html+='<span class="rating-star"><span class="star-base">★</span><span class="star-fill" style="--people-star-fill:'+(fill*100)+'%;width:'+(fill*100)+'%">★</span></span>'}return html+'</span>'}
 function ratingStars(value,interactive=false,inline=false){const rating=Math.max(0,Math.min(5,Number(value)||0));const wrapper=inline?'span':'div';let html='<'+wrapper+' class="review-stars'+(interactive?' interactive':'')+(inline?' review-stars-inline':'')+'">';for(let i=0;i<5;i++){const fill=Math.round(Math.max(0,Math.min(1,rating-i))*2)/2;const pct=fill*100;const tag=interactive?'button':'span';const attrs=interactive?' class="rating-star" onclick="setReviewRating(event,'+i+')"':' class="rating-star"';html+='<'+tag+attrs+'><span class="star-gradient" style="--star-fill:'+pct+'%">★</span></'+tag+'>'}return html+'</'+wrapper+'>'}
 function movieReviewsSection(m){if(!m.watched)return "";const reviews=movieReviews[m.id]||{};const mine=reviews[currentUser]||{};let html='<section class="review-section" data-rating="'+(mine.rating||0)+'"><div class="review-heading"><div><div class="eyebrow">AFTER THE WATCH</div><h3>Reviews</h3></div><span class="review-count">'+Object.keys(reviews).length+'</span></div><div class="review-form"><div class="review-form-label">Your rating</div>'+ratingStars(mine.rating||0,true)+'<textarea id="reviewText" class="review-text" rows="3" placeholder="What did you think?">'+(mine.review||"")+'</textarea><div class="review-form-actions"><button class="primary" onclick="saveReview(\''+m.id+'\')">'+(mine.rating||mine.review?"Update review":"Add review")+'</button></div></div>';Object.entries(reviews).forEach(([name,r])=>{html+='<article class="review-card"><div class="review-card-head"><div class="review-author">'+avatarMarkup(name)+'<strong>'+escapeHtml(name)+'</strong></div>'+ratingStars(r.rating||0)+'</div>'+(r.review?'<div class="review-body">'+r.review+'</div>':"")+'</article>'});return html+'</section>'}
 function tmdbDetailsSections(m){
-  const cast=m.tmdbCast||[],providers=(m.tmdbStreaming||[]).filter(p=>["flatrate","free","ads"].includes(p.type)),trailer=m.tmdbTrailer;
+  const regionOk=String(m.tmdbStreamingRegion||"US").toUpperCase()===state.streamingRegion;
+  const cast=m.tmdbCast||[],providers=regionOk?(m.tmdbStreaming||[]).filter(p=>["flatrate","free","ads"].includes(p.type)):[],trailer=m.tmdbTrailer;
   const collapsible=(key,label,body)=>'<section class="tmdb-detail-section tmdb-section-'+key+'"><button class="tmdb-section-toggle" aria-expanded="'+Boolean(state.detailSections[key])+'" onclick="toggleDetailSection(\''+key+'\')"><span>'+label+'</span><span class="tmdb-section-chevron" aria-hidden="true"><svg viewBox="0 0 20 20" focusable="false"><path d="'+(state.detailSections[key]?"M5 10h10":"M10 5v10 M5 10h10")+'"/></svg></span></button>'+(state.detailSections[key]?'<div class="tmdb-section-body">'+body+'</div>':"")+'</section>';
   let castMarkup="";
   if(state.showCast&&cast.length){
@@ -1001,10 +1040,36 @@ function tmdbDetailsSections(m){
   const trailerMarkup=state.showTrailer&&trailer&&trailer.site==="YouTube"&&trailer.key?collapsible("trailer","Trailer",'<div class="tmdb-trailer"><iframe src="https://www.youtube-nocookie.com/embed/'+encodeURIComponent(trailer.key)+'" title="'+escapeHtml(m.title)+' trailer" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe></div>'):"";
   return castMarkup+trailerMarkup+streamingMarkup;
 }
+const detailTmdbRefreshed=new Set();
+function refreshDetailTmdb(movie){
+  if(!movie?.tmdbId||!window.TMDB||detailTmdbRefreshed.has(movie.id))return;
+  detailTmdbRefreshed.add(movie.id);
+  const id=movie.id;
+  const dates=m=>JSON.stringify([m.releaseDate||null,m.year||null,m.tmdbDigitalReleaseDate||null,m.tmdbPhysicalReleaseDate||null]);
+  TMDB.details(movie.tmdbId,state.streamingRegion).then(async data=>{
+    const current=movies.find(x=>x.id===id);
+    if(!current)return;
+    const before=dates(current);
+    TMDB.apply(current,data);
+    current.tmdbDetailsLoaded=true;
+    // Release dates are the same for everyone, so they're shared. Streaming data is per-country, so it stays local.
+    if(dates(current)!==before){
+      await persistSharedPatch({movies:[{
+        id:current.id,
+        releaseDate:current.releaseDate||null,
+        year:current.year||null,
+        tmdbDigitalReleaseDate:current.tmdbDigitalReleaseDate||null,
+        tmdbPhysicalReleaseDate:current.tmdbPhysicalReleaseDate||null
+      }]});
+    }
+    if(state.nav==="detail"&&state.detail===id)render();
+  }).catch(error=>console.warn("TMDB refresh skipped for "+movie.title,error.message||error));
+}
 function detail(){
  let m=movies.find(x=>x.id===state.detail);
  if(!m)return '<div class="hero"><div><div class="eyebrow">MOVIE</div><h1>Details</h1></div></div><section class="detail"><p class="muted">Movie not found.</p></section>';
  if(state.showRatings)requestAnimationFrame(()=>loadExternalRatings(m));
+ if(m.tmdbId)requestAnimationFrame(()=>refreshDetailTmdb(m));
  let selected=currentVote(m.id);
  const detailWarnings=contentWarningsEnabled?dedupeWarnings(m.warnings).filter(w=>savedWarningCategories.includes(String(w).toLowerCase())):[];
  const detailGenres=(Array.isArray(m.genre)?m.genre:String(m.genre||"").split(/\\s*[·,/]\s*/)).map(x=>String(x).trim()).filter(Boolean);
@@ -1215,7 +1280,7 @@ window.confirmAddMovie=()=>{
   const duplicate=movies.some(m=>m.tmdbId===d.tmdbId||(normalizeTitle(m.title)===normalizeTitle(d.title)&&String(m.year)===String(d.year||"")));
   if(duplicate){state.addMovieError="Already in watchlist";return render()}
   const note=(document.querySelector("#addMovieNote")?.value||"").trim();
-  const movie={id:"tmdb-"+d.tmdbId,title:d.title,year:d.year||"",genre:(d.genre||[]).join(" · "),director:(d.director||[]).join(", "),runtime:d.runtime?formatRuntime(d.runtime):"",rating:d.rating||"",score:0,seen:[],voters:[],synopsis:d.synopsis||"",note,warnings:Array.isArray(d.warnings)?d.warnings:[],watched:false,suggestedBy:currentUser,addedBy:currentUser,suggestedById:identityId,addedById:identityId,releaseDate:d.releaseDate||"",tmdbId:d.tmdbId,imdbId:d.imdbId||null,posterPath:d.posterPath||null,textlessPosterPath:d.textlessPosterPath||null,backdropPath:d.backdropPath||null,logoPath:d.logoPath||null,digitalReleaseDate:d.digitalReleaseDate||null,physicalReleaseDate:d.physicalReleaseDate||null,tmdbStreaming:Array.isArray(d.streaming)?d.streaming:[],addedAt:new Date().toISOString(),watchStateUpdatedAt:new Date().toISOString()};
+  const movie={id:"tmdb-"+d.tmdbId,title:d.title,year:d.year||"",genre:(d.genre||[]).join(" · "),director:(d.director||[]).join(", "),runtime:d.runtime?formatRuntime(d.runtime):"",rating:d.rating||"",score:0,seen:[],voters:[],synopsis:d.synopsis||"",note,warnings:Array.isArray(d.warnings)?d.warnings:[],watched:false,suggestedBy:currentUser,addedBy:currentUser,suggestedById:identityId,addedById:identityId,releaseDate:d.releaseDate||"",tmdbId:d.tmdbId,imdbId:d.imdbId||null,posterPath:d.posterPath||null,textlessPosterPath:d.textlessPosterPath||null,backdropPath:d.backdropPath||null,logoPath:d.logoPath||null,digitalReleaseDate:d.digitalReleaseDate||null,physicalReleaseDate:d.physicalReleaseDate||null,tmdbStreaming:Array.isArray(d.streaming)?d.streaming:[],tmdbStreamingRegion:d.streamingRegion||"US",addedAt:new Date().toISOString(),watchStateUpdatedAt:new Date().toISOString()};
   movies.push(movie);
   removedMovieIds=removedMovieIds.filter(removedId=>removedId!==movie.id);delete removedMovieAt[movie.id];
   try{localStorage.setItem("watchlist-removed-movies",JSON.stringify(removedMovieIds));localStorage.setItem("watchlist-added-movies",JSON.stringify(movies.filter(m=>m.id.startsWith("tmdb-")).map(m=>({...m,score:0}))));}catch(error){}
