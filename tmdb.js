@@ -46,7 +46,7 @@ const TMDB = {
     return this.request({ action: "search", query, page });
   },
 
-  details(id, region = "US") {
+  details(id, region = window.WATCHLIST_STREAMING_REGION || "US") {
     return this.request({ action: "details", id, region });
   },
 
@@ -60,9 +60,12 @@ const TMDB = {
     movie.logoPath = data.logoPath || movie.logoPath || null;
     movie.tmdbCast = Array.isArray(data.cast) ? data.cast : movie.tmdbCast || [];
     movie.tmdbTrailer = data.trailer || movie.tmdbTrailer || null;
-    movie.tmdbStreaming = Array.isArray(data.streaming) ? data.streaming : movie.tmdbStreaming || [];
-    movie.tmdbStreamingLink = data.streamingLink || movie.tmdbStreamingLink || null;
-    movie.tmdbStreamingRegion = data.streamingRegion || movie.tmdbStreamingRegion || "US";
+    const wantedRegion = String(window.WATCHLIST_STREAMING_REGION || "US").toUpperCase();
+    if (String(data.streamingRegion || "US").toUpperCase() === wantedRegion) {
+      movie.tmdbStreaming = Array.isArray(data.streaming) ? data.streaming : [];
+      movie.tmdbStreamingLink = data.streamingLink || null;
+      movie.tmdbStreamingRegion = wantedRegion;
+    }
     movie.tmdbDigitalReleaseDate = data.digitalReleaseDate || movie.tmdbDigitalReleaseDate || null;
     movie.tmdbPhysicalReleaseDate = data.physicalReleaseDate || movie.tmdbPhysicalReleaseDate || null;
     movie.imdbId = data.imdbId || movie.imdbId || null;
