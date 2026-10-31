@@ -938,57 +938,19 @@ async function loadConnectedDiscordServer(){
   if(error){console.warn("Could not load connected Discord server:",error.message||error);return null}
   return data||null;
 }
-async function connectDiscordServer(guildId){
+async function connectDiscordServer(guild){
   const client=window.WATCHLIST_SUPABASE_CLIENT;
-  if(!client||!guildId)return;
+  if(!client||!guild?.id)return;
   const {data:{user},error:authError}=await client.auth.getUser();
   if(authError||!user)throw new Error("Your Discord session is no longer available. Please sign in again.");
-  const uid=user.id;
-  const guilds=await getDiscordGuildsCached();
-  const guild=guilds.find(x=>x.id===guildId);
-  if(!guild)throw new Error("That Discord server is no longer available to this account.");
   const profile=window.WATCHLIST_AUTH_PROFILE||{};
   const iconUrl=guild.icon?("https://cdn.discordapp.com/icons/"+guild.id+"/"+guild.icon+".png?size=64"):null;
-  const now=new Date().toISOString();
   const {error:connectError}=await client.rpc("watchlist_connect_server",{target_guild_id:guild.id,target_guild_name:guild.name,target_guild_icon_url:iconUrl,target_display_name:profile.name||currentUser,target_avatar_url:profile.avatar||null});
   if(connectError)throw connectError;
   activeServer={guild_id:guild.id,guild_name:guild.name,guild_icon_url:iconUrl};
   try{localStorage.setItem("watchlist-active-server",JSON.stringify(activeServer))}catch(error){}
   await saveUserSettings();
   await loadServerContext();
-}
-async function chooseDiscordServer(forceGuildRefresh=false){
-  const picker=document.querySelector("#discord-server-picker");
-  if(!picker)return;
-  picker.disabled=true;picker.innerHTML='<option>Loading…</option>';
-  try{
-    const current=activeServer||await loadConnectedDiscordServer();
-    if(current&&!forceGuildRefresh){
-      picker.innerHTML='<option value="__CURRENT__">'+escapeHtml(current.guild_name||"Connected Discord server")+'</option><option value="__change__">Change Discord server…</option>';
-      picker.value="__CURRENT__";
-      picker.disabled=false;
-      return;
-    }
-    const guilds=await getDiscordGuildsCached();
-    const selected=activeServer||current;
-    picker.innerHTML='<option value="">Select a Discord server…</option>'+guilds.sort((a,b)=>a.name.localeCompare(b.name)).map(g=>'<option value="'+escapeHtml(g.id)+'">'+escapeHtml(g.name)+'</option>').join("");
-    if(selected)picker.value=selected.guild_id;
-    picker.disabled=false;
-  }catch(error){
-    picker.innerHTML='<option value="">Could not load servers</option>';picker.disabled=false;
-    alert(error.message||"Could not load your Discord servers.");
-  }
-}
-async function onDiscordServerSelected(select){
-  if(!select.value)return;
-  if(select.value==="__change__"){
-    await chooseDiscordServer(true);
-    return;
-  }
-  if(select.value==="__CURRENT__")return;
-  select.disabled=true;
-  try{await connectDiscordServer(select.value)}
-  catch(error){alert(error.message||"Could not connect this Discord server.");select.disabled=false}
 }
 
 function regionName(code){try{return new Intl.DisplayNames(["en"],{type:"region"}).of(code)||code}catch(error){return code}}
@@ -1015,9 +977,66 @@ window.setStreamingRegion=code=>{
   if(applyStreamingRegion(code)){saveUserSettings();render();hydrateTmdbArtwork()}
   else render();
 };
+
+let serverPicker={open:false,loading:false,error:"",needsReauth:false,guilds:[],connectingId:null};
+const guildIcon=g=>g.icon?"https://cdn.discordapp.com/icons/"+g.id+"/"+g.icon+".png?size=128":"";
+const guildBanner=g=>g.banner?"https://cdn.discordapp.com/banners/"+g.id+"/"+g.banner+".png?size=480":"";
+function serverIconMarkup(url,name){
+  return url?'<img class="server-icon" src="'+escapeHtml(url)+'" alt="">':'<span class="server-icon server-icon-fallback">'+escapeHtml(String(name||"?").slice(0,1).toUpperCase())+'</span>';
+}
+function serverPickerButton(){
+  const s=activeServer;
+  return '<button type="button" class="ghost server-picker-button" onclick="openServerPicker()">'+
+    (s?serverIconMarkup(s.guild_icon_url,s.guild_name)+'<span class="server-picker-name">'+escapeHtml(s.guild_name||"Connected server")+'</span><span class="server-picker-action">Change</span>':'<span>Choose a server…</span>')+'</button>';
+}
+function serverPickerModal(){
+  if(!serverPicker.open)return "";
+  let body;
+  if(serverPicker.loading)body='<div class="add-status">Loading your Discord servers…</div>';
+  else if(serverPicker.needsReauth)body='<div class="add-status">Discord needs you to re-authorize before The Watchlist can list your servers.<br><br><button class="primary" onclick="reconnectDiscordForServers()">Reconnect Discord</button></div>';
+  else if(!serverPicker.guilds.length)body='<div class="add-status'+(serverPicker.error?' error':'')+'">'+escapeHtml(serverPicker.error||"No Discord servers found.")+'</div>';
+  else body=(serverPicker.error?'<div class="add-status error">'+escapeHtml(serverPicker.error)+'</div>':"")+'<div class="server-list" data-scroll-key="server-picker">'+serverPicker.guilds.map(g=>{
+    const current=activeServer?.guild_id===g.id,connecting=serverPicker.connectingId===g.id,banner=guildBanner(g);
+    return '<button type="button" class="server-card'+(current?' current':'')+'" data-guild-id="'+escapeHtml(g.id)+'" onclick="selectServer(this.dataset.guildId)"'+(serverPicker.connectingId?' disabled':'')+'>'+
+      (banner?'<span class="server-card-bg" style="background-image:url(\''+escapeHtml(banner)+'\')"></span>':'')+
+      serverIconMarkup(guildIcon(g),g.name)+'<span class="server-card-name">'+escapeHtml(g.name)+'</span>'+
+      (connecting?'<span class="server-card-status">Connecting…</span>':current?'<span class="server-card-status">Connected</span>':'')+'</button>';
+  }).join("")+'</div>';
+  return '<div class="modal-backdrop open" onclick="if(event.target===this)closeServerPicker()"><section class="add-modal server-picker-modal" role="dialog" aria-modal="true" aria-labelledby="server-picker-title"><div class="modal-head"><div><div class="eyebrow">DISCORD</div><h2 id="server-picker-title">Choose a server</h2></div><button class="modal-close" onclick="closeServerPicker()" aria-label="Close">×</button></div>'+body+'</section></div>';
+}
+async function loadServerPickerGuilds(){
+  serverPicker={...serverPicker,loading:true,error:"",needsReauth:false};render();
+  try{
+    const guilds=await getDiscordGuildsCached();
+    serverPicker.guilds=guilds.slice().sort((a,b)=>a.name.localeCompare(b.name));
+  }catch(error){
+    if(error?.code==="DISCORD_REAUTH_NEEDED")serverPicker.needsReauth=true;
+    else serverPicker.error=error.message||"Could not load your Discord servers.";
+  }
+  serverPicker.loading=false;render();
+}
+window.openServerPicker=()=>{serverPicker.open=true;loadServerPickerGuilds()};
+window.closeServerPicker=()=>{serverPicker.open=false;render()};
+window.reconnectDiscordForServers=async()=>{
+  try{
+    discordGuildCache=null;try{sessionStorage.removeItem("watchlist-discord-guilds-cache")}catch(e){}
+    await window.WATCHLIST_REAUTH_DISCORD();
+    await loadServerPickerGuilds();
+  }catch(error){serverPicker.error=error.message||"Could not reconnect Discord.";render()}
+};
+window.selectServer=async id=>{
+  const guild=serverPicker.guilds.find(g=>g.id===id);
+  if(!guild||serverPicker.connectingId)return;
+  if(activeServer?.guild_id===id){closeServerPicker();return}
+  serverPicker.connectingId=id;serverPicker.error="";render();
+  try{await connectDiscordServer(guild);serverPicker.open=false}
+  catch(error){serverPicker.error=error.message||"Could not connect this Discord server."}
+  serverPicker.connectingId=null;render();
+};
+
 if(!window.__regionPickerBound){window.__regionPickerBound=true;document.addEventListener("click",e=>{document.querySelectorAll(".region-picker[open]").forEach(el=>{if(!el.contains(e.target))el.open=false})})}
 
-function settings(){let rows=[["Show synopsis","Show movie synopses on cards and details.","showSynopsis"],["Show RT/IMDb scores","Show Rotten Tomatoes and IMDb scores when available.","showRatings"],["Show suggester's note","Show personal notes attached to suggestions on Details screens.","showNote"],["Show cast","Show cast photos and names on movie details.","showCast"],["Show streaming links","Show streaming availability and provider links on movie details.","showStreamingLinks"],["Show trailers","Allow trailers to appear in details.","showTrailer"]];return `<div class="hero"><div><div class="eyebrow">YOUR PREFERENCES</div><h1>Settings</h1><p class="sub">Control how much pre-watch information The Watchlist shows you.</p></div></div><div class="settings">${rows.map(([a,b,k])=>`<div class="setting"><div><strong>${a}</strong><span>${b}</span></div><button class="toggle ${state[k]?"on":""}" onclick="toggleSetting('${k}')" aria-label="Toggle ${a}"></button></div>`).join("")}<div class="setting warning-settings"><div class="warning-settings-header"><div><strong>Content warnings</strong><span>Choose which warning categories you want surfaced.</span></div><button class="toggle ${contentWarningsEnabled?"on":""}" onclick="toggleContentWarnings()" aria-label="Toggle content warnings" aria-pressed="${contentWarningsEnabled}"></button></div><div class="warning-category-controls"><details class="warning-category-picker"><summary>Choose categories <span class="warning-picker-count">${savedWarningCategories.length} selected</span><span class="tmdb-section-chevron warning-picker-chevron" aria-hidden="true"><svg viewBox="0 0 20 20" focusable="false"><path d="M5 10h10"/><path class="warning-chevron-vertical" d="M10 5v10"/></svg></span></summary><div class="warning-category-groups">${warningGroups.map(group=>'<details class="warning-category-group"><summary>'+escapeHtml(group.name)+'<span class="tmdb-section-chevron warning-picker-chevron" aria-hidden="true"><svg viewBox="0 0 20 20" focusable="false"><path d="M5 10h10"/><path class="warning-chevron-vertical" d="M10 5v10"/></svg></span></summary><div class="warning-category-options"><div class="warning-group-actions"><button type="button" onclick="setWarningGroup(&quot;'+group.name+'&quot;,true)">Check all</button><button type="button" onclick="setWarningGroup(&quot;'+group.name+'&quot;,false)">Uncheck all</button></div>'+group.categories.map(category=>'<label class="warning-category-option"><input type="checkbox" '+(savedWarningCategories.includes(category.toLowerCase())?'checked':'')+' onchange="toggleWarningCategory(\&quot;'+category+'\&quot;,this.checked)"><span>'+escapeHtml(category)+'</span></label>').join("")+'</div></details>').join("")}<p class="warning-picker-help">Each heading expands to a scrollable list of individual warning categories with toggles.</p></div></details></div></div><div class="setting streaming-region-setting"><div><strong>Streaming country</strong><span>Choose which country's streaming availability shows under Where to watch.</span></div>${streamingRegionPicker()}</div><div class="setting discord-server-setting"><div><strong>Discord server</strong><span>Connect The Watchlist to a Discord server you belong to.</span></div><div class="discord-server-control"><select id="discord-server-picker" onchange="onDiscordServerSelected(this)"><option value="">Loading…</option></select></div></div></div>`}
+function settings(){let rows=[["Show synopsis","Show movie synopses on cards and details.","showSynopsis"],["Show RT/IMDb scores","Show Rotten Tomatoes and IMDb scores when available.","showRatings"],["Show suggester's note","Show personal notes attached to suggestions on Details screens.","showNote"],["Show cast","Show cast photos and names on movie details.","showCast"],["Show streaming links","Show streaming availability and provider links on movie details.","showStreamingLinks"],["Show trailers","Allow trailers to appear in details.","showTrailer"]];return `<div class="hero"><div><div class="eyebrow">YOUR PREFERENCES</div><h1>Settings</h1><p class="sub">Control how much pre-watch information The Watchlist shows you.</p></div></div><div class="settings">${rows.map(([a,b,k])=>`<div class="setting"><div><strong>${a}</strong><span>${b}</span></div><button class="toggle ${state[k]?"on":""}" onclick="toggleSetting('${k}')" aria-label="Toggle ${a}"></button></div>`).join("")}<div class="setting warning-settings"><div class="warning-settings-header"><div><strong>Content warnings</strong><span>Choose which warning categories you want surfaced.</span></div><button class="toggle ${contentWarningsEnabled?"on":""}" onclick="toggleContentWarnings()" aria-label="Toggle content warnings" aria-pressed="${contentWarningsEnabled}"></button></div><div class="warning-category-controls"><details class="warning-category-picker"><summary>Choose categories <span class="warning-picker-count">${savedWarningCategories.length} selected</span><span class="tmdb-section-chevron warning-picker-chevron" aria-hidden="true"><svg viewBox="0 0 20 20" focusable="false"><path d="M5 10h10"/><path class="warning-chevron-vertical" d="M10 5v10"/></svg></span></summary><div class="warning-category-groups">${warningGroups.map(group=>'<details class="warning-category-group"><summary>'+escapeHtml(group.name)+'<span class="tmdb-section-chevron warning-picker-chevron" aria-hidden="true"><svg viewBox="0 0 20 20" focusable="false"><path d="M5 10h10"/><path class="warning-chevron-vertical" d="M10 5v10"/></svg></span></summary><div class="warning-category-options"><div class="warning-group-actions"><button type="button" onclick="setWarningGroup(&quot;'+group.name+'&quot;,true)">Check all</button><button type="button" onclick="setWarningGroup(&quot;'+group.name+'&quot;,false)">Uncheck all</button></div>'+group.categories.map(category=>'<label class="warning-category-option"><input type="checkbox" '+(savedWarningCategories.includes(category.toLowerCase())?'checked':'')+' onchange="toggleWarningCategory(\&quot;'+category+'\&quot;,this.checked)"><span>'+escapeHtml(category)+'</span></label>').join("")+'</div></details>').join("")}<p class="warning-picker-help">Each heading expands to a scrollable list of individual warning categories with toggles.</p></div></details></div></div><div class="setting streaming-region-setting"><div><strong>Streaming country</strong><span>Choose which country's streaming availability shows under Where to watch.</span></div>${streamingRegionPicker()}</div><div class="setting discord-server-setting"><div><strong>Discord server</strong><span>Connect The Watchlist to a Discord server you belong to.</span></div>${serverPickerButton()}</div></div>`}
 window.setDiscordWatchThreshold=value=>{return}; // Notifications are disabled while watch scheduling is unavailable.
 window.toggleContentWarnings=()=>{contentWarningsEnabled=!contentWarningsEnabled;try{localStorage.setItem("watchlist-content-warnings-enabled",String(contentWarningsEnabled))}catch(error){}saveUserSettings();render()};
 function peopleRatingStars(value){const rating=Math.max(0,Math.min(5,Number(value)||0));let html='<span class="review-stars people-review-stars">';for(let i=0;i<5;i++){const fill=Math.round(Math.max(0,Math.min(1,rating-i))*2)/2;html+='<span class="rating-star"><span class="star-base">★</span><span class="star-fill" style="--people-star-fill:'+(fill*100)+'%;width:'+(fill*100)+'%">★</span></span>'}return html+'</span>'}
@@ -1251,7 +1270,7 @@ function bindMovieMiddleClick(){
   },true);
 }
 
-function render(){bindMovieMiddleClick();const scrollKeep={};document.querySelectorAll("[data-scroll-key]").forEach(el=>{scrollKeep[el.dataset.scrollKey]=el.scrollTop});const openFilterIds=[...document.querySelectorAll(".filter-dropdown[open][data-filter-id]")].map(el=>el.dataset.filterId);const signedIn=!!window.WATCHLIST_AUTHENTICATED;const content=signedIn?(state.nav==="watchlist"?watchlist():state.nav==="history"?history():state.nav==="people"?people():state.nav==="settings"?settings():detail()):'<section class="empty-state signed-out-message"><h2>Sign in with Discord to start tracking your watchlist.</h2></section>';app.innerHTML=header()+`<main class="content${signedIn?"":" signed-out-content"}">${content}</main>`+addMovieModal()+attendanceModal()+assetEditor()+removeMovieModal()+suggestionNoteEditorModal()+watchNoteModal()+'<button id="scroll-to-top" class="scroll-to-top" type="button" title="Back to top" aria-label="Back to top" onclick="window.scrollTo({top:0,behavior:\'smooth\'})"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 14 7-7 7 7M12 7v13" /></svg></button>';openFilterIds.forEach(id=>{const el=[...document.querySelectorAll(".filter-dropdown[data-filter-id]")].find(x=>x.dataset.filterId===id);if(el)el.open=true});document.querySelectorAll("[data-scroll-key]").forEach(el=>{if(scrollKeep[el.dataset.scrollKey]!==undefined)el.scrollTop=scrollKeep[el.dataset.scrollKey]});bindLiveInputs();bindVhsTilt();bindScrollToTop();requestAnimationFrame(syncHeaderPrism);if(state.nav==="settings"&&window.WATCHLIST_AUTHENTICATED){requestAnimationFrame(()=>{const picker=document.querySelector("#discord-server-picker");if(picker&&picker.dataset.loaded!=="true"){picker.dataset.loaded="loading";chooseDiscordServer().then(()=>{picker.dataset.loaded="true"}).catch(()=>{picker.dataset.loaded="error"})}})}if(!window.__watchlistPrismResize){window.__watchlistPrismResize=true;window.addEventListener("resize",()=>requestAnimationFrame(syncHeaderPrism));window.addEventListener("scroll",()=>requestAnimationFrame(syncHeaderPrism),{passive:true});}}
+function render(){bindMovieMiddleClick();const scrollKeep={};document.querySelectorAll("[data-scroll-key]").forEach(el=>{scrollKeep[el.dataset.scrollKey]=el.scrollTop});const openFilterIds=[...document.querySelectorAll(".filter-dropdown[open][data-filter-id]")].map(el=>el.dataset.filterId);const signedIn=!!window.WATCHLIST_AUTHENTICATED;const content=signedIn?(state.nav==="watchlist"?watchlist():state.nav==="history"?history():state.nav==="people"?people():state.nav==="settings"?settings():detail()):'<section class="empty-state signed-out-message"><h2>Sign in with Discord to start tracking your watchlist.</h2></section>';app.innerHTML=header()+`<main class="content${signedIn?"":" signed-out-content"}">${content}</main>`+addMovieModal()+attendanceModal()+assetEditor()+removeMovieModal()+suggestionNoteEditorModal()+watchNoteModal()+serverPickerModal()+'<button id="scroll-to-top" class="scroll-to-top" type="button" title="Back to top" aria-label="Back to top" onclick="window.scrollTo({top:0,behavior:\'smooth\'})"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 14 7-7 7 7M12 7v13" /></svg></button>';openFilterIds.forEach(id=>{const el=[...document.querySelectorAll(".filter-dropdown[data-filter-id]")].find(x=>x.dataset.filterId===id);if(el)el.open=true});document.querySelectorAll("[data-scroll-key]").forEach(el=>{if(scrollKeep[el.dataset.scrollKey]!==undefined)el.scrollTop=scrollKeep[el.dataset.scrollKey]});bindLiveInputs();bindVhsTilt();bindScrollToTop();requestAnimationFrame(syncHeaderPrism);if(!window.__watchlistPrismResize){window.__watchlistPrismResize=true;window.addEventListener("resize",()=>requestAnimationFrame(syncHeaderPrism));window.addEventListener("scroll",()=>requestAnimationFrame(syncHeaderPrism),{passive:true});}}
 function bindScrollToTop(){const button=document.querySelector("#scroll-to-top");if(!button)return;const update=()=>button.classList.toggle("is-visible",window.scrollY>0);update();if(!window.__watchlistScrollToTopBound){window.__watchlistScrollToTopBound=true;window.addEventListener("scroll",()=>{const el=document.querySelector("#scroll-to-top");if(el)el.classList.toggle("is-visible",window.scrollY>0)},{passive:true})}}
 let addMovieSearchTimer=null;let addMovieSearchRequest=0;
 function bindLiveInputs(){let s=document.querySelector("#search");if(s)s.addEventListener("input",e=>{state.search=e.target.value;resetMoviePages();savePersistentFilterState();updateListOnly()});let r=document.querySelector("#sizeRange");if(r)r.addEventListener("input",e=>setPosterSize(e.target.value));let a=document.querySelector("#addMovieSearch");if(a)a.addEventListener("input",e=>{state.addMovieQuery=e.target.value;clearTimeout(addMovieSearchTimer);const query=e.target.value.trim();if(!query){state.addMovieResults=[];state.addMovieError="";document.querySelector("#addMovieResults").innerHTML=addMovieResults();return}addMovieSearchTimer=setTimeout(()=>searchAddMovies(query),300)})}

@@ -1933,3 +1933,23 @@ button,input{font:inherit}button{color:inherit}.topbar{height:72px;padding:0 32p
 /* Undo the generic ".setting span" styling inside the picker */
 .region-picker span{display:inline;margin:0;color:inherit;font-size:inherit}
 @media(max-width:760px){.region-picker{width:min(220px,100%)}}
+
+/* Server picker */
+.server-icon{width:40px;height:40px;border-radius:50%;object-fit:cover;flex:0 0 auto;background:var(--panel2)}
+.server-icon-fallback{display:grid;place-items:center;font-weight:800;font-size:14px;color:var(--text);border:1px solid var(--line2);box-sizing:border-box}
+.server-picker-button{display:inline-flex;align-items:center;gap:9px;max-width:280px;min-height:36px;padding:5px 12px 5px 6px}
+.server-picker-button .server-icon{width:26px;height:26px;font-size:11px}
+.setting .server-picker-button span{margin:0;color:inherit;font-size:12px}
+.setting .server-picker-button .server-icon-fallback{display:grid}
+.setting .server-picker-button .server-picker-name{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.setting .server-picker-button .server-picker-action{color:var(--muted);padding-left:4px}
+.server-picker-modal{width:min(520px,100%)}
+.server-list{display:flex;flex-direction:column;gap:8px;margin-top:14px;min-height:0;max-height:min(480px,60vh);overflow-y:auto;overscroll-behavior:contain;padding-right:3px;scrollbar-width:thin;scrollbar-color:#555b65 transparent}
+.server-card{position:relative;isolation:isolate;flex:0 0 auto;display:flex;align-items:center;gap:13px;width:100%;min-height:68px;padding:12px 14px;border:1px solid var(--line);border-radius:10px;background:var(--panel2);color:var(--text);text-align:left;cursor:pointer;overflow:hidden;transition:border-color .15s}
+.server-card:hover:not(:disabled){border-color:var(--line2)}
+.server-card.current{border-color:#5a7a63}
+.server-card:disabled{cursor:wait;opacity:.7}
+.server-card-bg{position:absolute;inset:0;z-index:-1;background-size:cover;background-position:center}
+.server-card-bg:after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(20,22,25,.94),rgba(20,22,25,.55))}
+.server-card-name{flex:1;min-width:0;font-size:14px;font-weight:650;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.server-card-status{flex:0 0 auto;font-size:11px;font-weight:650;color:var(--green)}
