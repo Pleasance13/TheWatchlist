@@ -1001,10 +1001,40 @@ function tmdbDetailsSections(m){
   const trailerMarkup=state.showTrailer&&trailer&&trailer.site==="YouTube"&&trailer.key?collapsible("trailer","Trailer",'<div class="tmdb-trailer"><iframe src="https://www.youtube-nocookie.com/embed/'+encodeURIComponent(trailer.key)+'" title="'+escapeHtml(m.title)+' trailer" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe></div>'):"";
   return castMarkup+trailerMarkup+streamingMarkup;
 }
+const detailTmdbRefreshed=new Set();
+function refreshDetailTmdb(movie){
+  if(!movie?.tmdbId||!window.TMDB||detailTmdbRefreshed.has(movie.id))return;
+  detailTmdbRefreshed.add(movie.id);
+  const id=movie.id;
+  const snap=m=>JSON.stringify([m.tmdbStreaming||[],m.tmdbStreamingLink||null,m.tmdbStreamingRegion||"US",m.releaseDate||null,m.year||null,m.tmdbDigitalReleaseDate||null,m.tmdbPhysicalReleaseDate||null]);
+  TMDB.details(movie.tmdbId).then(async data=>{
+    // A realtime update may have replaced the movie object while we waited.
+    const current=movies.find(x=>x.id===id);
+    if(!current)return;
+    const before=snap(current);
+    TMDB.apply(current,data);
+    current.tmdbDetailsLoaded=true;
+    if(snap(current)!==before){
+      // Persist, otherwise the stale shared snapshot overwrites this on the next sync.
+      await persistSharedPatch({movies:[{
+        id:current.id,
+        tmdbStreaming:current.tmdbStreaming||[],
+        tmdbStreamingLink:current.tmdbStreamingLink||null,
+        tmdbStreamingRegion:current.tmdbStreamingRegion||"US",
+        releaseDate:current.releaseDate||null,
+        year:current.year||null,
+        tmdbDigitalReleaseDate:current.tmdbDigitalReleaseDate||null,
+        tmdbPhysicalReleaseDate:current.tmdbPhysicalReleaseDate||null
+      }]});
+    }
+    if(state.nav==="detail"&&state.detail===id)render();
+  }).catch(error=>console.warn("TMDB refresh skipped for "+movie.title,error.message||error));
+}
 function detail(){
  let m=movies.find(x=>x.id===state.detail);
  if(!m)return '<div class="hero"><div><div class="eyebrow">MOVIE</div><h1>Details</h1></div></div><section class="detail"><p class="muted">Movie not found.</p></section>';
  if(state.showRatings)requestAnimationFrame(()=>loadExternalRatings(m));
+ if(m.tmdbId)requestAnimationFrame(()=>refreshDetailTmdb(m));
  let selected=currentVote(m.id);
  const detailWarnings=contentWarningsEnabled?dedupeWarnings(m.warnings).filter(w=>savedWarningCategories.includes(String(w).toLowerCase())):[];
  const detailGenres=(Array.isArray(m.genre)?m.genre:String(m.genre||"").split(/\\s*[·,/]\s*/)).map(x=>String(x).trim()).filter(Boolean);
