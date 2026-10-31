@@ -137,58 +137,54 @@
     return payload.access_token;
   }
 
-  async function refreshDiscordAccess(){
-    const refreshed=await refreshDiscordProviderToken();
-    if(refreshed)return refreshed;
-    if(!client)throw new Error("Authentication is still loading. Please try again.");
-    const {data,error}=await client.auth.getSession();if(error)throw error;
-    if(!data?.session?.user)throw new Error("Please sign in with Discord first.");
-    const reauthKey="watchlist-discord-reauth-in-progress";
-    if(sessionStorage.getItem(reauthKey)==="1"){
-      sessionStorage.removeItem(reauthKey);
-      throw new Error("Discord server access could not be restored. Please sign in with Discord again.");
-    }
-    sessionStorage.setItem(reauthKey,"1");
-    // Try the same popup flow as manual sign-in. Browsers may block this popup
-    // because refresh happens after an async request, so retain redirect as fallback.
-    const authPopup=window.open("about:blank","watchlist-discord-auth","popup=yes,width=520,height=720,resizable=yes,scrollbars=yes");
-    const popupUrl=new URL(window.location.href);
-    popupUrl.searchParams.set("watchlist_oauth_popup","1");
-    const popupOptions={redirectTo:popupUrl.origin+popupUrl.pathname+popupUrl.search,scopes:"identify guilds",skipBrowserRedirect:true};
-    if(authPopup){
-      const {data:oauthData,error:oauthError}=await client.auth.signInWithOAuth({provider:"discord",options:popupOptions});
-      if(oauthError){authPopup.close();sessionStorage.removeItem(reauthKey);throw oauthError}
-      if(!oauthData?.url){authPopup.close();sessionStorage.removeItem(reauthKey);throw new Error("Discord did not return an authorization URL.")}
-      authPopup.location.href=oauthData.url;
-    }else{
-      const {error:oauthError}=await client.auth.signInWithOAuth({provider:"discord",options:{redirectTo:window.location.origin+window.location.pathname+window.location.search,scopes:"identify guilds"}});
-      if(oauthError){sessionStorage.removeItem(reauthKey);throw oauthError}
-    }
-    throw new Error("Refreshing Discord server access…");
-  }
+const reauthNeeded=()=>Object.assign(new Error("Discord needs you to sign in again to list your servers."),{code:"DISCORD_REAUTH_NEEDED"});
 
-  window.WATCHLIST_FETCH_DISCORD_GUILDS=async function(){
-    if(!client)throw new Error("Authentication is still loading. Please try again.");
-    const {data,error}=await client.auth.getSession();if(error)throw error;
-    // Prefer the freshest token from an earlier refresh, not a stale provider token in the Supabase session.
-    let token=lastProviderToken||storedProviderToken()||data?.session?.provider_token;
-    if(!token)token=await refreshDiscordProviderToken();
-    if(!token)return refreshDiscordAccess();
-    let response=await fetch("https://discord.com/api/users/@me/guilds",{headers:{Authorization:"Bearer "+token}});
-    if(response.status===401||response.status===403){
-      token=await refreshDiscordProviderToken();
-      if(token)response=await fetch("https://discord.com/api/users/@me/guilds",{headers:{Authorization:"Bearer "+token}});
-    }
-    if(response.status===401||response.status===403){
-      let details="";
-      try{const body=await response.clone().json();if(body?.message)details=" — "+body.message;if(body?.code)details+=" (code "+body.code+")"}catch(error){}
-      console.warn("[Watchlist] Discord guild request rejected",{status:response.status,details});
-      lastProviderToken=null;storeProviderToken(null);
-      throw new Error("Discord rejected server access (HTTP "+response.status+details+").");
-    }
-    if(!response.ok)throw new Error("Could not load your Discord servers (HTTP "+response.status+").");
-    return response.json();
-  };
+window.WATCHLIST_FETCH_DISCORD_GUILDS=async function(){
+  if(!client)throw new Error("Authentication is still loading. Please try again.");
+  const {data,error}=await client.auth.getSession();if(error)throw error;
+  if(!data?.session?.user)throw new Error("Please sign in with Discord first.");
+  let token=lastProviderToken||storedProviderToken()||data.session.provider_token;
+  if(!token)token=await refreshDiscordProviderToken();
+  if(!token)throw reauthNeeded();
+  const get=t=>fetch("https://discord.com/api/users/@me/guilds",{headers:{Authorization:"Bearer "+t}});
+  let response=await get(token);
+  if(response.status===401||response.status===403){
+    token=await refreshDiscordProviderToken();
+    if(token)response=await get(token);
+  }
+  if(response.status===401||response.status===403){
+    lastProviderToken=null;storeProviderToken(null);
+    throw reauthNeeded();
+  }
+  if(!response.ok)throw new Error("Could not load your Discord servers (HTTP "+response.status+").");
+  return response.json();
+};
+
+// Must be called directly from a click so the popup isn't blocked.
+// Resolves once the popup finishes; rejects if it's closed early.
+window.WATCHLIST_REAUTH_DISCORD=function(){
+  const authPopup=window.open("about:blank","watchlist-discord-auth","popup=yes,width=520,height=720,resizable=yes,scrollbars=yes");
+  if(!client)return Promise.reject(new Error("Authentication is still loading. Please try again."));
+  const popupUrl=new URL(window.location.href);popupUrl.searchParams.set("watchlist_oauth_popup","1");
+  const redirectTo=authPopup?popupUrl.origin+popupUrl.pathname+popupUrl.search:window.location.origin+window.location.pathname+window.location.search;
+  return client.auth.signInWithOAuth({provider:"discord",options:{redirectTo,scopes:"identify guilds",skipBrowserRedirect:!!authPopup}}).then(({data,error})=>{
+    if(error)throw error;
+    if(!authPopup)return new Promise(()=>{}); // full-page redirect is underway
+    if(!data?.url)throw new Error("Discord did not return an authorization URL.");
+    authPopup.location.href=data.url;
+    return new Promise((resolve,reject)=>{
+      let finished=false;
+      const finish=(ok,err)=>{if(finished)return;finished=true;window.removeEventListener("message",onMsg);clearInterval(timer);ok?resolve():reject(err)};
+      const onMsg=e=>{
+        if(e.origin!==window.location.origin||e.data?.type!=="watchlist-discord-auth-complete")return;
+        lastProviderToken=null;storeProviderToken(null); // force use of the fresh refresh token
+        finish(true);
+      };
+      window.addEventListener("message",onMsg);
+      const timer=setInterval(()=>{if(authPopup.closed)setTimeout(()=>finish(false,new Error("Discord sign-in was closed before it finished.")),400)},500);
+    });
+  }).catch(e=>{if(authPopup&&!authPopup.closed)authPopup.close();throw e});
+};
 
   // FIXED SECTION: Rely purely on onAuthStateChange to handle initial session discovery and URL token parsing.
   loadClient().then(lib=>{
