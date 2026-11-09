@@ -4,5 +4,12 @@
       "path": "/api/refresh-release-dates",
       "schedule": "0 11 * * *"
     }
+  ],
+  "rewrites": [
+    {
+      "source": "/",
+      "has": [{ "type": "query", "key": "movie" }],
+      "destination": "/api/movie-preview"
+    }
   ]
 }
