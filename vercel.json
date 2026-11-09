@@ -5,11 +5,12 @@
       "schedule": "0 11 * * *"
     }
   ],
-  "rewrites": [
+  "routes": [
     {
-      "source": "/",
+      "src": "/",
       "has": [{ "type": "query", "key": "movie" }],
-      "destination": "/api/movie-preview"
-    }
+      "dest": "/api/movie-preview"
+    },
+    { "handle": "filesystem" }
   ]
 }
