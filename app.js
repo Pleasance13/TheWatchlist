@@ -529,7 +529,7 @@ function sharedApply(data){
       ...current,
       id:current.id||profile.id||null,
       name:current.name||profile.name||key,
-      avatar:current.avatar||profile.avatar||""
+      avatar:profile.avatar||current.avatar||""
     };
   });
   votesByUser=decodeIdentityMap(incomingVotes);
