@@ -17,7 +17,8 @@ export default async function handler(req, res) {
   const supabaseUrl = process.env.SUPABASE_URL;
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   const botToken = process.env.DISCORD_BOT_TOKEN;
-  if (!supabaseUrl || !serviceKey || !botToken) return send(res, 500, { error: "Missing server configuration." });
+  const missing = ["SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY", "DISCORD_BOT_TOKEN"].filter(k => !process.env[k]);
+  if (missing.length) return send(res, 500, { error: "Missing server configuration: " + missing.join(", ") });
 
   const sb = { apikey: serviceKey, Authorization: "Bearer " + serviceKey };
   try {
