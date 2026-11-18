@@ -27,26 +27,28 @@ export default async function handler(req, res) {
     const discordIdByUser = new Map(users.map(u => [u.id, discordIdOf(u)]).filter(([, d]) => d));
 
     const avatarByDiscordId = new Map();
-    let updated = 0;
+    const stats = { members: 0, noDiscordId: 0, discordFailed: [], unchanged: 0, updated: 0 };
     for (const m of Array.isArray(members) ? members : []) {
+      stats.members++;
       const did = discordIdByUser.get(m.user_id);
-      if (!did) continue;
+      if (!did) { stats.noDiscordId++; continue; }
       if (!avatarByDiscordId.has(did)) {
         const r = await fetch(`${DISCORD}/users/${did}`, { headers: { Authorization: "Bot " + botToken } });
-        if (!r.ok) { avatarByDiscordId.set(did, undefined); continue; }
+        if (!r.ok) { stats.discordFailed.push(r.status); avatarByDiscordId.set(did, undefined); continue; }
         const d = await r.json();
         avatarByDiscordId.set(did, d.avatar ? `https://cdn.discordapp.com/avatars/${did}/${d.avatar}.png` : "");
       }
       const fresh = avatarByDiscordId.get(did);
-      if (fresh === undefined || fresh === (m.avatar_url || "")) continue;
+      if (fresh === undefined) continue;
+      if (fresh === (m.avatar_url || "")) { stats.unchanged++; continue; }
       const patch = await fetch(`${supabaseUrl}/rest/v1/watchlist_server_memberships?user_id=eq.${m.user_id}`, {
         method: "PATCH",
         headers: { ...sb, "Content-Type": "application/json", Prefer: "return=minimal" },
         body: JSON.stringify({ avatar_url: fresh, updated_at: new Date().toISOString() })
       });
-      if (patch.ok) updated++;
+      if (patch.ok) stats.updated++;
     }
-    return send(res, 200, { ok: true, updated });
+    return send(res, 200, { ok: true, ...stats });
   } catch (error) {
     return send(res, 500, { error: error instanceof Error ? error.message : "Avatar refresh failed." });
   }
