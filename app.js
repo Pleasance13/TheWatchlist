@@ -167,7 +167,7 @@ function deserializeAttendance(attendance={},profiles={},votes={}){
 }
 function currentAvatar(){return currentProfile?.avatar||""}
 function avatarFor(name){return userProfiles[userKey(name)]?.avatar||((name===currentUser)?currentAvatar():"")}
-function avatarMarkup(name,extra=""){const url=avatarFor(name);return url?'<img class="avatar '+extra+'" src="'+escapeHtml(url)+'" alt="" referrerpolicy="no-referrer">':'<span class="avatar '+extra+'" aria-hidden="true">'+escapeHtml(String(name||"?").slice(0,2).toUpperCase())+'</span>'}
+function avatarMarkup(name,extra=""){const url=avatarFor(name);return url?'<img class="avatar '+extra+'" data-initials="'+escapeHtml(String(name||"?").slice(0,2).toUpperCase())+'" src="'+escapeHtml(url)+'" alt="" referrerpolicy="no-referrer">':'<span class="avatar '+extra+'" aria-hidden="true">'+escapeHtml(String(name||"?").slice(0,2).toUpperCase())+'</span>'}
 window.watchlistAuthIdentityChanged=function(profile){
   currentProfile=profile||null;
   currentUser=profile?.name||"Guest";
@@ -775,7 +775,7 @@ function toolbar(historyMode=false){
  const options=historyMode?[["alpha","Alphabetical"],["release","Release Date"],["rt","RT avg. score"],["imdb","IMDb avg. score"],["runtime","Runtime"],["added","Date Added"]]:[["server","Server Interest"],["user","User Interest"],["alpha","Alphabetical"],["release","Release Date"],["rt","RT avg. score"],["imdb","IMDb avg. score"],["runtime","Runtime"],["added","Date Added"]];
  return '<div class="toolbar"><input id="search" class="search" placeholder="Search movies..." value="'+state.search+'"><button class="icon '+(state.view==="list"?"active":"")+'" onclick="setView(\'list\')"><svg class="toolbar-icon-svg list-icon-svg" viewBox="0 0 18 18" aria-hidden="true"><circle cx="3" cy="4" r="1.15"></circle><circle cx="3" cy="9" r="1.15"></circle><circle cx="3" cy="14" r="1.15"></circle><path d="M7 4h9M7 9h9M7 14h9"></path></svg><span>List</span></button><button class="icon '+(state.view==="grid"?"active":"")+'" onclick="setView(\'grid\')"><svg class="toolbar-icon-svg" viewBox="0 0 18 18" aria-hidden="true"><rect x="1" y="1" width="4" height="4" rx=".7"></rect><rect x="7" y="1" width="4" height="4" rx=".7"></rect><rect x="13" y="1" width="4" height="4" rx=".7"></rect><rect x="1" y="7" width="4" height="4" rx=".7"></rect><rect x="7" y="7" width="4" height="4" rx=".7"></rect><rect x="13" y="7" width="4" height="4" rx=".7"></rect><rect x="1" y="13" width="4" height="4" rx=".7"></rect><rect x="7" y="13" width="4" height="4" rx=".7"></rect><rect x="13" y="13" width="4" height="4" rx=".7"></rect></svg><span>Grid</span></button><button class="ghost filter-button '+(state.showFilters?"active":"")+'" aria-pressed="'+state.showFilters+'" onclick="toggleFilters()"><svg class="filter-icon-svg" viewBox="0 0 20 20" aria-hidden="true"><path d="M2.5 4.5h15L12 10.5v4.1l-3.9 1.9v-6Z"></path></svg><span>Filters</span></button><div class="sort-control"><details class="sort-dropdown"><summary>Sort: '+sortLabel(sort.key)+'</summary><div class="sort-menu">'+options.map(([key,label])=>'<button class="'+(sort.key===key?"selected":"")+'" onclick="setSort(\''+key+'\','+historyMode+')">'+label+'</button>').join("")+'</div></details><button class="sort-direction" onclick="toggleSortDirection('+historyMode+')" aria-label="Sort '+(sort.dir==="asc"?"descending":"ascending")+'" title="Sort '+(sort.dir==="asc"?"descending":"ascending")+'">'+(sort.dir==="asc"?"↑":"↓")+'</button></div>'+(state.view==="grid"?'<input class="range" id="sizeRange" type="range" min="1" max="4" step="1" value="'+state.posterSize+'" aria-label="Poster size">':"")+'</div>'+advancedFilterPanel(historyMode);
 }
-function stack(v){return `<div class="stack">${v.map(([n,c,label,suggester])=>{const tip=suggester?`Suggested by ${n}${label?" · "+label:""}`:`${n}${label?" · "+label:""}`,url=avatarFor(n);return `<div class="ring ${c}" title="${escapeHtml(tip)}" aria-label="${escapeHtml(tip)}">${url?`<img src="${escapeHtml(url)}" alt="" referrerpolicy="no-referrer">`:escapeHtml(n.slice(0,2).toUpperCase())}</div>${suggester&&v.length>1?'<span class="stack-divider" aria-hidden="true"></span>':""}`}).join("")}</div>`}
+function stack(v){return `<div class="stack">${v.map(([n,c,label,suggester])=>{const tip=suggester?`Suggested by ${n}${label?" · "+label:""}`:`${n}${label?" · "+label:""}`,url=avatarFor(n);return `<div class="ring ${c}" title="${escapeHtml(tip)}" aria-label="${escapeHtml(tip)}">${url?`<img src="${escapeHtml(url)}" data-initials="${escapeHtml(n.slice(0,2).toUpperCase())}" alt="" referrerpolicy="no-referrer">`:escapeHtml(n.slice(0,2).toUpperCase())}</div>${suggester&&v.length>1?'<span class="stack-divider" aria-hidden="true"></span>':""}`}).join("")}</div>`}
 // List view only: suggester first (even with no response), then everyone else.
 function listStackEntries(m){
   const entries=voterEntries(m);
@@ -1114,7 +1114,7 @@ function suggestionNoteMarkup(m){
   const who=resolved&&resolved!==ownerId?resolved:(m.suggestedBy||m.addedBy||"Unknown");
   const editable=ownerId?ownerId===currentProfile?.id:who===currentUser;
   const avatar=avatarFor(who);
-  return '<div class="detail-note '+(!m.note?'detail-note-empty':'')+'"><div class="detail-note-label">'+(avatar?'<img class="avatar" src="'+escapeHtml(avatar)+'" alt="" referrerpolicy="no-referrer">':'<span class="avatar">'+escapeHtml(who.slice(0,2).toUpperCase())+'</span>')+'<span>Suggested by '+escapeHtml(who)+'</span></div>'+(state.showNote&&m.note?'<div class="detail-note-text">'+escapeHtml(m.note)+'</div>':"")+(state.showNote&&editable?'<div class="detail-note-actions"><button class="edit-suggestion-note" onclick="editSuggestionNote(\''+m.id+'\')">'+(m.note?"Edit note":"Add note")+'</button></div>':"")+'</div>';
+  return '<div class="detail-note '+(!m.note?'detail-note-empty':'')+'"><div class="detail-note-label">'+(avatar?'<img class="avatar" data-initials="'+escapeHtml(who.slice(0,2).toUpperCase())+'" src="'+escapeHtml(avatar)+'" alt="" referrerpolicy="no-referrer">':'<span class="avatar">'+escapeHtml(who.slice(0,2).toUpperCase())+'</span>')+'<span>Suggested by '+escapeHtml(who)+'</span></div>'+(state.showNote&&m.note?'<div class="detail-note-text">'+escapeHtml(m.note)+'</div>':"")+(state.showNote&&editable?'<div class="detail-note-actions"><button class="edit-suggestion-note" onclick="editSuggestionNote(\''+m.id+'\')">'+(m.note?"Edit note":"Add note")+'</button></div>':"")+'</div>';
 }
 function addMovieResults(){
 if(state.addMovieLoading)return '<div class="add-status">Searching TMDB…</div>';
@@ -1792,3 +1792,13 @@ loadPersistentFilterState();
 state.showFilters=hasAppliedFilters(state.nav);
 render();
 hydrateTmdbArtwork();document.addEventListener("toggle",event=>{const target=event.target;if(!target.matches(".filter-dropdown")||!target.open)return;document.querySelectorAll(".filter-dropdown[open]").forEach(other=>{if(other!==target&&!other.contains(target)&&!target.contains(other))other.open=false})},true);
+
+document.addEventListener("error", e => {
+  const img = e.target;
+  if (!(img instanceof HTMLImageElement) || !img.matches(".avatar,.ring>img,.auth-avatar")) return;
+  const span = document.createElement("span");
+  span.className = img.className;
+  span.setAttribute("aria-hidden", "true");
+  span.textContent = img.dataset.initials || "?";
+  img.replaceWith(span);
+}, true);
