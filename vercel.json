@@ -1,16 +1,10 @@
 {
   "crons": [
-    {
-      "path": "/api/refresh-release-dates",
-      "schedule": "0 11 * * *"
-    }
+    { "path": "/api/refresh-release-dates", "schedule": "0 11 * * *" },
+    { "path": "/api/refresh-avatars", "schedule": "0 12 * * *" }
   ],
   "routes": [
-    {
-      "src": "/",
-      "has": [{ "type": "query", "key": "movie" }],
-      "dest": "/api/movie-preview"
-    },
+    { "src": "/", "has": [{ "type": "query", "key": "movie" }], "dest": "/api/movie-preview" },
     { "handle": "filesystem" }
   ]
 }
