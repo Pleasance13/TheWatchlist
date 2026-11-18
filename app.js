@@ -1792,7 +1792,6 @@ loadPersistentFilterState();
 state.showFilters=hasAppliedFilters(state.nav);
 render();
 hydrateTmdbArtwork();document.addEventListener("toggle",event=>{const target=event.target;if(!target.matches(".filter-dropdown")||!target.open)return;document.querySelectorAll(".filter-dropdown[open]").forEach(other=>{if(other!==target&&!other.contains(target)&&!target.contains(other))other.open=false})},true);
-
 document.addEventListener("error", e => {
   const img = e.target;
   if (!(img instanceof HTMLImageElement) || !img.matches(".avatar,.ring>img,.auth-avatar")) return;
