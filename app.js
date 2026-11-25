@@ -1283,9 +1283,8 @@ function timeAgo(ts){
 }
 function activityButton(){
   if(!window.WATCHLIST_AUTHENTICATED)return "";
-  const n=unseenAdditions().length;
-  return '<button type="button" class="activity-button'+(state.activityOpen?' active':'')+'" onclick="toggleActivityPanel(event)" aria-label="Recently added movies'+(n?' ('+n+' new)':'')+'" aria-haspopup="true" aria-expanded="'+state.activityOpen+'"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>'+(n?'<span class="activity-badge">'+(n>9?'9+':n)+'</span>':'')+'</button>';
-}
+  const hasNew=unseenAdditions().length>0;
+  return '<button type="button" class="activity-button'+(state.activityOpen?' active':'')+'" onclick="toggleActivityPanel(event)" aria-label="Recently added movies'+(hasNew?' (new additions)':'')+'" aria-haspopup="true" aria-expanded="'+state.activityOpen+'"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>'+(hasNew?'<span class="activity-dot"></span>':'')+'</button>';}
 function activityPanel(){
   if(!state.activityOpen||!window.WATCHLIST_AUTHENTICATED)return "";
   const rows=recentAdditions().map(m=>{
