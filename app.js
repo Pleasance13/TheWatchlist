@@ -683,7 +683,7 @@ function responseLabel(k){return ({must:"Must Watch",interested:"Interested",wat
 function responseDescription(k){return ({must:"Don't watch without me, please!",interested:"I want to be included for this one.",watch:"If I'm around I'll join, but don't wait up for me.",no:"No need to include me."})[k]||""}
 function rankOf(m){const ranked=movies.filter(x=>!x.watched&&!isUpcomingMovie(x)).slice().sort((a,b)=>compareServerInterest(b,a));const n=ranked.findIndex(x=>x.id===m.id);return n>=0?n+1:"—"}
 function rankSticker(rank,extraClass=""){if(!Number.isFinite(Number(rank))||Number(rank)<1||Number(rank)>5)return "";const n=Number(rank);return `<span class="rank-sticker rank-sticker-${n} ${extraClass}" aria-label="Rank #${n}" style="--sticker-index:${n-1}"><span class="rank-sticker-number">#${n}</span>${n===1?'<span class="rank-sticker-shine" aria-hidden="true"></span>':""}</span>`}
-function header(){return `<header class="topbar"><div class="header-prism" aria-hidden="true"><img src="thewatchlist-prism.svg" alt=""></div><button class="brand" onclick="location.href=routeUrl('watchlist');return false" aria-label="Go to Watchlist"><img class="brand-logo" src="thewatchlist-logo.svg" alt="The Watchlist"></button><nav class="nav">${["watchlist","history","people","settings"].map(x=>`<button class="${state.nav===x?"active":""}" onclick="location.href=routeUrl('${x}');return false"><span>${x[0].toUpperCase()+x.slice(1)}</span></button>`).join("")}</nav>${window.watchlistAuthControlMarkup?window.watchlistAuthControlMarkup():""}</header>`}function genreList(){return [...new Set(movies.flatMap(m=>(m.genre||"").split(/\s*[·,/&]\s*/).map(x=>x.trim()).filter(Boolean)))].sort()}
+function header(){return `<header class="topbar"><div class="header-prism" aria-hidden="true"><img src="thewatchlist-prism.svg" alt=""></div><button class="brand" onclick="location.href=routeUrl('watchlist');return false" aria-label="Go to Watchlist"><img class="brand-logo" src="thewatchlist-logo.svg" alt="The Watchlist"></button><nav class="nav">${["watchlist","history","people","settings"].map(x=>`<button class="${state.nav===x?"active":""}" onclick="location.href=routeUrl('${x}');return false"><span>${x[0].toUpperCase()+x.slice(1)}</span></button>`).join("")}</nav><div class="header-right">${activityButton()}${window.watchlistAuthControlMarkup?window.watchlistAuthControlMarkup():""}</div></header>`}function genreList(){return [...new Set(movies.flatMap(m=>(m.genre||"").split(/\s*[·,/&]\s*/).map(x=>x.trim()).filter(Boolean)))].sort()}
 function filterActive(key){const v=state[key];return Array.isArray(v)?v.length>0:Boolean(v)}
 function filterChip(label,key){return filterActive(key)?`<button class="filter-clear" title="Clear ${label}" aria-label="Clear ${label}" onclick="clearOneFilter('${key}')">×</button>`:""}
 function userOptions(users,selected,placeholder){return `<option value="">${placeholder}</option>${users.map(p=>`<option value="${p}" ${selected===p?"selected":""}>${p===currentUser?p+" (you)":p}</option>`).join("")}`}
@@ -1246,8 +1246,87 @@ function confirmRemoveMovie(){const id=state.removeMovieId;if(!id)return;const i
 persistSharedPatch({removedMovieIds:[id],removedMovieAt:{[id]:removedMovieAt[id]}});
 state.removeMovieId=null;state.detail=null;state.nav='watchlist';render()}
 function removeMovieModal(){if(!state.removeMovieId)return '';const m=movies.find(x=>x.id===state.removeMovieId);if(!m)return '';return '<div class="modal-backdrop open" onclick="if(event.target===this)closeRemoveMovie()"><section class="remove-confirm-modal" role="dialog" aria-modal="true"><h2>Remove '+m.title+'?</h2><p>Are you sure?</p><div class="remove-confirm-actions"><button class="ghost" onclick="closeRemoveMovie()">No</button><button class="remove-movie-button" onclick="confirmRemoveMovie()">Yes</button></div></section></div>'}
+/* ---------- Recently added panel ---------- */
+const ACTIVITY_LIMIT=5;
+state.activityOpen=false;
+let activityNewIds=new Set();
+let activityNewTimer=null,activityFadeTimer=null;
+function activitySeenKey(){return currentProfile?.id?"watchlist-activity-seen-v1:"+currentProfile.id:null}
+// First visit on a device sets the baseline to "now", so existing movies aren't all flagged NEW.
+function activityLastSeen(){
+  const key=activitySeenKey();if(!key)return null;
+  try{
+    let v=localStorage.getItem(key);
+    if(v===null){v=String(Date.now());localStorage.setItem(key,v)}
+    const n=Number(v);return Number.isFinite(n)?n:Date.now();
+  }catch(error){return null}
+}
+function recentAdditions(){
+  return movies.filter(m=>addedTimestamp(m)!==null).slice().sort((a,b)=>addedTimestamp(b)-addedTimestamp(a)).slice(0,ACTIVITY_LIMIT);
+}
+function isAddedByMe(m){
+  const id=movieSuggesterId(m);
+  if(id&&currentProfile?.id)return id===currentProfile.id;
+  const n=m.addedBy||m.suggestedBy;
+  return !!n&&n===currentUser;
+}
+function unseenAdditions(){
+  const last=activityLastSeen();if(last===null)return [];
+  return movies.filter(m=>{const t=addedTimestamp(m);return t!==null&&t>last&&!isAddedByMe(m)});
+}
+function timeAgo(ts){
+  const s=Math.max(0,(Date.now()-ts)/1000);if(s<60)return "just now";
+  const m=Math.floor(s/60);if(m<60)return m+"m ago";
+  const h=Math.floor(m/60);if(h<24)return h+"h ago";
+  const d=Math.floor(h/24);if(d<7)return d+"d ago";
+  return new Date(ts).toLocaleDateString([],{month:"short",day:"numeric"});
+}
+function activityButton(){
+  if(!window.WATCHLIST_AUTHENTICATED)return "";
+  const n=unseenAdditions().length;
+  return '<button type="button" class="activity-button'+(state.activityOpen?' active':'')+'" onclick="toggleActivityPanel(event)" aria-label="Recently added movies'+(n?' ('+n+' new)':'')+'" aria-haspopup="true" aria-expanded="'+state.activityOpen+'"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>'+(n?'<span class="activity-badge">'+(n>9?'9+':n)+'</span>':'')+'</button>';
+}
+function activityPanel(){
+  if(!state.activityOpen||!window.WATCHLIST_AUTHENTICATED)return "";
+  const rows=recentAdditions().map(m=>{
+    const id=movieSuggesterId(m);
+    let who=id?identityDisplayName(id,userProfiles,votesByUser):"";
+    if(!who||who===id)who=m.addedBy||m.suggestedBy||"Someone";
+    if(UUID_RE.test(String(who)))who="Someone";
+    const mine=isAddedByMe(m),isNew=activityNewIds.has(m.id);
+    const poster=m.posterPath&&window.TMDB?'<img class="activity-poster" src="'+TMDB.image(m.posterPath,"w92")+'" alt="">':'<span class="activity-poster"></span>';
+    return '<button type="button" class="activity-row" data-open-movie="'+escapeHtml(m.id)+'" onclick="closeActivityPanel();openMovie(this.dataset.openMovie)">'+poster+
+      '<span class="activity-info"><span class="activity-title">'+escapeHtml(m.title)+(m.year?' <small>('+escapeHtml(m.year)+')</small>':'')+(isNew?'<span class="activity-new">NEW</span>':'')+'</span>'+
+      '<span class="activity-meta">'+avatarMarkup(who,"activity-avatar")+'<span>Added by '+(mine?'you':escapeHtml(who))+' · '+timeAgo(addedTimestamp(m))+'</span></span></span></button>';
+  }).join("");
+  return '<div class="activity-panel" role="dialog" aria-label="Recently added movies"><div class="activity-head"><strong>Recently added</strong></div>'+(rows?'<div class="activity-list">'+rows+'</div>':'<div class="activity-empty">No movies added yet.</div>')+'</div>';
+}
+window.toggleActivityPanel=event=>{
+  event?.stopPropagation?.();
+  if(state.activityOpen){closeActivityPanel();return}
+  activityNewIds=new Set(unseenAdditions().map(m=>m.id));
+  const key=activitySeenKey();
+  if(key)try{localStorage.setItem(key,String(Math.max(Date.now(),...movies.map(m=>addedTimestamp(m)||0))))}catch(error){}
+  state.activityOpen=true;render();
+  clearTimeout(activityNewTimer);clearTimeout(activityFadeTimer);
+  if(activityNewIds.size){
+    activityNewTimer=setTimeout(()=>{
+      document.querySelectorAll(".activity-new").forEach(el=>el.classList.add("fading"));
+      activityFadeTimer=setTimeout(()=>{activityNewIds=new Set();if(state.activityOpen)render()},500);
+    },3000);
+  }
+};
+window.closeActivityPanel=()=>{
+  clearTimeout(activityNewTimer);clearTimeout(activityFadeTimer);
+  state.activityOpen=false;activityNewIds=new Set();render();
+};
+if(!window.__activityPanelBound){
+  window.__activityPanelBound=true;
+  document.addEventListener("click",e=>{if(state.activityOpen&&!e.target.closest(".activity-panel,.activity-button"))closeActivityPanel()});
+  document.addEventListener("keydown",e=>{if(e.key==="Escape"&&state.activityOpen)closeActivityPanel()});
+}
 let headerPrismIntroPlayed=false;
-function syncHeaderPrism(){const logo=document.querySelector(".brand-logo"),avatar=document.querySelector(".topbar .user, .topbar .auth-control"),prism=document.querySelector(".header-prism");if(!logo||!avatar||!prism)return;const l=logo.getBoundingClientRect(),u=avatar.getBoundingClientRect();const left=l.right-l.width*.139,right=u.left-24,width=Math.max(0,right-left);prism.style.setProperty("position","fixed","important");prism.style.setProperty("left",left+"px","important");prism.style.setProperty("right","auto","important");prism.style.setProperty("top",l.top+"px","important");prism.style.setProperty("bottom","auto","important");prism.style.setProperty("width",width+"px","important");prism.style.setProperty("height",l.height+"px","important");prism.style.setProperty("transform","none","important");prism.style.setProperty("margin","0","important");prism.style.setProperty("--prism-height",l.height+"px");if(!headerPrismIntroPlayed){headerPrismIntroPlayed=true;const beam=prism.querySelector("img");if(beam){const reduceMotion=window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)").matches;if(reduceMotion){beam.style.transform="none";}else{beam.style.transformOrigin="left center";beam.style.transform="scaleX(0)";beam.getBoundingClientRect();beam.animate([{transform:"scaleX(0)"},{transform:"scaleX(1)"}],{duration:650,easing:"cubic-bezier(.18,.72,.25,1)",fill:"both"});}}}}
+function syncHeaderPrism(){const logo=document.querySelector(".brand-logo"),avatar=document.querySelector(".topbar .header-right"),prism=document.querySelector(".header-prism");if(!logo||!avatar||!prism)return;const l=logo.getBoundingClientRect(),u=avatar.getBoundingClientRect();const left=l.right-l.width*.139,right=u.left-24,width=Math.max(0,right-left);prism.style.setProperty("position","fixed","important");prism.style.setProperty("left",left+"px","important");prism.style.setProperty("right","auto","important");prism.style.setProperty("top",l.top+"px","important");prism.style.setProperty("bottom","auto","important");prism.style.setProperty("width",width+"px","important");prism.style.setProperty("height",l.height+"px","important");prism.style.setProperty("transform","none","important");prism.style.setProperty("margin","0","important");prism.style.setProperty("--prism-height",l.height+"px");if(!headerPrismIntroPlayed){headerPrismIntroPlayed=true;const beam=prism.querySelector("img");if(beam){const reduceMotion=window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)").matches;if(reduceMotion){beam.style.transform="none";}else{beam.style.transformOrigin="left center";beam.style.transform="scaleX(0)";beam.getBoundingClientRect();beam.animate([{transform:"scaleX(0)"},{transform:"scaleX(1)"}],{duration:650,easing:"cubic-bezier(.18,.72,.25,1)",fill:"both"});}}}}
 function openMovieInNewTab(movieId){
   if(!movieId)return;
   const target=routeUrl("detail",movieId);
@@ -1270,7 +1349,7 @@ function bindMovieMiddleClick(){
   },true);
 }
 
-function render(){bindMovieMiddleClick();const scrollKeep={};document.querySelectorAll("[data-scroll-key]").forEach(el=>{scrollKeep[el.dataset.scrollKey]=el.scrollTop});const openFilterIds=[...document.querySelectorAll(".filter-dropdown[open][data-filter-id]")].map(el=>el.dataset.filterId);const signedIn=!!window.WATCHLIST_AUTHENTICATED;const content=signedIn?(state.nav==="watchlist"?watchlist():state.nav==="history"?history():state.nav==="people"?people():state.nav==="settings"?settings():detail()):'<section class="empty-state signed-out-message"><h2>Sign in with Discord to start tracking your watchlist.</h2></section>';app.innerHTML=header()+`<main class="content${signedIn?"":" signed-out-content"}">${content}</main>`+addMovieModal()+attendanceModal()+assetEditor()+removeMovieModal()+suggestionNoteEditorModal()+watchNoteModal()+serverPickerModal()+'<button id="scroll-to-top" class="scroll-to-top" type="button" title="Back to top" aria-label="Back to top" onclick="window.scrollTo({top:0,behavior:\'smooth\'})"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 14 7-7 7 7M12 7v13" /></svg></button>';openFilterIds.forEach(id=>{const el=[...document.querySelectorAll(".filter-dropdown[data-filter-id]")].find(x=>x.dataset.filterId===id);if(el)el.open=true});document.querySelectorAll("[data-scroll-key]").forEach(el=>{if(scrollKeep[el.dataset.scrollKey]!==undefined)el.scrollTop=scrollKeep[el.dataset.scrollKey]});bindLiveInputs();bindVhsTilt();bindScrollToTop();requestAnimationFrame(syncHeaderPrism);if(!window.__watchlistPrismResize){window.__watchlistPrismResize=true;window.addEventListener("resize",()=>requestAnimationFrame(syncHeaderPrism));window.addEventListener("scroll",()=>requestAnimationFrame(syncHeaderPrism),{passive:true});}}
+function render(){bindMovieMiddleClick();const scrollKeep={};document.querySelectorAll("[data-scroll-key]").forEach(el=>{scrollKeep[el.dataset.scrollKey]=el.scrollTop});const openFilterIds=[...document.querySelectorAll(".filter-dropdown[open][data-filter-id]")].map(el=>el.dataset.filterId);const signedIn=!!window.WATCHLIST_AUTHENTICATED;const content=signedIn?(state.nav==="watchlist"?watchlist():state.nav==="history"?history():state.nav==="people"?people():state.nav==="settings"?settings():detail()):'<section class="empty-state signed-out-message"><h2>Sign in with Discord to start tracking your watchlist.</h2></section>';app.innerHTML=header()+`<main class="content${signedIn?"":" signed-out-content"}">${content}</main>`+addMovieModal()+attendanceModal()+assetEditor()+removeMovieModal()+suggestionNoteEditorModal()+watchNoteModal()+serverPickerModal()+activityPanel()+'<button id="scroll-to-top" class="scroll-to-top" type="button" title="Back to top" aria-label="Back to top" onclick="window.scrollTo({top:0,behavior:\'smooth\'})"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 14 7-7 7 7M12 7v13" /></svg></button>';openFilterIds.forEach(id=>{const el=[...document.querySelectorAll(".filter-dropdown[data-filter-id]")].find(x=>x.dataset.filterId===id);if(el)el.open=true});document.querySelectorAll("[data-scroll-key]").forEach(el=>{if(scrollKeep[el.dataset.scrollKey]!==undefined)el.scrollTop=scrollKeep[el.dataset.scrollKey]});bindLiveInputs();bindVhsTilt();bindScrollToTop();requestAnimationFrame(syncHeaderPrism);if(!window.__watchlistPrismResize){window.__watchlistPrismResize=true;window.addEventListener("resize",()=>requestAnimationFrame(syncHeaderPrism));window.addEventListener("scroll",()=>requestAnimationFrame(syncHeaderPrism),{passive:true});}}
 function bindScrollToTop(){const button=document.querySelector("#scroll-to-top");if(!button)return;const update=()=>button.classList.toggle("is-visible",window.scrollY>0);update();if(!window.__watchlistScrollToTopBound){window.__watchlistScrollToTopBound=true;window.addEventListener("scroll",()=>{const el=document.querySelector("#scroll-to-top");if(el)el.classList.toggle("is-visible",window.scrollY>0)},{passive:true})}}
 let addMovieSearchTimer=null;let addMovieSearchRequest=0;
 function bindLiveInputs(){let s=document.querySelector("#search");if(s)s.addEventListener("input",e=>{state.search=e.target.value;resetMoviePages();savePersistentFilterState();updateListOnly()});let r=document.querySelector("#sizeRange");if(r)r.addEventListener("input",e=>setPosterSize(e.target.value));let a=document.querySelector("#addMovieSearch");if(a)a.addEventListener("input",e=>{state.addMovieQuery=e.target.value;clearTimeout(addMovieSearchTimer);const query=e.target.value.trim();if(!query){state.addMovieResults=[];state.addMovieError="";document.querySelector("#addMovieResults").innerHTML=addMovieResults();return}addMovieSearchTimer=setTimeout(()=>searchAddMovies(query),300)})}
