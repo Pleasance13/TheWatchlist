@@ -1978,4 +1978,4 @@ button,input{font:inherit}button{color:inherit}.topbar{height:72px;padding:0 32p
 .activity-empty{padding:22px 15px;text-align:center;color:var(--muted);font-size:12px}
 @media(max-width:760px){.activity-panel{right:12px;top:64px}.header-right{gap:8px}}
 .activity-badge{display:none}
-.activity-dot{position:absolute;top:-1px;right:-1px;width:10px;height:10px;border-radius:50%;background:#e65d54;border:2px solid #0b0c0e;box-sizing:content-box}
+.activity-dot{position:absolute;top:-2px;right:-2px;width:10px;height:10px;border-radius:50%;background:#e65d54;border:2px solid #0b0c0e;box-sizing:content-box}
