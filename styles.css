@@ -1956,9 +1956,9 @@ button,input{font:inherit}button{color:inherit}.topbar{height:72px;padding:0 32p
 /* Recently added panel */
 .header-right{display:flex;align-items:center;gap:10px}
 .header-right .auth-control{margin-left:0}
-.activity-button{position:relative;width:34px;height:34px;padding:0;display:grid;place-items:center;border:1px solid var(--line2);border-radius:50%;background:var(--panel);color:var(--muted);cursor:pointer;transition:color .15s,border-color .15s,background .15s}
+.activity-button{position:relative;width:30px;height:30px;padding:0;display:grid;place-items:center;border:1px solid var(--line2);border-radius:50%;background:var(--panel);color:var(--muted);cursor:pointer;transition:color .15s,border-color .15s,background .15s}
 .activity-button:hover,.activity-button.active{color:var(--text);border-color:#5b616b;background:var(--panel2)}
-.activity-button svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.activity-button svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
 .activity-badge{position:absolute;top:-4px;right:-4px;min-width:16px;height:16px;padding:0 4px;box-sizing:border-box;display:grid;place-items:center;border-radius:999px;background:#e65d54;color:#fff;font-size:10px;font-weight:800;line-height:1}
 .activity-panel{position:fixed;top:68px;right:20px;z-index:1500;width:min(360px,calc(100vw - 24px));background:var(--panel);border:1px solid var(--line2);border-radius:12px;box-shadow:var(--shadow);overflow:hidden;animation:activity-pop .16s ease-out}
 @keyframes activity-pop{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
