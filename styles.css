@@ -1953,3 +1953,27 @@ button,input{font:inherit}button{color:inherit}.topbar{height:72px;padding:0 32p
 .server-card-bg:after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(20,22,25,.94),rgba(20,22,25,.55))}
 .server-card-name{flex:1;min-width:0;font-size:14px;font-weight:650;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .server-card-status{flex:0 0 auto;font-size:11px;font-weight:650;color:var(--green)}
+/* Recently added panel */
+.header-right{display:flex;align-items:center;gap:10px}
+.header-right .auth-control{margin-left:0}
+.activity-button{position:relative;width:34px;height:34px;padding:0;display:grid;place-items:center;border:1px solid var(--line2);border-radius:50%;background:var(--panel);color:var(--muted);cursor:pointer;transition:color .15s,border-color .15s,background .15s}
+.activity-button:hover,.activity-button.active{color:var(--text);border-color:#5b616b;background:var(--panel2)}
+.activity-button svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.activity-badge{position:absolute;top:-4px;right:-4px;min-width:16px;height:16px;padding:0 4px;box-sizing:border-box;display:grid;place-items:center;border-radius:999px;background:#e65d54;color:#fff;font-size:10px;font-weight:800;line-height:1}
+.activity-panel{position:fixed;top:68px;right:20px;z-index:1500;width:min(360px,calc(100vw - 24px));background:var(--panel);border:1px solid var(--line2);border-radius:12px;box-shadow:var(--shadow);overflow:hidden;animation:activity-pop .16s ease-out}
+@keyframes activity-pop{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
+.activity-head{padding:13px 15px;border-bottom:1px solid var(--line);font-size:13px}
+.activity-list{display:flex;flex-direction:column}
+.activity-row{display:flex;align-items:center;gap:12px;width:100%;padding:10px 15px;border:0;border-bottom:1px solid var(--line);background:transparent;color:var(--text);text-align:left;font:inherit;cursor:pointer}
+.activity-row:last-child{border-bottom:0}
+.activity-row:hover{background:rgba(255,255,255,.04)}
+.activity-poster{flex:0 0 38px;width:38px;aspect-ratio:2/3;object-fit:cover;border-radius:3px;background:#202328;border:1px solid var(--line);display:block}
+.activity-info{display:flex;flex-direction:column;gap:5px;min-width:0}
+.activity-title{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:700;min-width:0}
+.activity-title small{color:var(--muted);font-weight:500;font-size:11px}
+.activity-new{flex:0 0 auto;padding:2px 6px;border-radius:5px;background:rgba(121,197,139,.14);border:1px solid #476d51;color:#9fd3aa;font-size:9px;font-weight:800;letter-spacing:.08em;transition:opacity .5s,transform .5s}
+.activity-new.fading{opacity:0;transform:scale(.85)}
+.activity-meta{display:flex;align-items:center;gap:6px;color:var(--muted);font-size:11px}
+.activity-avatar{width:18px!important;height:18px!important;flex:0 0 18px!important;font-size:7px!important}
+.activity-empty{padding:22px 15px;text-align:center;color:var(--muted);font-size:12px}
+@media(max-width:760px){.activity-panel{right:12px;top:64px}.header-right{gap:8px}}
