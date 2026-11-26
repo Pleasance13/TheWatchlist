@@ -25,41 +25,44 @@
   .toolbar .icon{width:40px;height:40px;padding:0}
   .sort-control{margin-left:auto}
   .sort-menu{left:auto;right:0;max-width:calc(100vw - 32px)}
-  .toolbar .range{flex:1 1 100%;width:100%!important;margin:2px 0}   /* cover-size slider, own row */
+  .toolbar .range{flex:1 1 100%;width:100%!important;margin:2px 0}
 
-  /* ---------- Touch scrolling over covers ---------- */
+  /* ---------- Touch behaviour on covers: vertical swipes scroll the page,
+     finger-hold/horizontal drag tilts the cover (see bindVhsTilt) ---------- */
   .vhs,.vhs-stage,.detail-vhs,.detail-cover-column{touch-action:pan-y pinch-zoom}
+  .vhs-stage,.detail-vhs{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+  .vhs-stage img{-webkit-user-drag:none;pointer-events:none}
   .vhs-back-scroll{overscroll-behavior:auto}
 
-  /* ---------- Grid: column count comes from the slider ---------- */
+  /* ---------- Grid ---------- */
   .grid{grid-template-columns:repeat(var(--grid-cols-m,2),minmax(0,1fr))!important;gap:28px 16px}
   .vhs{padding-right:0}
   .grid-title-line>.seen-button{width:78px!important;min-width:78px!important;max-width:78px!important;flex-basis:78px!important;height:26px!important;font-size:10px!important}
 
-  /* ---------- List rows ----------
-     Cover top-left with the rank badge overlapping its corner,
-     title/meta beside it, interest buttons full width in one row. */
+  /* ---------- List rows: everything sits to the right of the cover ---------- */
   .row{
     grid-template-columns:54px minmax(0,1fr) auto!important;
     grid-template-areas:
-      "vhs    title  title"
-      "vhs    meta   meta"
-      "votes  votes  votes"
-      "people people seen";
-    grid-template-rows:auto 1fr auto auto;
+      "vhs title  title"
+      "vhs meta   meta"
+      "vhs votes  votes"
+      "vhs people seen";
+    grid-template-rows:auto auto auto auto;
     align-items:start;gap:6px 12px;padding:14px 12px 12px
   }
-  .row>[data-open-movie]{display:contents!important}  /* lets title/meta/buttons be placed individually */
-  .row>[data-open-movie]>.title{grid-area:title;align-self:end}
-  .row>[data-open-movie]>.meta{grid-area:meta;align-self:start}
-  .row>[data-open-movie]>.quick-votes{grid-area:votes;margin-top:4px}
+  .row>[data-open-movie]{display:contents!important}
+  .row>[data-open-movie]>.title{grid-area:title}
+  .row>[data-open-movie]>.meta{grid-area:meta}
+  .row>[data-open-movie]>.quick-votes{grid-area:votes;margin-top:2px}
   .row>.list-vhs{grid-area:vhs}
-  .row>div:has(>.stack){grid-area:people;display:block!important;align-self:center}
-  .row .stack{justify-content:flex-start}
+  .row>div:has(>.stack){grid-area:people;display:block!important;align-self:center;min-width:0}
+  .row .stack{justify-content:flex-start;flex-wrap:nowrap;padding-left:8px}
+  .row .ring{width:24px;height:24px;margin-left:-8px;flex:0 0 24px;font-size:8px}
+  .row .stack-divider{height:24px;margin:0 12px 0 8px}
   .row>.seen-button{
     grid-area:seen;grid-column:auto;grid-row:auto;justify-self:end;align-self:center;
     width:auto!important;min-width:0!important;max-width:none!important;flex:none!important;
-    padding:4px 10px;height:30px!important
+    padding:4px 9px;height:30px!important
   }
   .row>.seen-button span:not(.seen-icon){display:inline!important}
   .row>.seen-button .seen-icon{display:block!important}
@@ -68,29 +71,31 @@
   .row>.rank{grid-area:vhs;align-self:start;justify-self:start;margin:-10px 0 0 -8px;z-index:3}
   .row>.rank:empty{display:none}
   .list-rank-sticker{width:38px;height:38px;flex-basis:38px}
-  .row>.rank:not(:has(.rank-sticker)){      /* #6 and up: readable dark pill */
+  .row>.rank:not(:has(.rank-sticker)){
     min-width:28px;height:28px;padding:0 6px;border-radius:999px;
     background:#2b2f35;border:1px solid #4a5058;color:#e8e9ec;
     font-size:11px;font-weight:700;box-shadow:0 2px 6px rgba(0,0,0,.5)
   }
 
-  /* interest buttons: always one row, shrink to fit */
-  .row .quick-votes{flex-wrap:nowrap;overflow:visible;gap:4px;justify-content:space-between}
-  .row .quick-vote{flex:1 1 auto;white-space:nowrap;text-align:center;
-    padding:8px clamp(4px,1.5vw,8px);font-size:clamp(9.5px,2.7vw,11.5px)}
+  /* interest buttons: always one row, text shrinks to fit */
+  .row .quick-votes{flex-wrap:nowrap;overflow:visible;gap:3px;width:100%}
+  .row .quick-vote{flex:1 1 auto;min-width:0;white-space:nowrap;text-align:center;
+    padding:8px 2px;font-size:clamp(8.5px,2.45vw,11px)}
 
   /* ---------- Other tap targets ---------- */
   .grid .quick-vote{padding:7px 9px;font-size:11px}
-  .vote{padding:11px 13px;font-size:13px}
-  input,select,textarea{font-size:16px!important}   /* stops iOS focus-zoom */
+  input,select,textarea{font-size:16px!important}
 
-  /* ---------- Detail page: single column, big centered cover ---------- */
+  /* ---------- Detail page ---------- */
   .detail{grid-template-columns:minmax(0,1fr)!important;gap:20px;padding:8px 0 0}
   .detail-cover-column{grid-column:1;grid-row:1}
   .detail>div:nth-child(2){grid-column:1;grid-row:2}
   .detail-cover-column .detail-vhs{width:min(72vw,280px);aspect-ratio:auto;padding:14px 0;margin:0 auto}
   .detail-title-row{flex-wrap:wrap!important}
   .detail-logo{max-width:100%}
+  .votes{flex-wrap:nowrap;gap:4px}
+  .vote{flex:1 1 auto;min-width:0;white-space:nowrap;text-align:center;
+    padding:11px 2px;font-size:clamp(9.5px,3vw,12.5px)}
 
   /* ---------- People page review rows ---------- */
   .person-movies .person-movie:has(.people-review-content){flex-wrap:wrap!important}
@@ -98,4 +103,11 @@
   .person-movies .person-movie:has(.people-review-content)>span:last-child{max-width:100%!important;margin-left:0!important}
 
   /* ---------- Settings ---------- */
-  .streaming-region-setting,.discord-server-se
+  .streaming-region-setting,.discord-server-setting{flex-direction:column;align-items:stretch}
+  .region-picker{width:100%}
+  .region-menu{width:min(260px,calc(100vw - 64px))}
+
+  /* ---------- Modals ---------- */
+  .modal-backdrop{align-items:flex-end;padding:8px}
+  .add-modal,.attendance-modal,.asset-modal{max-height:calc(100dvh - 16px)}
+}
