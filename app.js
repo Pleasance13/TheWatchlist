@@ -192,7 +192,7 @@ function scheduleTimestamp(iso){const date=new Date(iso);return Number.isNaN(dat
 async function saveUserSettings(){
   if(currentUser==="Guest")return;
   const client=window.WATCHLIST_SUPABASE_CLIENT;if(!client)return;
-  const data={showSynopsis:Boolean(state.showSynopsis),showRatings:Boolean(state.showRatings),showNote:Boolean(state.showNote),showTrailer:Boolean(state.showTrailer),showCast:Boolean(state.showCast),showStreamingLinks:Boolean(state.showStreamingLinks),contentWarningsEnabled:Boolean(contentWarningsEnabled),warningCategories:[...savedWarningCategories],view:state.view==="grid"?"grid":"list",posterSize:Math.max(1,Math.min(4,Math.round(Number(state.posterSize)||2))),activeServer:activeServer?{guild_id:activeServer.guild_id,guild_name:activeServer.guild_name,guild_icon_url:activeServer.guild_icon_url||null}:null,streamingRegion:normalizeStreamingRegion(state.streamingRegion),discordWatchThreshold:normalizeDiscordWatchThreshold(state.discordWatchThreshold)};
+  const data={showSynopsis:Boolean(state.showSynopsis),showRatings:Boolean(state.showRatings),showNote:Boolean(state.showNote),showTrailer:Boolean(state.showTrailer),showCast:Boolean(state.showCast),showStreamingLinks:Boolean(state.showStreamingLinks),contentWarningsEnabled:Boolean(contentWarningsEnabled),warningCategories:[...savedWarningCategories],posterSize:Math.max(1,Math.min(4,Math.round(Number(state.posterSize)||2))),activeServer:activeServer?{guild_id:activeServer.guild_id,guild_name:activeServer.guild_name,guild_icon_url:activeServer.guild_icon_url||null}:null,streamingRegion:normalizeStreamingRegion(state.streamingRegion),discordWatchThreshold:normalizeDiscordWatchThreshold(state.discordWatchThreshold)};
   const {error}=await client.from("watchlist_user_settings").upsert({user_id:currentProfile?.id,data,updated_at:new Date().toISOString()});
   if(error)console.warn("Could not save user settings:",error.message||error);
 }
@@ -205,7 +205,7 @@ async function loadUserSettings(){
   displaySettingKeys.forEach(key=>{state[key]=typeof saved[key]==="boolean"?saved[key]:defaultUserSettings[key]});
   contentWarningsEnabled=typeof saved.contentWarningsEnabled==="boolean"?saved.contentWarningsEnabled:true;
   savedWarningCategories=Array.isArray(saved.warningCategories)?saved.warningCategories:[];
-  state.view=saved.view==="grid"?"grid":"list";
+  state.view=localViewPreference();
   if(saved.streamingRegion)applyStreamingRegion(saved.streamingRegion);
   state.posterSize=Math.max(1,Math.min(4,Math.round(Number(saved.posterSize)||2)));
   activeServer=saved.activeServer&&saved.activeServer.guild_id?{guild_id:saved.activeServer.guild_id,guild_name:saved.activeServer.guild_name||"",guild_icon_url:saved.activeServer.guild_icon_url||null}:null; state.discordWatchThreshold=normalizeDiscordWatchThreshold(saved.discordWatchThreshold);
@@ -250,6 +250,8 @@ const state={nav:"watchlist",view:"list",search:"",filter:"all",posterSize:2,pos
 const MOBILE_GRID_COLS=[4,3,2,1];
 const isMobileView=()=>window.matchMedia("(max-width:760px)").matches;
 state.mobilePosterSize=(()=>{try{const n=Number(localStorage.getItem("watchlist-mobile-poster-size"));return n>=1&&n<=4?n:3}catch(error){return 3}})();
+function localViewPreference(){try{return localStorage.getItem("watchlist-view")==="grid"?"grid":"list"}catch(error){return "list"}}
+state.view=localViewPreference();
 const STREAMING_REGION_CODES="AE AL AR AT AU BA BB BE BG BO BR BS CA CH CL CO CR CZ DE DK DO EC EE EG ES FI FR GB GR GT HK HN HR HU ID IE IL IN IT JM JP KR LT LV MX MY NL NO NZ PE PH PL PT PY RO RS RU SA SE SG SI SK SV TH TR TW UA US UY VE ZA".split(" ");
 function normalizeStreamingRegion(value){const code=String(value||"").toUpperCase();return STREAMING_REGION_CODES.includes(code)?code:"US"}
 state.streamingRegion="US";
@@ -1356,7 +1358,64 @@ function bindScrollToTop(){const button=document.querySelector("#scroll-to-top")
 let addMovieSearchTimer=null;let addMovieSearchRequest=0;
 function bindLiveInputs(){let s=document.querySelector("#search");if(s)s.addEventListener("input",e=>{state.search=e.target.value;resetMoviePages();savePersistentFilterState();updateListOnly()});let r=document.querySelector("#sizeRange");if(r)r.addEventListener("input",e=>{if(!isMobileView()){setPosterSize(e.target.value);return}const n=Math.max(1,Math.min(4,Math.round(Number(e.target.value)||1)));state.mobilePosterSize=n;try{localStorage.setItem("watchlist-mobile-poster-size",String(n))}catch(error){}document.querySelectorAll(".grid").forEach(g=>g.style.setProperty("--grid-cols-m",MOBILE_GRID_COLS[n-1]));bindVhsTilt()});let a=document.querySelector("#addMovieSearch");if(a)a.addEventListener("input",e=>{state.addMovieQuery=e.target.value;clearTimeout(addMovieSearchTimer);const query=e.target.value.trim();if(!query){state.addMovieResults=[];state.addMovieError="";document.querySelector("#addMovieResults").innerHTML=addMovieResults();return}addMovieSearchTimer=setTimeout(()=>searchAddMovies(query),300)})}
 function updateListOnly(){let main=document.querySelector("main.content");if(!main)return;let active=document.activeElement===document.querySelector("#search");let pos=document.querySelector("#search")?.selectionStart;const page=state.nav==="history"?history():state.nav==="watchlist"?watchlist():null;if(page===null){render();return}main.innerHTML=page;bindLiveInputs();bindVhsTilt();let s=document.querySelector("#search");if(active&&s){s.focus();s.setSelectionRange(pos,pos)}}
-function bindVhsTilt(){const cards=[...document.querySelectorAll("[data-vhs]")];const records=[];cards.forEach(card=>{const stage=card.querySelector(".vhs-stage"),inner=card.querySelector(".vhs-inner");if(!stage||!inner)return;const r=stage.getBoundingClientRect();inner.style.setProperty("--box-width",r.width+"px");inner.style.setProperty("--box-height",r.height+"px");records.push({stage,rect:r})});if(window.__vhsMouseMove){window.removeEventListener("pointermove",window.__vhsMouseMove);window.removeEventListener("pointerleave",window.__vhsMouseLeave);window.removeEventListener("scroll",window.__vhsRectRefresh);window.removeEventListener("resize",window.__vhsRectRefresh)}let frame=0,lastX=0,lastY=0;const refresh=()=>records.forEach(record=>{if(record.stage.isConnected)record.rect=record.stage.getBoundingClientRect()});window.__vhsRectRefresh=refresh;window.__vhsMouseMove=e=>{if(e.pointerType==="touch")return;lastX=e.clientX;lastY=e.clientY;if(frame)return;frame=requestAnimationFrame(()=>{frame=0;const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));records.forEach(({stage,rect:r})=>{if(!stage.isConnected||!r.width||!r.height)return;const x=(lastX-r.left)/r.width-.5,y=(lastY-r.top)/r.height-.5,tiltY=clamp(x*14,-20,20);stage.style.setProperty("--tilt-x",clamp(-y*10,-10,10).toFixed(2)+"deg");stage.style.setProperty("--tilt-y",tiltY.toFixed(2)+"deg");stage.style.setProperty("--sticker-shine",(tiltY/20*45).toFixed(2)+"%")})})};window.__vhsMouseLeave=()=>{if(frame)cancelAnimationFrame(frame);frame=0;records.forEach(({stage})=>{if(stage.isConnected){stage.style.setProperty("--tilt-x","0deg");stage.style.setProperty("--tilt-y","0deg");stage.style.setProperty("--sticker-shine","0%")}})};window.addEventListener("pointermove",window.__vhsMouseMove,{passive:true});window.addEventListener("pointerleave",window.__vhsMouseLeave,{passive:true});window.addEventListener("scroll",window.__vhsRectRefresh,{passive:true});window.addEventListener("resize",window.__vhsRectRefresh,{passive:true})}
+function bindVhsTilt(){
+  const records=[];
+  document.querySelectorAll("[data-vhs]").forEach(card=>{
+    const stage=card.querySelector(".vhs-stage"),inner=card.querySelector(".vhs-inner");
+    if(!stage||!inner)return;
+    const r=stage.getBoundingClientRect();
+    inner.style.setProperty("--box-width",r.width+"px");
+    inner.style.setProperty("--box-height",r.height+"px");
+    records.push({stage,rect:r});
+  });
+  (window.__vhsCleanup||[]).forEach(fn=>fn());
+  const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
+  const refresh=()=>records.forEach(rec=>{if(rec.stage.isConnected)rec.rect=rec.stage.getBoundingClientRect()});
+  const apply=(rec,cx,cy,touch)=>{
+    const r=rec.rect;
+    if(!rec.stage.isConnected||!r.width||!r.height)return;
+    const kY=touch?40:14,mY=touch?35:20,kX=touch?20:10,mX=touch?14:10;
+    const x=(cx-r.left)/r.width-.5,y=(cy-r.top)/r.height-.5,tiltY=clamp(x*kY,-mY,mY);
+    rec.stage.style.setProperty("--tilt-x",clamp(-y*kX,-mX,mX).toFixed(2)+"deg");
+    rec.stage.style.setProperty("--tilt-y",tiltY.toFixed(2)+"deg");
+    rec.stage.style.setProperty("--sticker-shine",(tiltY/mY*45).toFixed(2)+"%");
+  };
+  const reset=rec=>{
+    if(!rec.stage.isConnected)return;
+    rec.stage.style.setProperty("--tilt-x","0deg");
+    rec.stage.style.setProperty("--tilt-y","0deg");
+    rec.stage.style.setProperty("--sticker-shine","0%");
+  };
+  let frame=0,lastX=0,lastY=0,touchRec=null;
+  const onDown=e=>{
+    if(e.pointerType!=="touch")return;
+    refresh();
+    touchRec=records.find(rec=>rec.stage.contains(e.target))||null;
+    if(touchRec){lastX=e.clientX;lastY=e.clientY;apply(touchRec,lastX,lastY,true)}
+  };
+  const onMove=e=>{
+    lastX=e.clientX;lastY=e.clientY;
+    if(e.pointerType==="touch"){
+      if(!touchRec||frame)return;
+      frame=requestAnimationFrame(()=>{frame=0;if(touchRec)apply(touchRec,lastX,lastY,true)});
+      return;
+    }
+    if(frame)return;
+    frame=requestAnimationFrame(()=>{frame=0;records.forEach(rec=>apply(rec,lastX,lastY,false))});
+  };
+  const onUp=e=>{
+    if(e.pointerType!=="touch"||!touchRec)return;
+    const rec=touchRec;touchRec=null;
+    if(frame){cancelAnimationFrame(frame);frame=0}
+    reset(rec);                       // CSS transition eases it back to facing forward
+  };
+  const onLeave=()=>{if(frame){cancelAnimationFrame(frame);frame=0}records.forEach(reset)};
+  const onCtx=e=>{if(window.matchMedia("(pointer:coarse)").matches&&e.target.closest&&e.target.closest(".vhs-stage"))e.preventDefault()};
+  const listeners=[["pointerdown",onDown],["pointermove",onMove],["pointerup",onUp],["pointercancel",onUp],["pointerleave",onLeave],["scroll",refresh],["resize",refresh]];
+  listeners.forEach(([type,fn])=>window.addEventListener(type,fn,{passive:true}));
+  window.addEventListener("contextmenu",onCtx);
+  window.__vhsCleanup=[()=>{listeners.forEach(([type,fn])=>window.removeEventListener(type,fn));window.removeEventListener("contextmenu",onCtx)}];
+}
 window.toggleCase=(e,el)=>{
   if(!el||e.target.closest("button,input"))return;
   el.classList.toggle("flipped");
@@ -1536,7 +1595,7 @@ window.setAssetDraft=(field,value)=>{
     if(toggle)toggle.classList.toggle("on",Boolean(value));
   }
 };
-window.setNav=x=>{if(!["watchlist","history","people","settings"].includes(x))return;savePersistentFilterState(state.nav);state.watchlistPage=1;state.historyPage=1;state.nav=x;state.detail=null;loadPersistentFilterState();state.showFilters=hasAppliedFilters(x);const target=routeUrl(x,null);if(window.location.pathname+window.location.search!==target)window.history.pushState(null,document.title,target);render();};window.setView=x=>{state.view=x;saveUserSettings();render()};window.toggleFilters=()=>{state.showFilters=!state.showFilters;render()};window.setFilter=x=>{resetMoviePages();state.filter=x;render()};window.setPosterSize=x=>{state.posterSize=Math.max(1,Math.min(4,Math.round(Number(x)||1)));saveUserSettings();render()};window.toggleSetting=k=>{state[k]=!state[k];if(displaySettingKeys.includes(k)){try{const saved={};displaySettingKeys.forEach(key=>saved[key]=Boolean(state[key]));localStorage.setItem("watchlist-display-settings",JSON.stringify(saved))}catch(error){}saveUserSettings()}render();if(k==="showRatings"&&state[k]&&state.nav==="detail"){const movie=movies.find(x=>x.id===state.detail);if(movie)loadExternalRatings(movie)}};window.toggleDetailSection=k=>{state.detailSections[k]=!state.detailSections[k];render()};async function loadExternalRatings(movie){if(!state.showRatings||movie.ratingsLoaded||movie.ratingsLoading||movie.ratingsError)return;movie.ratingsLoading=true;movie.ratingsError=false;try{if(!movie.imdbId&&movie.tmdbId){const details=await TMDB.details(movie.tmdbId);TMDB.apply(movie,details)}if(!movie.imdbId)throw new Error("No IMDb ID");const endpoint=window.WATCHLIST_OMDB_ENDPOINT||(location.hostname.endsWith("github.io")?"https://the-watchlist-two.vercel.app/api/omdb":"/api/omdb");const url=new URL(endpoint,window.location.origin);url.searchParams.set("imdbID",movie.imdbId);const response=await fetch(url);const data=await response.json().catch(()=>({}));if(!response.ok||data.error)throw new Error("Ratings unavailable");movie.imdbRating=data.imdbRating&&data.imdbRating!=="N/A"?data.imdbRating:null;movie.rottenTomatoesRating=data.rottenTomatoesRating&&data.rottenTomatoesRating!=="N/A"?data.rottenTomatoesRating:null;movie.ratingsLoaded=true;movie.ratingsLoading=false;
+window.setNav=x=>{if(!["watchlist","history","people","settings"].includes(x))return;savePersistentFilterState(state.nav);state.watchlistPage=1;state.historyPage=1;state.nav=x;state.detail=null;loadPersistentFilterState();state.showFilters=hasAppliedFilters(x);const target=routeUrl(x,null);if(window.location.pathname+window.location.search!==target)window.history.pushState(null,document.title,target);render();};window.setView=x=>{state.view=x==="grid"?"grid":"list";try{localStorage.setItem("watchlist-view",state.view)}catch(error){}render()};window.toggleFilters=()=>{state.showFilters=!state.showFilters;render()};window.setFilter=x=>{resetMoviePages();state.filter=x;render()};window.setPosterSize=x=>{state.posterSize=Math.max(1,Math.min(4,Math.round(Number(x)||1)));saveUserSettings();render()};window.toggleSetting=k=>{state[k]=!state[k];if(displaySettingKeys.includes(k)){try{const saved={};displaySettingKeys.forEach(key=>saved[key]=Boolean(state[key]));localStorage.setItem("watchlist-display-settings",JSON.stringify(saved))}catch(error){}saveUserSettings()}render();if(k==="showRatings"&&state[k]&&state.nav==="detail"){const movie=movies.find(x=>x.id===state.detail);if(movie)loadExternalRatings(movie)}};window.toggleDetailSection=k=>{state.detailSections[k]=!state.detailSections[k];render()};async function loadExternalRatings(movie){if(!state.showRatings||movie.ratingsLoaded||movie.ratingsLoading||movie.ratingsError)return;movie.ratingsLoading=true;movie.ratingsError=false;try{if(!movie.imdbId&&movie.tmdbId){const details=await TMDB.details(movie.tmdbId);TMDB.apply(movie,details)}if(!movie.imdbId)throw new Error("No IMDb ID");const endpoint=window.WATCHLIST_OMDB_ENDPOINT||(location.hostname.endsWith("github.io")?"https://the-watchlist-two.vercel.app/api/omdb":"/api/omdb");const url=new URL(endpoint,window.location.origin);url.searchParams.set("imdbID",movie.imdbId);const response=await fetch(url);const data=await response.json().catch(()=>({}));if(!response.ok||data.error)throw new Error("Ratings unavailable");movie.imdbRating=data.imdbRating&&data.imdbRating!=="N/A"?data.imdbRating:null;movie.rottenTomatoesRating=data.rottenTomatoesRating&&data.rottenTomatoesRating!=="N/A"?data.rottenTomatoesRating:null;movie.ratingsLoaded=true;movie.ratingsLoading=false;
 persistSharedPatch({movies:[{id:movie.id,imdbRating:movie.imdbRating,rottenTomatoesRating:movie.rottenTomatoesRating}]});}catch(error){movie.ratingsError=true;}finally{movie.ratingsLoading=false;if(state.nav==="detail"&&state.detail===movie.id)render()}}
 window.openMovie=id=>{const movie=movies.find(x=>String(x.id)===String(id));if(!movie)return;window.location.href=routeUrl("detail",movie.id);if(movie.tmdbId&&!movie.tmdbDetailsLoading){movie.tmdbDetailsLoading=true;TMDB.details(movie.tmdbId).then(data=>{TMDB.apply(movie,data);movie.tmdbDetailsLoaded=true;if(state.showRatings)loadExternalRatings(movie);}).catch(error=>console.warn("TMDB details unavailable for "+movie.title,error.message)).finally(()=>{movie.tmdbDetailsLoading=false;if(state.nav==="detail"&&state.detail===movie.id)render()})}else if(state.showRatings)loadExternalRatings(movie)};window.togglePerson=p=>{
 const card=document.querySelector('[data-person="'+p+'"]');if(!card)return;const old=card.querySelector(".person-details");if(old){old.remove();return}
