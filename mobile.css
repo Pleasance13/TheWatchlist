@@ -1,0 +1,82 @@
+/* Mobile only. Nothing here applies above 760px. */
+@media (max-width:760px){
+
+  /* ---------- Header: logo + bell/avatar on row 1, nav on row 2 ---------- */
+  .topbar{height:auto!important;padding:8px 14px 10px!important;flex-wrap:wrap;row-gap:8px}
+  .brand{order:1}
+  .header-right{order:2}
+  .topbar>.nav{
+    position:relative!important;left:auto!important;top:auto!important;transform:none!important;
+    order:3;flex:1 1 100%;display:grid;grid-template-columns:repeat(4,1fr);gap:4px
+  }
+  .topbar .nav button{padding:9px 4px!important;text-align:center}
+  .activity-panel{top:112px!important}
+
+  /* ---------- Page chrome ---------- */
+  .content{overflow-x:clip}
+  .hero{flex-wrap:wrap;align-items:flex-start;gap:14px}
+  h1{font-size:28px}
+
+  /* ---------- Toolbar ---------- */
+  .toolbar{gap:8px}
+  .toolbar .search,
+  .search-clear-wrapper{flex:1 1 100%!important;min-width:0!important;max-width:none!important;width:100%}
+  .toolbar .icon span{display:none}               /* List/Grid become icon-only */
+  .toolbar .icon{width:40px;height:40px;padding:0}
+  .sort-control{margin-left:auto}
+  .sort-menu{left:auto;right:0;max-width:calc(100vw - 32px)}
+  #sizeRange{display:none}                          /* grid is fixed at 2 columns on phones */
+
+  /* ---------- Grid: 2 columns ---------- */
+  .grid{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:28px 16px}
+  .vhs{padding-right:0}
+  .grid-title-line>.seen-button{width:78px!important;min-width:78px!important;max-width:78px!important;flex-basis:78px!important;height:26px!important;font-size:10px!important}
+
+  /* ---------- List rows: poster left, details stacked right ---------- */
+  .row{
+    grid-template-columns:38px 54px minmax(0,1fr)!important;
+    grid-template-areas:"rank vhs info" "rank vhs people" "rank vhs seen";
+    align-items:start;gap:6px 12px;padding:12px
+  }
+  .history-row{
+    grid-template-columns:54px minmax(0,1fr)!important;
+    grid-template-areas:"vhs info" "vhs people" "vhs seen"
+  }
+  .row>.rank{grid-area:rank}
+  .row>.list-vhs{grid-area:vhs}
+  .row>[data-open-movie]{grid-area:info;display:block!important;min-width:0}
+  .row>div:has(>.stack){grid-area:people;display:block!important}
+  .row>.seen-button{grid-area:seen;grid-column:auto;grid-row:auto;justify-self:start;
+    width:auto!important;min-width:0!important;max-width:none!important;flex:none!important;padding:4px 10px;height:30px!important}
+  .row>.seen-button span:not(.seen-icon){display:inline!important}
+  .row>.seen-button .seen-icon{display:block!important}
+  .list-rank-sticker{width:34px;height:34px;flex-basis:34px}
+  .row .quick-votes{flex-wrap:wrap;overflow:visible}
+
+  /* ---------- Tap-friendly controls ---------- */
+  .quick-vote{padding:7px 9px;font-size:11px}
+  .vote{padding:11px 13px;font-size:13px}
+  input,select,textarea{font-size:16px!important}   /* stops iOS focus-zoom */
+
+  /* ---------- Detail page: single column ---------- */
+  .detail{grid-template-columns:minmax(0,1fr)!important;gap:20px;padding:8px 0 0}
+  .detail-cover-column{grid-column:1;grid-row:1}
+  .detail>div:nth-child(2){grid-column:1;grid-row:2}
+  .detail-vhs{width:min(275px,100%);padding:26px 72px 26px 22px}
+  .detail-title-row{flex-wrap:wrap!important}
+  .detail-logo{max-width:100%}
+
+  /* ---------- People page review rows ---------- */
+  .person-movies .person-movie:has(.people-review-content){flex-wrap:wrap!important}
+  .person-movies .person-movie:has(.people-review-content)>span:first-child{flex:1 1 100%!important}
+  .person-movies .person-movie:has(.people-review-content)>span:last-child{max-width:100%!important;margin-left:0!important}
+
+  /* ---------- Settings ---------- */
+  .streaming-region-setting,.discord-server-setting{flex-direction:column;align-items:stretch}
+  .region-picker{width:100%}
+  .region-menu{width:min(260px,calc(100vw - 64px))}
+
+  /* ---------- Modals: use dynamic viewport height so browser bars don't clip them ---------- */
+  .modal-backdrop{align-items:flex-end;padding:8px}
+  .add-modal,.attendance-modal,.asset-modal{max-height:calc(100dvh - 16px)}
+}
