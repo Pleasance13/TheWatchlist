@@ -1599,9 +1599,9 @@ window.setNav=x=>{if(!["watchlist","history","people","settings"].includes(x))re
 persistSharedPatch({movies:[{id:movie.id,imdbRating:movie.imdbRating,rottenTomatoesRating:movie.rottenTomatoesRating}]});}catch(error){movie.ratingsError=true;}finally{movie.ratingsLoading=false;if(state.nav==="detail"&&state.detail===movie.id)render()}}
 window.openMovie=id=>{const movie=movies.find(x=>String(x.id)===String(id));if(!movie)return;window.location.href=routeUrl("detail",movie.id);if(movie.tmdbId&&!movie.tmdbDetailsLoading){movie.tmdbDetailsLoading=true;TMDB.details(movie.tmdbId).then(data=>{TMDB.apply(movie,data);movie.tmdbDetailsLoaded=true;if(state.showRatings)loadExternalRatings(movie);}).catch(error=>console.warn("TMDB details unavailable for "+movie.title,error.message)).finally(()=>{movie.tmdbDetailsLoading=false;if(state.nav==="detail"&&state.detail===movie.id)render()})}else if(state.showRatings)loadExternalRatings(movie)};window.togglePerson=p=>{
 const card=document.querySelector('[data-person="'+p+'"]');if(!card)return;const old=card.querySelector(".person-details");if(old){old.remove();return}
-// Interest is independent of Seen status. A movie can be both watched/seen
-// and still have a recorded interest response, so don't hide it here.
-const interests=movies.filter(m=>{const v=personVote(m,p);return Boolean(v)&&v!=="no"}).sort((a,b)=>{const rank={must:4,interested:3,watch:2};const av=rank[personVote(a,p)]||0;const bv=rank[personVote(b,p)]||0;return (bv-av)||String(a.title||"").localeCompare(String(b.title||""));});
+// "Interested in watching" only covers movies still on the watchlist; once a
+// movie is marked watched it moves to History and drops off this list.
+const interests=movies.filter(m=>{if(m.watched)return false;const v=personVote(m,p);return Boolean(v)&&v!=="no"}).sort((a,b)=>{const rank={must:4,interested:3,watch:2};const av=rank[personVote(a,p)]||0;const bv=rank[personVote(b,p)]||0;return (bv-av)||String(a.title||"").localeCompare(String(b.title||""));});
 const watched=movies.filter(m=>(m.watchedBy||[]).includes(p));
 const together=p===currentUser?[]:movies.filter(m=>(m.watchedBy||[]).includes(p)&&(m.watchedBy||[]).includes(currentUser));
 const reviewed=movies.filter(m=>(movieReviews[m.id]||{})[p]);
